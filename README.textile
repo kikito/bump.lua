@@ -1,48 +1,69 @@
 h1. bump.lua
 
-Lua collision-detection library for axis-aligned boxes.
+Lua collision-detection library for axis-aligned boxes. Its main features are:
+
+* Handles axis-aligned boxes only
+* Distributes the boxes in an internal grid to optimize the amount of comparisons done
+* Detects collisions and collision stops
+* When a collision occurs, the lib provides a minimal displacement vector
 
 It tries to be a minimal "HardonCollider":http://vrld.github.com/HardonCollider/ .
 
-Bump handles "objects" (usually tables) via their bounding boxes.
+Bump only does axis-aligned box collisions. If you need anything more complicated than that (circles, polygons, etc.) give HardonCollider a look.
+
+Other than that, feel free to poke around!
 
 h1. Example
 
-
 <pre>local bump = require 'bump'
 
-bump.setCellSize(50) -- optional, defaults to 32
+-- The grid cell size can be specified via the initialize method
+-- By default, the cell size is 32
+bump.initialize(50)
 
--- called when a new collision starts happening
-function bump.beginCollision(obj1, obj2, dx, dy)
-  print(obj1.name, "started colliding with", obj2.name, "displacement vector:", dx, dy)
+-- bump has 3 callbacks:
+-- * collision is called every time a collision occurs
+-- * endCollision is called every time a collision ends
+-- * getBBox must accept an item and return its bounding box: left, top, width and height
+-- None of the callbacks is mandatory.
+-- collision and stopCollision do nothing by default.
+-- getBBox calls item:getBBox() by default
+function bump.collision(item1, item2, dx, dy)
+  print(item1.name, "collision with", item2.name, "displacement vector:", dx, dy)
 end
 
-function bump.endCollision(obj1, obj2)
+function bump.endCollision(item1, item2)
   print(a.name, "stopped colliding with", b.name)
 end
 
-function bump.getBBox(x)
-  return x.l, x.t, x.w, x.h
+function bump.getBBox(item)
+  return item.l, item.t, item.w, item.h
 end
 
-local item1 = {name="item1", l=0  , t=0, w=100, h=100} -- name, left, top, width, height
-local item2 = {name="item2", l=300, t=0, w=100, h=100}
+-- here we create two rectangles
+local rect1 = {name="rect1", l=0  , t=0, w=100, h=100} -- name, left, top, width, height
+local rect2 = {name="rect2", l=300, t=0, w=100, h=100}
 
-bump.add(item1) -- inserts item1 with its associated bounding box
-bump.add(item2) -- same with item2
+-- insert both rectangles into the lib
+bump.add(rect1)
+bump.add(rect2)
 
-bump.check() -- checks for no collisions
+-- Now every time we call bump.check() it will call bump.collision/endCollision appropiatedly.
+-- For example:
 
-item2.l = 50 -- move item2 so it collides with item1
+bump.check() -- nothing happens, there are no collisions
 
-bump.check() -- prints "item1 started colliding with item2 displacement vector: -50 0"
+rect2.l = 50 -- move rect2 so it collides with rect1
 
-itel2.l = 100 -- move item2 so it does not collide any more with item1
+bump.check() -- prints "rect1 started colliding with rect2 displacement vector: -50 0"
 
-bump.check()  -- prints "item1 stopped colliding with item2"
+rect2.l = 100 -- move rect2 so it does not collide any more with rect1
+
+bump.check()  -- prints "rect1 stopped colliding with rect2"
 
 </pre>
+
+h1. Installation
 
 Just copy the bump.lua file wherever you want it. Then require it where you need it:
 
