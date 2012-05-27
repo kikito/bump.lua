@@ -1,0 +1,55 @@
+h1. bump.lua
+
+Lua collision-detection library for axis-aligned boxes.
+
+It tries to be a minimal "HardonCollider":http://vrld.github.com/HardonCollider/ .
+
+Bump handles "objects" (usually tables) via their bounding boxes.
+
+h1. Example
+
+
+<pre>local bump = require 'bump'
+
+bump.setCellSize(50) -- optional, defaults to 32
+
+-- called when a new collision starts happening
+function bump.beginCollision(obj1, obj2, dx, dy)
+  print(obj1.name, "started colliding with", obj2.name, "displacement vector:", dx, dy)
+end
+
+function bump.endCollision(obj1, obj2)
+  print(a.name, "stopped colliding with", b.name)
+end
+
+function bump.getBBox(x)
+  return x.l, x.t, x.w, x.h
+end
+
+local item1 = {name="item1", l=0  , t=0, w=100, h=100} -- name, left, top, width, height
+local item2 = {name="item2", l=300, t=0, w=100, h=100}
+
+bump.add(item1) -- inserts item1 with its associated bounding box
+bump.add(item2) -- same with item2
+
+bump.check() -- checks for no collisions
+
+item2.l = 50 -- move item2 so it collides with item1
+
+bump.check() -- prints "item1 started colliding with item2 displacement vector: -50 0"
+
+itel2.l = 100 -- move item2 so it does not collide any more with item1
+
+bump.check()  -- prints "item1 stopped colliding with item2"
+
+</pre>
+
+Just copy the bump.lua file wherever you want it. Then require it where you need it:
+
+<pre>local bump = require 'bump'</pre>
+
+If you copied bump.lua to a file not accesible from the root folder (for example a lib folder), change the code accordingly:
+
+<pre>local bump = require 'lib.bump'</pre>
+
+Please make sure that you read the license, too (for your convenience it's now included at the beginning of the middleclass.lua file).
