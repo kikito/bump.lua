@@ -169,13 +169,13 @@ local function _calculateCollisions()
   return collisions
 end
 
--- fires bump.beginCollision with the appropiate parameters
-local function _invokeBeginCollision(collisions)
+-- fires bump.Collision with the appropiate parameters
+local function _invokeCollision(collisions)
   for item,neighbors in pairs(collisions) do
     if _items[item] then
       for neighbor, d in pairs(neighbors) do
         if _items[neighbor] then
-          bump.beginCollision(item, neighbor, d.x, d.y)
+          bump.collision(item, neighbor, d.x, d.y)
           if _prevCollisions[item] then _prevCollisions[item][neighbor] = nil end
         end
       end
@@ -206,7 +206,7 @@ function bump.initialize(cellSize)
   _prevCollisions = setmetatable({}, _weakmt)
 end
 
-function bump.beginCollision(item1, item2, vx, vy)
+function bump.collision(item1, item2, vx, vy)
 end
 
 function bump.endCollision(item1, item2)
@@ -230,7 +230,7 @@ function bump.check()
 
   local collisions = _calculateCollisions()
 
-  _invokeBeginCollision(collisions)
+  _invokeCollision(collisions)
   _invokeEndCollision()
 
   _prevCollisions = collisions

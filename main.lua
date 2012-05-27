@@ -3,7 +3,7 @@ local bump = require 'bump'
 -- array to hold collision messages
 local text = {}
 
-function bump.beginCollision(a, b, dx, dy)
+function bump.collision(a, b, dx, dy)
   text[#text+1] = string.format("Colliding. mtv = (%s,%s)", dx, dy)
 end
 
