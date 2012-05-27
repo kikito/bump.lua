@@ -7,10 +7,58 @@
 local bump = {}
 
 local _weakmt = {mode = 'k'}
-local abs = math.abs
+local abs, floor = math.abs, math.floor
 
 local _items, _collisions, _prevCollisions, _cellSize, _cells
 
+-- given a world coordinate, return the coordinates of the cell that would contain it
+local function _toGrid(wx, wy)
+  return floor(wx / _cellSize) + 1, floor(wy / _cellSize) + 1
+end
+
+-- given a box in world coordinates, return a box in cell coordinates that contains it
+-- returns the x,y coordinates of the top-left cell, the number of cells to the right and the number of cells down.
+local function _toGridBox(wl, wt, ww, wh)
+  local l,t = _toGrid(wl, wt)
+  local r,b = _toGrid(wl+ww, wt+wh)
+  return l, t, r-l, b-t
+end
+
+-- returns (or creates, if it doesn't exist) a cell, given its coordinates (on grid terms)
+local function _getCell(x, y)
+  _cells[y] = _cells[y] or {}
+  _cells[y][x] = _cells[y][x] or setmetatable({}, _weakmt)
+  return _cells[y][x]
+end
+
+-- returns all the cells contained in a box (specified as x and y of top-left cell, number of cells left and number of cells down)
+local function _getCells(l,t,w,h)
+  local cells, len = {}, 0
+  for y=t,t+h do
+    for x=l,l+w do
+      len = len + 1
+      cells[len] = _getCell(x,y)
+    end
+  end
+  return cells, len
+end
+
+-- returns (and creates, if needed) the cell that contains a real-world coordinate
+local function _getContainingCell(wx, wy)
+  return _getCell(_toGrid(wx, wy))
+end
+
+-- returns the cells containing a world in real world term
+local function _getContainingCellsFromBox(wl, wt, ww, wh)
+  return _getCells(_toGridBox(wl, wt, ww, wh))
+end
+
+
+-- performs the collision between two bounding boxes
+-- if no collision, it returns false
+-- else, it returns true, dx, dy, where dx and dy are
+-- the minimal direction to where the first box has to be moved
+-- in order to not intersect with the second any more
 local function _boxCollision(l1,t1,w1,h1, l2,t2,w2,h2)
 
   -- if there is a collision
@@ -34,40 +82,86 @@ local function _boxCollision(l1,t1,w1,h1, l2,t2,w2,h2)
   return false
 end
 
-local function _getNeighbors(item)
-  local neighbors, len = {}, 0
-  for neighbor,_ in pairs(_items) do
-    if neighbor ~= item then
-      len = len + 1
-      neighbors[len] = neighbor
+-- removes the grid info of an item (what cells does it occupy)
+local function _unlink(item)
+  local info = _items[item]
+  if info then
+    local cells = info.cells
+    if info.cells then
+      for i=1, info.cellsLength do
+        cells[item] = nil
+      end
     end
   end
-  return neighbors, len
 end
 
+-- updates the information hump has about one item - its boundingbox, and containing cells
+local function _updateItem(item)
+  local info = _items[item] or {}
+
+  -- if the new bounding box is different from the stored one
+  local l,t,w,h = bump.getBBox(item)
+  if l ~= info.l or t ~= info.t or w ~= info.w or h ~= info.h then
+    -- remove this item from all the cells that used to contain it
+    _unlink(item)
+
+    -- link it with the new cells that contain it
+    local cells, cellsLength = _getContainingCellsFromBox(l,t,w,h)
+    for i=1, cellsLength do
+      cells[i][item] = true
+    end
+
+    -- store the info so it will be available on the next iteration
+    info.l, info.t, info.w, info.h = l, t, w, h
+    info.cells, info.cellsLength   = cells, cellsLength
+    _items[item] = info
+  end
+end
+
+-- updates the cell information (what cells every item is stepping in) - this takes care of moving items
+local function _updateItems()
+  for item,_ in pairs(_items) do
+    _updateItem(item, info)
+  end
+end
+
+-- Returns a new table containing references to all the calculated collisions
+-- structure: { [item1] = { [item2] = {x=1,y=2} } }
+-- so collisions[item1][item] = {x=1, y=2}
 local function _calculateCollisions()
   local collisions = setmetatable({}, _weakmt)
 
-  local getBBox = bump.getBBox
-  local l1,t1,w1,h1
-  local neighbor, neighbors, neighborsLength
+  local l, t, w, h, cells
+  local neighbor, ninfo
   local collision, dx, dy
+  local tested = {}
 
-  for item,_ in pairs(_items) do
-    l1, t1, w1, h1 = bump.getBBox(item)
-    neighbors, neighborsLength = _getNeighbors(item)
-    for i=1, neighborsLength do
-      neighbor = neighbors[i]
-      assert(neighbor, i)
+  -- for each item stored in bump
+  for item, info in pairs(_items) do
+    l, t, w, h, cells = info.l, info.t, info.w, info.h, info.cells
+    tested[item] = {}
 
-      if not (collisions[neighbor] and collisions[neighbor][item]) then
-        collision, dx, dy = _boxCollision(l1,t1,w1,h1, getBBox(neighbor))
+    -- parse the cells intersecting with item's boundingbox
+    for i=1, info.cellsLength do
 
-        if collision then
-          collisions[item] = collisions[item] or setmetatable({}, _weakmt)
-          collisions[item][neighbor] = {x=dx, y=dy}
+      -- check if there are any neighbors on that group of cells
+      for neighbor,_ in pairs(cells[i]) do
+        -- skip this neighbor if:
+        -- a) It's the same item whose neighbors we are checking out
+        -- b) The opposite collision (neighbor-item instead of item-neighbor) has already been calculated
+        if neighbor ~= item
+        and not (tested[neighbor] and tested[neighbor][item]) then
+          -- store the collision, if it happened
+          ninfo = _items[neighbor]
+          collision, dx, dy = _boxCollision(l, t, w, h, ninfo.l, ninfo.t, ninfo.w, ninfo.h)
+
+          if collision then
+            collisions[item] = collisions[item] or setmetatable({}, _weakmt)
+            collisions[item][neighbor] = {x=dx, y=dy}
+          end
+
+          tested[item][neighbor] = true
         end
-
       end
     end
   end
@@ -75,7 +169,8 @@ local function _calculateCollisions()
   return collisions
 end
 
-local function _invokeStartCollisionCallbacks(collisions)
+-- fires bump.beginCollision with the appropiate parameters
+local function _invokeBeginCollision(collisions)
   for item,neighbors in pairs(collisions) do
     if _items[item] then
       for neighbor, d in pairs(neighbors) do
@@ -88,7 +183,8 @@ local function _invokeStartCollisionCallbacks(collisions)
   end
 end
 
-local function _invokeStopCollisionCallbacks()
+-- fires bump.endCollision with the appropiate parameters
+local function _invokeEndCollision()
   for item,neighbors in pairs(_prevCollisions) do
     if _items[item] then
       for neighbor, d in pairs(neighbors) do
@@ -105,6 +201,7 @@ end
 
 function bump.initialize(cellSize)
   _cellSize = cellSize or 32
+  _cells          = setmetatable({}, _weakmt)
   _items          = setmetatable({}, _weakmt)
   _prevCollisions = setmetatable({}, _weakmt)
 end
@@ -120,18 +217,21 @@ function bump.getBBox(item)
 end
 
 function bump.add(item)
-  _items[item] = true
+  _updateItem(item, {})
 end
 
 function bump.remove(item)
+  unlink(item, _items[item])
   _items[item] = nil
 end
 
 function bump.check()
-  local collisions = _calculateCollisions(collisions)
+  _updateItems()
 
-  _invokeStartCollisionCallbacks(collisions)
-  _invokeStopCollisionCallbacks()
+  local collisions = _calculateCollisions()
+
+  _invokeBeginCollision(collisions)
+  _invokeEndCollision()
 
   _prevCollisions = collisions
 end
