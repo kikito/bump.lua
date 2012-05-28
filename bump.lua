@@ -9,7 +9,17 @@ local bump = {}
 local _weakmt = {mode = 'k'}
 local abs, floor = math.abs, math.floor
 
-local _items, _collisions, _prevCollisions, _cellSize, _cells
+-- stores information about each item: bbox and what cells does it "occupy"
+local _items
+
+-- stores the collision information of the previous frame. used to call bump.endCollision
+local _prevCollisions
+
+-- stores the cell size (default to 32)
+local _cellSize
+
+-- stores the cells in a 2-d table - _cells[y][x] returns the items on that cell
+local _cells
 
 -- given a world coordinate, return the coordinates of the cell that would contain it
 local function _toGrid(wx, wy)
@@ -121,7 +131,7 @@ end
 -- updates the cell information (what cells every item is stepping in) - this takes care of moving items
 local function _updateItems()
   for item,_ in pairs(_items) do
-    _updateItem(item, info)
+    _updateItem(item)
   end
 end
 
@@ -129,6 +139,8 @@ end
 -- structure: { [item1] = { [item2] = {x=1,y=2} } }
 -- so collisions[item1][item] = {x=1, y=2}
 local function _calculateCollisions()
+  _updateItems() -- refresh moving items info
+
   local collisions = setmetatable({}, _weakmt)
 
   local l, t, w, h, cells
@@ -160,6 +172,7 @@ local function _calculateCollisions()
             collisions[item][neighbor] = {x=dx, y=dy}
           end
 
+          -- mark the couple item-neighbor as tested, so the inverse is not calculated
           tested[item][neighbor] = true
         end
       end
@@ -226,8 +239,6 @@ function bump.remove(item)
 end
 
 function bump.check()
-  _updateItems()
-
   local collisions = _calculateCollisions()
 
   _invokeCollision(collisions)
