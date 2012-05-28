@@ -1,57 +1,52 @@
-local bump = require 'bump'
+local bump    = require 'bump'
+local object  = require 'objects.object'
+local player  = require 'objects.player'
+local scenery = require 'objects.scenery'
 
--- array to hold collision messages
-local text = {}
+local p                    -- the player instance
+local maxdt = 0.1          -- max dt; used to clamp max speed
 
-function bump.collision(a, b, dx, dy)
-  text[#text+1] = string.format("Colliding. mtv = (%s,%s)", dx, dy)
+function bump.collision(obj1, obj2, dx, dy)
+  if obj2.player then
+    obj1,obj2,dx,dy = obj2,obj1,-dx,-dy
+  end
+  player.sceneryCollision(obj1, obj2, dx, dy)
 end
 
-function bump.endCollision(a, b)
-  text[#text+1] = "Stopped colliding"
+function bump.endCollision(obj1, obj2)
+  if obj2.player then
+    obj1,obj2 = obj2,obj1
+  end
+  player.endSceneryCollision(obj1, obj2)
 end
 
 function bump.getBBox(item)
-  return unpack(item)
+  return item.l, item.t, item.w, item.h
 end
 
 function love.load()
-  -- add a rectangle to the scene
-  rect = { 200,400,400,20 }
-  -- add a moving rectangle to the scene
-  mouse = { 400, 300, 20, 20 }
+  scenery.new(  0,   0, 800,  32)
+  scenery.new(  0, 568, 800,  32)
+  scenery.new(  0,  32,  32, 536)
+  scenery.new(768,  32,  32, 536)
 
-  bump.add(rect)
-  bump.add(mouse)
+  scenery.new(368, 536,  32,  32)
+
+  p = player.new(100, 100, 32, 32)
 end
 
 function love.update(dt)
-  -- move circle to mouse position
-  local x, y = love.mouse.getPosition()
-  mouse[1] = x - mouse[3]/2
-  mouse[2] = y - mouse[4]/2
+  dt = math.min(dt, maxdt)
 
-  -- check for collisions
+  player.update(p, dt, maxdt)
+
   bump.check()
-
-  while #text > 40 do
-    table.remove(text, 1)
-  end
 end
 
 function love.draw()
-  -- print messages
-  for i = 1,#text do
-    love.graphics.setColor(255,255,255, 255 - (i-1) * 6)
-    love.graphics.print(text[#text - (i-1)], 10, i * 15)
-  end
-
-    -- shapes can be drawn to the screen
-    love.graphics.setColor(255,255,255)
-    love.graphics.rectangle('fill', unpack(rect))
-    love.graphics.rectangle('fill', unpack(mouse))
+  object.drawAll()
 end
 
-function love.keypressed()
-  love.event.quit()
+function love.keypressed(k)
+  if k=="escape" then love.event.quit() end
 end

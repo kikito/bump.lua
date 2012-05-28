@@ -7,7 +7,7 @@
 local bump = {}
 
 local _weakmt = {mode = 'k'}
-local abs, floor = math.abs, math.floor
+local abs, floor, min = math.abs, math.floor, math.min
 
 -- stores information about each item: bbox and what cells does it "occupy"
 local _items
@@ -245,6 +245,14 @@ function bump.check()
   _invokeEndCollision()
 
   _prevCollisions = collisions
+end
+
+function bump.padVelocity(maxdt, vx, vy)
+  if maxdt == 0 or (vx == 0 and vy == 0) then return 0,0 end
+  local maxV = _cellSize/maxdt
+  if abs(vx) > maxV then vx = vx < 0 and -maxV or maxV end
+  if abs(vy) > maxV then vy = vy < 0 and -maxV or maxV end
+  return vx, vy
 end
 
 bump.initialize(32)
