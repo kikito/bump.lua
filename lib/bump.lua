@@ -21,49 +21,6 @@ local _cellSize
 -- stores the cells in a 2-d table - _cells[y][x] returns the items on that cell
 local _cells
 
--- given a world coordinate, return the coordinates of the cell that would contain it
-local function _toGrid(wx, wy)
-  return floor(wx / _cellSize) + 1, floor(wy / _cellSize) + 1
-end
-
--- given a box in world coordinates, return a box in cell coordinates that contains it
--- returns the x,y coordinates of the top-left cell, the number of cells to the right and the number of cells down.
-local function _toGridBox(wl, wt, ww, wh)
-  local l,t = _toGrid(wl, wt)
-  local r,b = _toGrid(wl+ww, wt+wh)
-  return l, t, r-l, b-t
-end
-
--- returns (or creates, if it doesn't exist) a cell, given its coordinates (on grid terms)
-local function _getCell(x, y)
-  _cells[y] = _cells[y] or {}
-  _cells[y][x] = _cells[y][x] or setmetatable({}, _weakmt)
-  return _cells[y][x]
-end
-
--- returns all the cells contained in a box (specified as x and y of top-left cell, number of cells left and number of cells down)
-local function _getCells(l,t,w,h)
-  local cells, len = {}, 0
-  for y=t,t+h do
-    for x=l,l+w do
-      len = len + 1
-      cells[len] = _getCell(x,y)
-    end
-  end
-  return cells, len
-end
-
--- returns (and creates, if needed) the cell that contains a real-world coordinate
-local function _getContainingCell(wx, wy)
-  return _getCell(_toGrid(wx, wy))
-end
-
--- returns the cells containing a world in real world term
-local function _getContainingCellsFromBox(wl, wt, ww, wh)
-  return _getCells(_toGridBox(wl, wt, ww, wh))
-end
-
-
 -- performs the collision between two bounding boxes
 -- if no collision, it returns false
 -- else, it returns true, dx, dy, where dx and dy are
@@ -92,38 +49,73 @@ local function _boxCollision(l1,t1,w1,h1, l2,t2,w2,h2)
   return false
 end
 
--- removes the grid info of an item (what cells does it occupy)
-local function _unlink(item)
-  local info = _items[item]
+-- given a world coordinate, return the coordinates of the cell that would contain it
+local function _toGrid(wx, wy)
+  return floor(wx / _cellSize) + 1, floor(wy / _cellSize) + 1
+end
+
+-- given a box in world coordinates, return a box in cell coordinates that contains it
+-- returns the x,y coordinates of the top-left cell, the number of cells to the right and the number of cells down.
+local function _toGridBox(wl, wt, ww, wh)
+  local l,t = _toGrid(wl, wt)
+  local r,b = _toGrid(wl+ww, wt+wh)
+  return l, t, r-l, b-t
+end
+
+-- returns (or creates, if it doesn't exist) a cell, given its coordinates (on grid terms)
+local function _getCell(x, y)
+  _cells[y] = _cells[y] or {}
+  _cells[y][x] = _cells[y][x] or setmetatable({}, _weakmt)
+  return _cells[y][x]
+end
+
+-- parses the cells touching one item, and removes the item from their list of items
+-- does not create new cells
+local function _unlink(item, info)
+  info = info or _items[item]
   if info then
-    local cells = info.cells
-    if info.cells then
-      for i=1, info.cellsLength do
-        cells[item] = nil
+    for y=info.gt, info.gt+info.gh do
+      if _cells[y] then
+        for x=info.gl, info.gl+info.gw do
+          if _cells[y][x] then
+            _cells[y][x][item] = nil
+          end
+        end
       end
     end
   end
 end
 
--- updates the information hump has about one item - its boundingbox, and containing cells
+-- parses all the cells that touch one item, adding the item to their list of items
+-- creates cells if they don't exist
+local function _link(item, gl, gt, gw, gh)
+  for y=gt, gt+gh do
+    for x=gl, gl+gw do
+     _getCell(x,y)[item] = true
+    end
+  end
+end
+
+-- updates the information bump has about one item - its boundingbox, and containing cells
 local function _updateItem(item)
   local info = _items[item] or {}
 
   -- if the new bounding box is different from the stored one
   local l,t,w,h = bump.getBBox(item)
   if l ~= info.l or t ~= info.t or w ~= info.w or h ~= info.h then
-    -- remove this item from all the cells that used to contain it
-    _unlink(item)
 
-    -- link it with the new cells that contain it
-    local cells, cellsLength = _getContainingCellsFromBox(l,t,w,h)
-    for i=1, cellsLength do
-      cells[i][item] = true
+    local gl, gt, gw, gh = _toGridBox(l, t, w, h)
+    if gl ~= info.gl or gt ~= info.gt or gw ~= info.gw or gh ~= info.gh then
+      -- remove this item from all the cells that used to contain it
+      _unlink(item)
+      -- then add it to the new cells
+      _link(item, gl, gt, gw, gh)
+      -- and update the grid info
+      info.gl, info.gt, info.gw, info.gh = gl, gt, gw, gh
     end
 
-    -- store the info so it will be available on the next iteration
+    -- update the bounding box info
     info.l, info.t, info.w, info.h = l, t, w, h
-    info.cells, info.cellsLength   = cells, cellsLength
     _items[item] = info
   end
 end
@@ -143,37 +135,45 @@ local function _calculateCollisions()
 
   local collisions = setmetatable({}, _weakmt)
 
-  local l, t, w, h, cells
+  local l, t, w, h, gh, gt, gw, gh, cell
   local neighbor, ninfo
   local collision, dx, dy
   local tested = {}
 
   -- for each item stored in bump
   for item, info in pairs(_items) do
-    l, t, w, h, cells = info.l, info.t, info.w, info.h, info.cells
+    l, t, w, h = info.l, info.t, info.w, info.h         -- bounding box, in world coordinates
+    gl, gt, gw, gh = info.gl, info.gt, info.gw, info.gh -- indexes of the cells containing the bounding box
     tested[item] = {}
 
     -- parse the cells intersecting with item's boundingbox
-    for i=1, info.cellsLength do
+    for y=gt, gt + gh do
+      if _cells[y] then
+        for x=gl, gl + gw do
+          cell = _cells[y][x]
+          if cell then
+            -- check if there are any neighbors on that group of cells
+            for neighbor,_ in pairs(cell) do
+              -- skip this neighbor if:
+              -- a) It's the same item whose neighbors we are checking out
+              -- b) The opposite collision (neighbor-item instead of item-neighbor) has already been calculated
+              if neighbor ~= item
+              and not (tested[neighbor] and tested[neighbor][item])
+              then
+                -- store the collision, if it happened
+                ninfo = _items[neighbor]
+                collision, dx, dy = _boxCollision(l, t, w, h, ninfo.l, ninfo.t, ninfo.w, ninfo.h)
 
-      -- check if there are any neighbors on that group of cells
-      for neighbor,_ in pairs(cells[i]) do
-        -- skip this neighbor if:
-        -- a) It's the same item whose neighbors we are checking out
-        -- b) The opposite collision (neighbor-item instead of item-neighbor) has already been calculated
-        if neighbor ~= item
-        and not (tested[neighbor] and tested[neighbor][item]) then
-          -- store the collision, if it happened
-          ninfo = _items[neighbor]
-          collision, dx, dy = _boxCollision(l, t, w, h, ninfo.l, ninfo.t, ninfo.w, ninfo.h)
+                if collision then
+                  collisions[item] = collisions[item] or setmetatable({}, _weakmt)
+                  collisions[item][neighbor] = {x=dx, y=dy}
+                end
 
-          if collision then
-            collisions[item] = collisions[item] or setmetatable({}, _weakmt)
-            collisions[item][neighbor] = {x=dx, y=dy}
+                -- mark the couple item-neighbor as tested, so the inverse is not calculated
+                tested[item][neighbor] = true
+              end
+            end
           end
-
-          -- mark the couple item-neighbor as tested, so the inverse is not calculated
-          tested[item][neighbor] = true
         end
       end
     end
@@ -257,5 +257,6 @@ end
 
 bump.initialize(32)
 
+bump._cells = _cells -- for debugging/drawing the cells, etc
 
 return bump
