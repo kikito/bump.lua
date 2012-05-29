@@ -5,7 +5,6 @@ local Entity = require 'entities.Entity'
 local Block  = require 'entities.Block'
 local Player = require 'entities.Player'
 
-local p                    -- the player instance
 local maxdt = 0.1          -- max dt; used to clamp max speed
 
 function bump.collision(obj1, obj2, dx, dy)
