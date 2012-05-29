@@ -48,9 +48,9 @@ function Player:update(dt, maxdt)
     vx = vx - dt * (vx > 0 and breakAccel or runAccel)
   elseif love.keyboard.isDown("right") then -- right
     vx = vx + dt * (vx < 0 and breakAccel or runAccel)
-  elseif vx < -2 then -- break to the right
+  elseif vx < -5 then -- break to the right
     vx = vx + dt * breakAccel
-  elseif vx >  2 then -- break to the left
+  elseif vx >  5 then -- break to the left
     vx = vx - dt * breakAccel
   else
     vx = 0

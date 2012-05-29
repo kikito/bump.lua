@@ -7,6 +7,8 @@ local Player = require 'entities.Player'
 
 local maxdt = 0.1          -- max dt; used to clamp max speed
 
+bump.initialize(64)
+
 function bump.collision(obj1, obj2, dx, dy)
   if instanceOf(Player, obj2) then
     obj1,obj2,dx,dy = obj2,obj1,-dx,-dy
@@ -37,6 +39,7 @@ function love.load()
 end
 
 function love.update(dt)
+  dt = math.min(dt, maxdt)
   Entity:updateAll(dt, maxdt)
   bump.check()
 end
