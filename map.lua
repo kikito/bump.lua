@@ -5,7 +5,6 @@ local height = 4000
 
 local Entity     = require 'entities.Entity'
 local Block      = require 'entities.Block'
-local Player     = require 'entities.Player'
 
 local random = math.random
 

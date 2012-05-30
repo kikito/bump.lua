@@ -163,8 +163,10 @@ local function _calculateCollisions()
               -- skip this neighbor if:
               -- a) It's the same item whose neighbors we are checking out
               -- b) The opposite collision (neighbor-item instead of item-neighbor) has already been calculated
+              -- c) The pair item, neighbor returns true in bump.shouldCollide
               if neighbor ~= item
               and not (tested[neighbor] and tested[neighbor][item])
+              and bump.shouldCollide(item, neighbor)
               then
                 -- store the collision, if it happened
                 ninfo = bump._items[neighbor]
@@ -232,6 +234,10 @@ end
 function bump.endCollision(item1, item2)
 end
 
+function bump.shouldCollide(item1, item2)
+  return true
+end
+
 function bump.getBBox(item)
   return item:getBBox()
 end
@@ -241,7 +247,7 @@ function bump.add(item)
 end
 
 function bump.remove(item)
-  unlink(item, bump._items[item])
+  _unlink(item, bump._items[item])
   bump._items[item] = nil
 end
 

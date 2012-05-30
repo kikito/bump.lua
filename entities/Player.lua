@@ -14,6 +14,7 @@ function Player:initialize(x,y)
   Entity.initialize(self,x,y,32,64)
   self.underFeet = {}
   self.vx, self.vy = 0,0
+  self.canFly = false
 end
 
 function Player:collision(block, dx, dy)
@@ -57,7 +58,7 @@ function Player:update(dt, maxdt)
   end
 
   vy = vy + gravityAccel * dt
-  if love.keyboard.isDown("up") and self:isOnGround() then -- jump
+  if love.keyboard.isDown("up") and (self.canFly or self:isOnGround()) then -- jump/fly
     vy = -jumpVelocity
   end
 

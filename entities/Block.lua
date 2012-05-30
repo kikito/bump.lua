@@ -8,4 +8,8 @@ function Block:initialize(l,t,w,h)
   Entity.initialize(self, l,t,w,h)
 end
 
+function Block:shouldCollide(other)
+  return false
+end
+
 return Block

@@ -7,9 +7,20 @@ local map        = require 'map'
 local Entity     = require 'entities.Entity'
 local Player     = require 'entities.Player'
 
-local maxdt       = 0.1          -- max dt; used to clamp max speed
-local drawDebug   = false
-local player
+local maxdt       = 0.1    -- if the window loses focus/etc, use this instead of dt
+local drawDebug   = false  -- draw bump's cells
+local player               -- a reference to the player (so the camera can follow him)
+local instructions = [[
+  bump.lua demo
+
+    left,right: move
+    up:     jump/fly
+    return: reset map
+    delete: run garbage collection
+    tab:         toggle debug info (%s)
+    right shift: toggle fly (%s)
+]]
+
 
 bump.initialize(64)
 
@@ -21,6 +32,11 @@ end
 function bump.endCollision(obj1, obj2)
   obj1:endCollision(obj2)
   obj2:endCollision(obj1)
+end
+
+function bump.shouldCollide(obj1, obj2)
+  return obj1:shouldCollide(obj2) or
+         obj2:shouldCollide(obj1)
 end
 
 function bump.getBBox(obj)
@@ -49,16 +65,23 @@ function love.draw()
     if drawDebug then bump_debug.draw() end
     Entity:drawAll()
   end)
+  local msg = instructions:format(tostring(drawDebug), tostring(player.canFly))
+  love.graphics.print(msg, 550, 10)
+
+  local statistics = ("fps: %d, mem: %dKB"):format(love.timer.getFPS(), collectgarbage("count"))
+  love.graphics.print(statistics, 630, 580 )
 end
 
 function love.keypressed(k)
   if k=="escape" then love.event.quit() end
   if k=="tab"    then drawDebug = not drawDebug end
   if k=="delete" then
-    print("collecting garbage")
     collectgarbage("collect")
   end
   if k=="return" then
     reset()
+  end
+  if k=="rshift" then
+    player.canFly = not player.canFly
   end
 end

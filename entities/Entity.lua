@@ -40,6 +40,10 @@ end
 function Entity:endCollision(other)
 end
 
+function Entity:shouldCollide(other)
+  return true
+end
+
 function Entity:getBBox()
   return self.l, self.t, self.w, self.h
 end
