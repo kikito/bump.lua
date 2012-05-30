@@ -25,6 +25,12 @@ end
 function Entity:update()
 end
 
+function Entity:collision(other, dx, dy)
+end
+
+function Entity:endCollision(other)
+end
+
 function Entity.static:drawAll()
   for entity,_ in pairs(entities) do
     entity:draw()

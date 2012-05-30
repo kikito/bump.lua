@@ -16,7 +16,7 @@ function Player:initialize(x,y)
   self.vx, self.vy = 0,0
 end
 
-function Player:blockCollision(block, dx, dy)
+function Player:collision(block, dx, dy)
   -- if we hit a wall, floor or ceiling reset the corresponding velocity to 0
   if dx~=0 then self.vx = 0 end
   if dy~=0 then self.vy = 0 end
@@ -30,7 +30,7 @@ function Player:blockCollision(block, dx, dy)
   self.l, self.t = self.l + dx, self.t + dy
 end
 
-function Player:endBlockCollision(block)
+function Player:endCollision(block)
   self.underFeet[block] = nil
 end
 

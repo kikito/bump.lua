@@ -12,17 +12,13 @@ local drawDebug = false
 bump.initialize(64)
 
 function bump.collision(obj1, obj2, dx, dy)
-  if instanceOf(Player, obj2) then
-    obj1,obj2,dx,dy = obj2,obj1,-dx,-dy
-  end
-  obj1:blockCollision(obj2, dx, dy)
+  obj1:collision(obj2,  dx,  dy)
+  obj2:collision(obj1, -dx, -dy)
 end
 
 function bump.endCollision(obj1, obj2)
-  if instanceOf(Player, obj2) then
-    obj1,obj2 = obj2,obj1
-  end
-  obj1:endBlockCollision(obj2)
+  obj1:endCollision(obj2)
+  obj2:endCollision(obj1)
 end
 
 function bump.getBBox(obj)
