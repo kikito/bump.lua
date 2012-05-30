@@ -1,11 +1,13 @@
 require 'lib.middleclass'
-local bump   = require 'lib.bump'
+local bump       = require 'lib.bump'
+local bump_debug = require 'lib.bump_debug'
 
-local Entity = require 'entities.Entity'
-local Block  = require 'entities.Block'
-local Player = require 'entities.Player'
+local Entity     = require 'entities.Entity'
+local Block      = require 'entities.Block'
+local Player     = require 'entities.Player'
 
 local maxdt = 0.1          -- max dt; used to clamp max speed
+local drawDebug = false
 
 bump.initialize(64)
 
@@ -45,9 +47,15 @@ function love.update(dt)
 end
 
 function love.draw()
+  if drawDebug then bump_debug.draw() end
   Entity:drawAll()
 end
 
 function love.keypressed(k)
   if k=="escape" then love.event.quit() end
+  if k=="tab"    then drawDebug = not drawDebug end
+  if k=="delete" then
+    print("collecting garbage")
+    collectgarbage("collect")
+  end
 end

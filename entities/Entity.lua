@@ -18,6 +18,7 @@ function Entity:destroy()
 end
 
 function Entity:draw()
+  love.graphics.setColor(255,255,255)
   love.graphics.rectangle('line', self.l, self.t, self.w, self.h)
 end
 

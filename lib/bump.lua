@@ -6,20 +6,13 @@
 
 local bump = {}
 
-local _weakmt = {mode = 'k'}
+local _weakKeys   = {__mode = 'k'}
+local _weakValues = {__mode = 'v'}
 local abs, floor, min = math.abs, math.floor, math.min
 
--- stores information about each item: bbox and what cells does it "occupy"
-local _items
-
--- stores the collision information of the previous frame. used to call bump.endCollision
-local _prevCollisions
-
--- stores the cell size (default to 32)
-local _cellSize
-
--- stores the cells in a 2-d table - _cells[y][x] returns the items on that cell
-local _cells
+local function newWeakTable(t, mt)
+  return setmetatable(t or {}, mt or _weakKeys)
+end
 
 -- performs the collision between two bounding boxes
 -- if no collision, it returns false
@@ -51,7 +44,7 @@ end
 
 -- given a world coordinate, return the coordinates of the cell that would contain it
 local function _toGrid(wx, wy)
-  return floor(wx / _cellSize) + 1, floor(wy / _cellSize) + 1
+  return floor(wx / bump._cellSize) + 1, floor(wy / bump._cellSize) + 1
 end
 
 -- given a box in world coordinates, return a box in cell coordinates that contains it
@@ -64,21 +57,28 @@ end
 
 -- returns (or creates, if it doesn't exist) a cell, given its coordinates (on grid terms)
 local function _getCell(x, y)
-  _cells[y] = _cells[y] or {}
-  _cells[y][x] = _cells[y][x] or setmetatable({}, _weakmt)
-  return _cells[y][x]
+  bump._cells[y]    = bump._cells[y]    or newWeakTable({}, _weakValues)
+  bump._cells[y][x] = bump._cells[y][x] or newWeakTable({itemCount = 0, items = newWeakTable()})
+  return bump._cells[y][x]
 end
 
 -- parses the cells touching one item, and removes the item from their list of items
 -- does not create new cells
 local function _unlink(item, info)
-  info = info or _items[item]
+  info = info or bump._items[item]
   if info then
+    local row, cell
     for y=info.gt, info.gt+info.gh do
-      if _cells[y] then
+      row = bump._cells[y]
+      if row then
         for x=info.gl, info.gl+info.gw do
-          if _cells[y][x] then
-            _cells[y][x][item] = nil
+          cell = row[x]
+          if cell then
+            cell.items[item] = nil
+            cell.itemCount = cell.itemCount - 1
+            if cell.itemCount == 0 then
+              bump._occupiedCells[cell] = nil
+            end
           end
         end
       end
@@ -89,16 +89,20 @@ end
 -- parses all the cells that touch one item, adding the item to their list of items
 -- creates cells if they don't exist
 local function _link(item, gl, gt, gw, gh)
+  local cell
   for y=gt, gt+gh do
     for x=gl, gl+gw do
-     _getCell(x,y)[item] = true
+     cell = _getCell(x,y)
+     cell.items[item] = true
+     cell.itemCount = cell.itemCount + 1
+     bump._occupiedCells[cell] = true
     end
   end
 end
 
 -- updates the information bump has about one item - its boundingbox, and containing cells
 local function _updateItem(item)
-  local info = _items[item] or {}
+  local info = bump._items[item] or {}
 
   -- if the new bounding box is different from the stored one
   local l,t,w,h = bump.getBBox(item)
@@ -116,13 +120,13 @@ local function _updateItem(item)
 
     -- update the bounding box info
     info.l, info.t, info.w, info.h = l, t, w, h
-    _items[item] = info
+    bump._items[item] = info
   end
 end
 
 -- updates the cell information (what cells every item is stepping in) - this takes care of moving items
 local function _updateItems()
-  for item,_ in pairs(_items) do
+  for item,_ in pairs(bump._items) do
     _updateItem(item)
   end
 end
@@ -133,27 +137,29 @@ end
 local function _calculateCollisions()
   _updateItems() -- refresh moving items info
 
-  local collisions = setmetatable({}, _weakmt)
+  local collisions = newWeakTable()
 
-  local l, t, w, h, gh, gt, gw, gh, cell
+  local l, t, w, h, gh, gt, gw, gh
+  local row, cell
   local neighbor, ninfo
   local collision, dx, dy
   local tested = {}
 
   -- for each item stored in bump
-  for item, info in pairs(_items) do
+  for item, info in pairs(bump._items) do
     l, t, w, h = info.l, info.t, info.w, info.h         -- bounding box, in world coordinates
     gl, gt, gw, gh = info.gl, info.gt, info.gw, info.gh -- indexes of the cells containing the bounding box
     tested[item] = {}
 
     -- parse the cells intersecting with item's boundingbox
     for y=gt, gt + gh do
-      if _cells[y] then
+      row = bump._cells[y]
+      if row then
         for x=gl, gl + gw do
-          cell = _cells[y][x]
-          if cell then
+          cell = row[x]
+          if cell and cell.itemCount > 0 then
             -- check if there are any neighbors on that group of cells
-            for neighbor,_ in pairs(cell) do
+            for neighbor,_ in pairs(cell.items) do
               -- skip this neighbor if:
               -- a) It's the same item whose neighbors we are checking out
               -- b) The opposite collision (neighbor-item instead of item-neighbor) has already been calculated
@@ -161,11 +167,11 @@ local function _calculateCollisions()
               and not (tested[neighbor] and tested[neighbor][item])
               then
                 -- store the collision, if it happened
-                ninfo = _items[neighbor]
+                ninfo = bump._items[neighbor]
                 collision, dx, dy = _boxCollision(l, t, w, h, ninfo.l, ninfo.t, ninfo.w, ninfo.h)
 
                 if collision then
-                  collisions[item] = collisions[item] or setmetatable({}, _weakmt)
+                  collisions[item] = collisions[item] or newWeakTable()
                   collisions[item][neighbor] = {x=dx, y=dy}
                 end
 
@@ -185,11 +191,11 @@ end
 -- fires bump.Collision with the appropiate parameters
 local function _invokeCollision(collisions)
   for item,neighbors in pairs(collisions) do
-    if _items[item] then
+    if bump._items[item] then
       for neighbor, d in pairs(neighbors) do
-        if _items[neighbor] then
+        if bump._items[neighbor] then
           bump.collision(item, neighbor, d.x, d.y)
-          if _prevCollisions[item] then _prevCollisions[item][neighbor] = nil end
+          if bump._prevCollisions[item] then bump._prevCollisions[item][neighbor] = nil end
         end
       end
     end
@@ -198,10 +204,10 @@ end
 
 -- fires bump.endCollision with the appropiate parameters
 local function _invokeEndCollision()
-  for item,neighbors in pairs(_prevCollisions) do
-    if _items[item] then
+  for item,neighbors in pairs(bump._prevCollisions) do
+    if bump._items[item] then
       for neighbor, d in pairs(neighbors) do
-        if _items[neighbor] then
+        if bump._items[neighbor] then
           bump.endCollision(item, neighbor, d.x, d.y)
         end
       end
@@ -213,10 +219,11 @@ end
 -- public interface
 
 function bump.initialize(cellSize)
-  _cellSize = cellSize or 32
-  _cells          = setmetatable({}, _weakmt)
-  _items          = setmetatable({}, _weakmt)
-  _prevCollisions = setmetatable({}, _weakmt)
+  bump._cellSize       = cellSize or 32
+  bump._cells          = newWeakTable()
+  bump._occupiedCells  = {} -- stores strong references to cells so that they are not gc'ed
+  bump._items          = newWeakTable()
+  bump._prevCollisions = newWeakTable()
 end
 
 function bump.collision(item1, item2, vx, vy)
@@ -234,8 +241,8 @@ function bump.add(item)
 end
 
 function bump.remove(item)
-  unlink(item, _items[item])
-  _items[item] = nil
+  unlink(item, bump._items[item])
+  bump._items[item] = nil
 end
 
 function bump.check()
@@ -244,12 +251,12 @@ function bump.check()
   _invokeCollision(collisions)
   _invokeEndCollision()
 
-  _prevCollisions = collisions
+  bump._prevCollisions = collisions
 end
 
 function bump.padVelocity(maxdt, vx, vy)
   if maxdt == 0 or (vx == 0 and vy == 0) then return 0,0 end
-  local maxV = _cellSize/maxdt
+  local maxV = bump._cellSize/maxdt
   if abs(vx) > maxV then vx = vx < 0 and -maxV or maxV end
   if abs(vy) > maxV then vy = vy < 0 and -maxV or maxV end
   return vx, vy
@@ -257,6 +264,5 @@ end
 
 bump.initialize(32)
 
-bump._cells = _cells -- for debugging/drawing the cells, etc
 
 return bump
