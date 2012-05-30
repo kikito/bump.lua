@@ -1,13 +1,15 @@
 require 'lib.middleclass'
 local bump       = require 'lib.bump'
 local bump_debug = require 'lib.bump_debug'
+local camera     = require 'lib.camera'
 
+local map        = require 'map'
 local Entity     = require 'entities.Entity'
-local Block      = require 'entities.Block'
 local Player     = require 'entities.Player'
 
-local maxdt = 0.1          -- max dt; used to clamp max speed
-local drawDebug = false
+local maxdt       = 0.1          -- max dt; used to clamp max speed
+local drawDebug   = false
+local player
 
 bump.initialize(64)
 
@@ -22,29 +24,31 @@ function bump.endCollision(obj1, obj2)
 end
 
 function bump.getBBox(obj)
-  return obj.l, obj.t, obj.w, obj.h
+  return obj:getBBox()
+end
+
+function reset()
+  map.reset()
+  player = Player:new(60, 60)
 end
 
 function love.load()
-  Block:new(  0,   0, 800,  32)
-  Block:new(  0, 568, 800,  32)
-  Block:new(  0,  32,  32, 536)
-  Block:new(768,  32,  32, 536)
-
-  Block:new(368, 536,  32,  32)
-
-  Player:new(100, 100, 32, 32)
+  camera.setBoundary(0,0,map.width,map.height)
+  reset()
 end
 
 function love.update(dt)
   dt = math.min(dt, maxdt)
   Entity:updateAll(dt, maxdt)
   bump.check()
+  camera.lookAt(player:getCenter())
 end
 
 function love.draw()
-  if drawDebug then bump_debug.draw() end
-  Entity:drawAll()
+  camera.draw(function()
+    if drawDebug then bump_debug.draw() end
+    Entity:drawAll()
+  end)
 end
 
 function love.keypressed(k)
@@ -53,5 +57,8 @@ function love.keypressed(k)
   if k=="delete" then
     print("collecting garbage")
     collectgarbage("collect")
+  end
+  if k=="return" then
+    reset()
   end
 end
