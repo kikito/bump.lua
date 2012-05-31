@@ -131,60 +131,64 @@ local function _updateItems()
   end
 end
 
--- Returns a new table containing references to all the calculated collisions
--- structure: { [item1] = { [item2] = {x=1,y=2} } }
--- so collisions[item1][item] = {x=1, y=2}
-local function _calculateCollisions()
-  _updateItems() -- refresh moving items info
+-- given an item and one of its neighbors, see if they collide. If yes,
+-- store the result in the collisions and tested tables
+local function _calculateItemNeighborCollision(item, info, neighbor, collisions, tested)
+  -- store the collision, if it happened
+  local ninfo = bump._items[neighbor]
+  collision, dx, dy = _boxCollision(
+    info.l,  info.t,  info.w,  info.h,
+    ninfo.l, ninfo.t, ninfo.w, ninfo.h
+  )
 
-  local collisions = newWeakTable()
+  if collision then
+    collisions[item] = collisions[item] or newWeakTable()
+    collisions[item][neighbor] = {x=dx, y=dy}
+  end
 
-  local l, t, w, h, gh, gt, gw, gh
+  -- mark the couple item-neighbor as tested, so the inverse is not calculated
+  tested[item][neighbor] = true
+end
+
+-- given an item, parse all its neighbors, updating the collisions & tested tables
+local function _calculateItemCollisions(item, info, collisions, tested)
   local row, cell
-  local neighbor, ninfo
   local collision, dx, dy
-  local tested = {}
+  tested[item] = {}
 
-  -- for each item stored in bump
-  for item, info in pairs(bump._items) do
-    l, t, w, h = info.l, info.t, info.w, info.h         -- bounding box, in world coordinates
-    gl, gt, gw, gh = info.gl, info.gt, info.gw, info.gh -- indexes of the cells containing the bounding box
-    tested[item] = {}
-
-    -- parse the cells intersecting with item's boundingbox
-    for y=gt, gt + gh do
-      row = bump._cells[y]
-      if row then
-        for x=gl, gl + gw do
-          cell = row[x]
-          if cell and cell.itemCount > 0 then
-            -- check if there are any neighbors on that group of cells
-            for neighbor,_ in pairs(cell.items) do
-              -- skip this neighbor if:
-              -- a) It's the same item whose neighbors we are checking out
-              -- b) The opposite collision (neighbor-item instead of item-neighbor) has already been calculated
-              -- c) The pair item, neighbor returns true in bump.shouldCollide
-              if neighbor ~= item
-              and not (tested[neighbor] and tested[neighbor][item])
-              and bump.shouldCollide(item, neighbor)
-              then
-                -- store the collision, if it happened
-                ninfo = bump._items[neighbor]
-                collision, dx, dy = _boxCollision(l, t, w, h, ninfo.l, ninfo.t, ninfo.w, ninfo.h)
-
-                if collision then
-                  collisions[item] = collisions[item] or newWeakTable()
-                  collisions[item][neighbor] = {x=dx, y=dy}
-                end
-
-                -- mark the couple item-neighbor as tested, so the inverse is not calculated
-                tested[item][neighbor] = true
-              end
+  -- parse the cells intersecting with item's boundingbox
+  for y=info.gt, info.gt + info.gh do
+    row = bump._cells[y]
+    if row then
+      for x=info.gl, info.gl + info.gw do
+        cell = row[x]
+        if cell and cell.itemCount > 0 then
+          -- check if there are any neighbors on that group of cells
+          for neighbor,_ in pairs(cell.items) do
+            if neighbor ~= item
+            and not (tested[neighbor] and tested[neighbor][item])
+            and bump.shouldCollide(item, neighbor) then
+              _calculateItemNeighborCollision(item, info, neighbor, collisions, tested)
             end
           end
         end
       end
     end
+  end
+end
+
+-- Returns a new table containing references to all the calculated collisions
+-- structure: { [item1] = { [item2] = {x=1,y=2} } }
+-- so collisions[item1][item] = {x=1, y=2}
+local function _calculateCollisions()
+  local collisions = newWeakTable()
+  local tested = {}
+
+  _updateItems() -- refresh moving items info
+
+  -- for each item stored in bump
+  for item, info in pairs(bump._items) do
+    _calculateItemCollisions(item, info, collisions, tested)
   end
 
   return collisions
