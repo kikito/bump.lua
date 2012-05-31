@@ -147,6 +147,7 @@ local function _calculateItemNeighborCollision(item, info, neighbor, collisions,
   end
 
   -- mark the couple item-neighbor as tested, so the inverse is not calculated
+  tested[item] = tested[item] or {}
   tested[item][neighbor] = true
 end
 
@@ -154,7 +155,6 @@ end
 local function _calculateItemCollisions(item, info, collisions, tested)
   local row, cell
   local collision, dx, dy
-  tested[item] = {}
 
   -- parse the cells intersecting with item's boundingbox
   for y=info.gt, info.gt + info.gh do
@@ -181,12 +181,21 @@ end
 -- structure: { [item1] = { [item2] = {x=1,y=2} } }
 -- so collisions[item1][item] = {x=1, y=2}
 local function _calculateCollisions()
+  local info
   local collisions = newWeakTable()
   local tested = {}
 
   _updateItems() -- refresh moving items info
 
-  -- for each item stored in bump
+  -- prioritize previous collisions (this should handle "walking over tiles")
+  for item, previouslyCollidingNeighbors in pairs(bump._prevCollisions) do
+    info = bump._items[item]
+    for neighbor,_ in pairs(previouslyCollidingNeighbors) do
+      _calculateItemNeighborCollision(item, info, neighbor, collisions, tested)
+    end
+  end
+
+  -- then calculate collisions for all the items
   for item, info in pairs(bump._items) do
     _calculateItemCollisions(item, info, collisions, tested)
   end
