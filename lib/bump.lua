@@ -121,11 +121,13 @@ local function _updateItem(item)
     -- update the bounding box info
     info.l, info.t, info.w, info.h = l, t, w, h
     bump._items[item] = info
+    bump._updatedItems[item] = info
   end
 end
 
 -- updates the cell information (what cells every item is stepping in) - this takes care of moving items
 local function _updateItems()
+  bump._updatedItems = newWeakTable()
   for item,_ in pairs(bump._items) do
     _updateItem(item)
   end
@@ -187,16 +189,8 @@ local function _calculateCollisions()
 
   _updateItems() -- refresh moving items info
 
-  -- prioritize previous collisions (this should handle "walking over tiles")
-  for item, previouslyCollidingNeighbors in pairs(bump._prevCollisions) do
-    info = bump._items[item]
-    for neighbor,_ in pairs(previouslyCollidingNeighbors) do
-      _calculateItemNeighborCollision(item, info, neighbor, collisions, tested)
-    end
-  end
-
-  -- then calculate collisions for all the items
-  for item, info in pairs(bump._items) do
+  -- then calculate collisions for all the updated items
+  for item, info in pairs(bump._updatedItems) do
     _calculateItemCollisions(item, info, collisions, tested)
   end
 
@@ -238,6 +232,7 @@ function bump.initialize(cellSize)
   bump._cells          = newWeakTable()
   bump._occupiedCells  = {} -- stores strong references to cells so that they are not gc'ed
   bump._items          = newWeakTable()
+  bump._updatedItems   = newWeakTable()
   bump._prevCollisions = newWeakTable()
 end
 
