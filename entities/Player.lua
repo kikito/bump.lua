@@ -18,17 +18,20 @@ function Player:initialize(x,y)
 end
 
 function Player:collision(block, dx, dy)
-  -- if we hit a wall, floor or ceiling reset the corresponding velocity to 0
-  if dx~=0 then self.vx = 0 end
-  if dy~=0 then self.vy = 0 end
+  if dx~=0 or dy~=0 then
+    -- if we hit a wall, floor or ceiling reset the corresponding velocity to 0
+    self.vx = dx == 0 and self.vx or 0
+    self.vy = dy == 0 and self.vy or 0
 
-  -- if we hit a floor, mark it as "under feet"
-  if dy < 0 then
-    self.underFeet[block] = true
+    -- if we hit a floor, mark it as "under feet"
+    if dy < 0 then
+      self.underFeet[block] = true
+    end
+
+    -- update the player position so that the intersection stops occurring
+    self.l, self.t = self.l + dx, self.t + dy
+    bump.update(self)
   end
-
-  -- update the player position so that the intersection stops occurring
-  self.l, self.t = self.l + dx, self.t + dy
 end
 
 function Player:endCollision(block)
@@ -64,6 +67,7 @@ function Player:update(dt, maxdt)
 
   self.vx, self.vy = bump.padVelocity(maxdt, vx, vy)
   self.l, self.t   = self.l + self.vx * dt, self.t + self.vy * dt
+  bump.update(self)
 end
 
 return Player

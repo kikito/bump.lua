@@ -121,23 +121,15 @@ local function _updateItem(item)
     -- update the bounding box info
     info.l, info.t, info.w, info.h = l, t, w, h
     bump._items[item] = info
-    bump._updatedItems[item] = info
-  end
-end
-
--- updates the cell information (what cells every item is stepping in) - this takes care of moving items
-local function _updateItems()
-  bump._updatedItems = newWeakTable()
-  for item,_ in pairs(bump._items) do
-    _updateItem(item)
   end
 end
 
 -- given an item and one of its neighbors, see if they collide. If yes,
 -- store the result in the collisions and tested tables
-local function _calculateItemNeighborCollision(item, info, neighbor, collisions, tested)
+-- invoke the bump collision callback and mark the collision as happened
+local function _collideItemWithNeighbor(item, neighbor, collisions, tested)
   -- store the collision, if it happened
-  local ninfo = bump._items[neighbor]
+  local info, ninfo = bump._items[item], bump._items[neighbor]
   collision, dx, dy = _boxCollision(
     info.l,  info.t,  info.w,  info.h,
     ninfo.l, ninfo.t, ninfo.w, ninfo.h
@@ -145,7 +137,9 @@ local function _calculateItemNeighborCollision(item, info, neighbor, collisions,
 
   if collision then
     collisions[item] = collisions[item] or newWeakTable()
-    collisions[item][neighbor] = {x=dx, y=dy}
+    collisions[item][neighbor] = true
+    bump.collision(item, neighbor, dx, dy)
+    if bump._prevCollisions[item] then bump._prevCollisions[item][neighbor] = nil end
   end
 
   -- mark the couple item-neighbor as tested, so the inverse is not calculated
@@ -153,8 +147,9 @@ local function _calculateItemNeighborCollision(item, info, neighbor, collisions,
   tested[item][neighbor] = true
 end
 
--- given an item, parse all its neighbors, updating the collisions & tested tables
-local function _calculateItemCollisions(item, info, collisions, tested)
+-- given an item, parse all its neighbors, updating the collisions & tested tables, and invoking the collision callback
+local function _collideItem(item, collisions, tested)
+  local info = bump._items[item]
   local row, cell
   local collision, dx, dy
 
@@ -170,7 +165,7 @@ local function _calculateItemCollisions(item, info, collisions, tested)
             if neighbor ~= item
             and not (tested[neighbor] and tested[neighbor][item])
             and bump.shouldCollide(item, neighbor) then
-              _calculateItemNeighborCollision(item, info, neighbor, collisions, tested)
+              _collideItemWithNeighbor(item, neighbor, collisions, tested)
             end
           end
         end
@@ -179,36 +174,15 @@ local function _calculateItemCollisions(item, info, collisions, tested)
   end
 end
 
--- Returns a new table containing references to all the calculated collisions
--- structure: { [item1] = { [item2] = {x=1,y=2} } }
--- so collisions[item1][item] = {x=1, y=2}
-local function _calculateCollisions()
-  local info
-  local collisions = newWeakTable()
-  local tested = {}
+-- Calculates the collisions that occur, returning a table in the form: collisions[item][neigbor] = true
+local function _collideItems()
+  local collisions, tested = newWeakTable(), {}
 
-  _updateItems() -- refresh moving items info
-
-  -- then calculate collisions for all the updated items
-  for item, info in pairs(bump._updatedItems) do
-    _calculateItemCollisions(item, info, collisions, tested)
+  for item,_ in pairs(bump._items) do
+    _collideItem(item, collisions, tested)
   end
 
   return collisions
-end
-
--- fires bump.Collision with the appropiate parameters
-local function _invokeCollision(collisions)
-  for item,neighbors in pairs(collisions) do
-    if bump._items[item] then
-      for neighbor, d in pairs(neighbors) do
-        if bump._items[neighbor] then
-          bump.collision(item, neighbor, d.x, d.y)
-          if bump._prevCollisions[item] then bump._prevCollisions[item][neighbor] = nil end
-        end
-      end
-    end
-  end
 end
 
 -- fires bump.endCollision with the appropiate parameters
@@ -217,7 +191,7 @@ local function _invokeEndCollision()
     if bump._items[item] then
       for neighbor, d in pairs(neighbors) do
         if bump._items[neighbor] then
-          bump.endCollision(item, neighbor, d.x, d.y)
+          bump.endCollision(item, neighbor)
         end
       end
     end
@@ -232,7 +206,6 @@ function bump.initialize(cellSize)
   bump._cells          = newWeakTable()
   bump._occupiedCells  = {} -- stores strong references to cells so that they are not gc'ed
   bump._items          = newWeakTable()
-  bump._updatedItems   = newWeakTable()
   bump._prevCollisions = newWeakTable()
 end
 
@@ -251,7 +224,11 @@ function bump.getBBox(item)
 end
 
 function bump.add(item)
-  _updateItem(item, {})
+  _updateItem(item)
+end
+
+function bump.update(item)
+  _updateItem(item)
 end
 
 function bump.remove(item)
@@ -260,9 +237,8 @@ function bump.remove(item)
 end
 
 function bump.check()
-  local collisions = _calculateCollisions()
+  local collisions = _collideItems()
 
-  _invokeCollision(collisions)
   _invokeEndCollision()
 
   bump._prevCollisions = collisions
