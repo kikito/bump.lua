@@ -34,7 +34,6 @@ function Player:collision(block, dx, dy)
 
     -- update the player position so that the intersection stops occurring
     self.l, self.t = self.l + dx, self.t + dy
-    bump.update(self)
   end
 end
 
@@ -71,7 +70,6 @@ function Player:update(dt, maxdt)
 
   self.vx, self.vy = bump.padVelocity(maxdt, vx, vy)
   self.l, self.t   = self.l + self.vx * dt, self.t + self.vy * dt
-  bump.update(self)
 end
 
 return Player

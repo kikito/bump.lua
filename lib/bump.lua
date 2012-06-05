@@ -145,6 +145,14 @@ local function _updateItem(item)
   end
 end
 
+-- Updates the cells occupied by all items
+local function _updateItems()
+  for item,_ in pairs(bump._items) do
+    _updateItem(item)
+  end
+end
+
+-- Returns the neighbors of an item, sorted by distance (closests first) & the list length
 local function _getItemNeighborsSorted(item)
   local info = bump._items[item]
   local neighbors, length = {}, 0
@@ -179,10 +187,19 @@ local function _collideItemWithNeighbor(item, neighbor, collisions, tested)
   )
 
   if collision then
+    -- store the colllision
     collisions[item] = collisions[item] or newWeakTable()
     collisions[item][neighbor] = true
+
+    -- invoke the collision callback
     bump.collision(item, neighbor, dx, dy)
+
+    -- mark the collision has "happened"
     if bump._prevCollisions[item] then bump._prevCollisions[item][neighbor] = nil end
+
+    -- recalculate the item & neighbor (in case they have moved)
+    _updateItem(item)
+    _updateItem(neighbor)
   end
 
   -- mark the couple item-neighbor as tested, so the inverse is not calculated
@@ -218,6 +235,8 @@ local function _collideItems()
 
   return collisions
 end
+
+
 
 -- fires bump.endCollision with the appropiate parameters
 local function _invokeEndCollision()
@@ -261,16 +280,14 @@ function bump.add(item)
   _updateItem(item)
 end
 
-function bump.update(item)
-  _updateItem(item)
-end
-
 function bump.remove(item)
   _unlink(item, bump._items[item])
   bump._items[item] = nil
 end
 
 function bump.check()
+  _updateItems()
+
   local collisions = _collideItems()
 
   _invokeEndCollision()
