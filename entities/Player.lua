@@ -10,6 +10,10 @@ local breakAccel    = 1000 -- the player acceleration when stopping/turning arou
 local jumpVelocity  =  400 -- the initial upwards velocity when jumping
 local gravityAccel  =  500 -- gravity, in pixels per second per second
 
+local function sign(x)
+  return x < 0 and -1 or (x > 0 and 1 or 0)
+end
+
 function Player:initialize(x,y)
   Entity.initialize(self,x,y,32,64)
   self.underFeet = {}
@@ -20,8 +24,8 @@ end
 function Player:collision(block, dx, dy)
   if dx~=0 or dy~=0 then
     -- if we hit a wall, floor or ceiling reset the corresponding velocity to 0
-    self.vx = dx == 0 and self.vx or 0
-    self.vy = dy == 0 and self.vy or 0
+    if dx~=0 and sign(self.vx) ~= sign(dx) then self.vx = 0 end
+    if dy~=0 and sign(self.vy) ~= sign(dy) then self.vy = 0 end
 
     -- if we hit a floor, mark it as "under feet"
     if dy < 0 then

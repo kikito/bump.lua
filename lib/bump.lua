@@ -8,7 +8,7 @@ local bump = {}
 
 local _weakKeys   = {__mode = 'k'}
 local _weakValues = {__mode = 'v'}
-local abs, floor, min = math.abs, math.floor, math.min
+local abs, floor, min, sort = math.abs, math.floor, math.min, table.sort
 
 local function newWeakTable(t, mt)
   return setmetatable(t or {}, mt or _weakKeys)
@@ -40,6 +40,24 @@ local function _boxCollision(l1,t1,w1,h1, l2,t2,w2,h2)
   end
   -- no collision; return false
   return false
+end
+
+local function _monoDistance(c, lower, upper)
+  return c < lower and lower-c or (c > upper and c-upper or min(c-lower, upper-c))
+end
+
+-- returns the squared distance between the center of item and the closest point in neighbor
+local function _squareDistance(item, neighbor)
+  local info, ninfo = bump._items[item], bump._items[neighbor]
+  local cx,cy,l,t,w,h = info.cx, info.cy, ninfo.l, ninfo.t, ninfo.w, ninfo.h
+  local dx,dy = _monoDistance(cx, l, l+w), _monoDistance(cy, t, t+h)
+  return dx*dx + dy*dy
+end
+
+local function _getNeighborSortFunction(item)
+  return function(a,b)
+    return _squareDistance(a, item) < _squareDistance(b,item)
+  end
 end
 
 -- given a world coordinate, return the coordinates of the cell that would contain it
@@ -118,10 +136,35 @@ local function _updateItem(item)
       info.gl, info.gt, info.gw, info.gh = gl, gt, gw, gh
     end
 
-    -- update the bounding box info
+    -- update the bounding box, center, and neighbor sorting function
     info.l, info.t, info.w, info.h = l, t, w, h
+    info.cx, info.cy = l+w*.5, t+h*0.5
+    info.neighborSort = info.neighborSort or _getNeighborSortFunction(item)
+
     bump._items[item] = info
   end
+end
+
+local function _getItemNeighborsSorted(item)
+  local info = bump._items[item]
+  local neighbors, length = {}, 0
+  local row, cell
+  for y=info.gt, info.gt + info.gh do
+    row = bump._cells[y]
+    if row then
+      for x=info.gl, info.gl + info.gw do
+        cell = row[x]
+        if cell and cell.itemCount > 0 then
+          for neighbor,_ in pairs(cell.items) do
+            length = length + 1
+            neighbors[length] = neighbor
+          end
+        end
+      end
+    end
+  end
+  sort(neighbors, info.neighborSort)
+  return neighbors, length
 end
 
 -- given an item and one of its neighbors, see if they collide. If yes,
@@ -149,27 +192,18 @@ end
 
 -- given an item, parse all its neighbors, updating the collisions & tested tables, and invoking the collision callback
 local function _collideItem(item, collisions, tested)
-  local info = bump._items[item]
-  local row, cell
-  local collision, dx, dy
+  local neighbor
+  local neighbors, length = _getItemNeighborsSorted(item)
 
-  -- parse the cells intersecting with item's boundingbox
-  for y=info.gt, info.gt + info.gh do
-    row = bump._cells[y]
-    if row then
-      for x=info.gl, info.gl + info.gw do
-        cell = row[x]
-        if cell and cell.itemCount > 0 then
-          -- check if there are any neighbors on that group of cells
-          for neighbor,_ in pairs(cell.items) do
-            if neighbor ~= item
-            and not (tested[neighbor] and tested[neighbor][item])
-            and bump.shouldCollide(item, neighbor) then
-              _collideItemWithNeighbor(item, neighbor, collisions, tested)
-            end
-          end
-        end
-      end
+  -- check if there are any neighbors on that group of cells
+  for i=1,length do
+    neighbor = neighbors[i]
+    if  bump._items[item]
+    and bump._items[neighbor]
+    and neighbor ~= item
+    and not (tested[neighbor] and tested[neighbor][item])
+    and bump.shouldCollide(item, neighbor) then
+      _collideItemWithNeighbor(item, neighbor, collisions, tested)
     end
   end
 end
