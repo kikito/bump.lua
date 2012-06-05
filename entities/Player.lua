@@ -1,6 +1,8 @@
 -- this file defines how the player moves/reacts to collisions
 
 local GravityEntity = require 'entities.GravityEntity'
+local Block         = require 'entities.Block'
+local Coin          = require 'entities.Coin'
 
 local Player        = class('Player', GravityEntity)
 
@@ -18,15 +20,21 @@ function Player:initialize(x,y)
   self.canFly = false
 end
 
-function Player:collision(block, dx, dy)
-  if dx~=0 or dy~=0 then
+function Player:shouldCollide(other)
+  return instanceOf(Block, other) or instanceOf(Coin, other)
+end
+
+function Player:collision(other, dx, dy)
+  if instanceOf(Coin, other) then
+    other:destroy()
+  elseif dx~=0 or dy~=0 then -- it can only be a block then
     -- if we hit a wall, floor or ceiling reset the corresponding velocity to 0
     if dx~=0 and sign(self.vx) ~= sign(dx) then self.vx = 0 end
     if dy~=0 and sign(self.vy) ~= sign(dy) then self.vy = 0 end
 
     -- if we hit a floor, mark it as "under feet"
     if dy < 0 then
-      self.underFeet[block] = true
+      self.underFeet[other] = true
     end
 
     -- update the player position so that the intersection stops occurring
@@ -52,12 +60,8 @@ function Player:update(dt, maxdt)
     vx = vx - dt * (vx > 0 and breakAccel or runAccel)
   elseif love.keyboard.isDown("right") then -- right
     vx = vx + dt * (vx < 0 and breakAccel or runAccel)
-  elseif vx < -5 then -- break to the right
-    vx = vx + dt * breakAccel
-  elseif vx >  5 then -- break to the left
-    vx = vx - dt * breakAccel
-  else
-    vx = 0
+  else -- break until stopping
+    vx = vx - dt * breakAccel * sign(vx)
   end
 
   if love.keyboard.isDown("up") and (self.canFly or self:isOnGround()) then -- jump/fly
@@ -67,6 +71,11 @@ function Player:update(dt, maxdt)
   self.vx, self.vy = vx, vy
 
   GravityEntity.update(self, dt, maxdt)
+end
+
+function Player:draw()
+  love.graphics.setColor(0,255,0)
+  love.graphics.rectangle('line', self:getBBox())
 end
 
 return Player

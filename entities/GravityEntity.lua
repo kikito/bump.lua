@@ -4,15 +4,26 @@ local Entity        = require 'entities.Entity'
 local GravityEntity = class('GravityEntity', Entity)
 
 local gravityAccel  =  500 -- gravity, in pixels per second per second
+local minVelocity   =    5
+
+local abs = math.abs
 
 local function pad(x, min, max)
   return x < min and min or (x > max and max or x)
+end
+
+local function zero(x, limit)
+  return abs(x) < limit and 0 or x
 end
 
 local function padVelocity(maxdt, vx, vy)
   local max = bump.getCellSize()/maxdt
   local min = -max
   return pad(vx, min, max), pad(vy, min, max)
+end
+
+local function zeroVelocity(vx, vy)
+  return zero(vx, minVelocity), zero(vy, minVelocity)
 end
 
 function GravityEntity:initialize(x,y,w,h)
@@ -23,7 +34,7 @@ end
 
 function GravityEntity:update(dt, maxdt)
   self.vy = self.vy + gravityAccel * dt
-  self.vx, self.vy = padVelocity(maxdt, self.vx, self.vy)
+  self.vx, self.vy = zeroVelocity(padVelocity(maxdt, self.vx, self.vy))
   self.l, self.t   = self.l + self.vx * dt, self.t + self.vy * dt
 end
 
