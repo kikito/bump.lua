@@ -1,33 +1,20 @@
 -- this file defines how the player moves/reacts to collisions
 
-local bump          = require 'lib.bump'
-local Entity        = require 'entities.Entity'
+local GravityEntity = require 'entities.GravityEntity'
 
-local Player        = class('Player', Entity)
+local Player        = class('Player', GravityEntity)
 
 local runAccel      =  500 -- the player acceleration while going left/right
 local breakAccel    = 1000 -- the player acceleration when stopping/turning around
 local jumpVelocity  =  400 -- the initial upwards velocity when jumping
-local gravityAccel  =  500 -- gravity, in pixels per second per second
 
 local function sign(x)
   return x < 0 and -1 or (x > 0 and 1 or 0)
 end
 
-local function pad(x, min, max)
-  return x < min and min or (x > max and max or x)
-end
-
-local function padVelocity(maxdt, vx, vy)
-  local max = bump.getCellSize()/maxdt
-  local min = -max
-  return pad(vx, min, max), pad(vy, min, max)
-end
-
 function Player:initialize(x,y)
-  Entity.initialize(self,x,y,32,64)
+  GravityEntity.initialize(self,x,y,32,64)
   self.underFeet = {}
-  self.vx, self.vy = 0,0
   self.canFly = false
 end
 
@@ -73,13 +60,13 @@ function Player:update(dt, maxdt)
     vx = 0
   end
 
-  vy = vy + gravityAccel * dt
   if love.keyboard.isDown("up") and (self.canFly or self:isOnGround()) then -- jump/fly
     vy = -jumpVelocity
   end
 
-  self.vx, self.vy = padVelocity(maxdt, vx, vy)
-  self.l, self.t   = self.l + self.vx * dt, self.t + self.vy * dt
+  self.vx, self.vy = vx, vy
+
+  GravityEntity.update(self, dt, maxdt)
 end
 
 return Player
