@@ -295,15 +295,11 @@ function bump.check()
   bump._prevCollisions = collisions
 end
 
-function bump.padVelocity(maxdt, vx, vy)
-  if maxdt == 0 or (vx == 0 and vy == 0) then return 0,0 end
-  local maxV = bump._cellSize/maxdt
-  if abs(vx) > maxV then vx = vx < 0 and -maxV or maxV end
-  if abs(vy) > maxV then vy = vy < 0 and -maxV or maxV end
-  return vx, vy
+function bump.getCellSize()
+  return bump._cellSize
 end
 
-bump.initialize(32)
+bump.initialize(128)
 
 
 return bump

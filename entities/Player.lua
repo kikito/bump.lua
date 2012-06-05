@@ -14,6 +14,16 @@ local function sign(x)
   return x < 0 and -1 or (x > 0 and 1 or 0)
 end
 
+local function pad(x, min, max)
+  return x < min and min or (x > max and max or x)
+end
+
+local function padVelocity(maxdt, vx, vy)
+  local max = bump.getCellSize()/maxdt
+  local min = -max
+  return pad(vx, min, max), pad(vy, min, max)
+end
+
 function Player:initialize(x,y)
   Entity.initialize(self,x,y,32,64)
   self.underFeet = {}
@@ -68,7 +78,7 @@ function Player:update(dt, maxdt)
     vy = -jumpVelocity
   end
 
-  self.vx, self.vy = bump.padVelocity(maxdt, vx, vy)
+  self.vx, self.vy = padVelocity(maxdt, vx, vy)
   self.l, self.t   = self.l + self.vx * dt, self.t + self.vy * dt
 end
 

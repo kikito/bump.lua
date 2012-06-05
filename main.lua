@@ -21,9 +21,6 @@ local instructions = [[
     right shift: toggle fly (%s)
 ]]
 
-
-bump.initialize(64)
-
 function bump.collision(obj1, obj2, dx, dy)
   obj1:collision(obj2,  dx,  dy)
   obj2:collision(obj1, -dx, -dy)
