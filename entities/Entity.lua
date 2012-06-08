@@ -24,10 +24,6 @@ function Entity:destroy()
   entities[self] = nil
 end
 
-function Entity:draw()
-  love.graphics.setColor(255,255,255)
-  love.graphics.rectangle('line', self.l, self.t, self.w, self.h)
-end
 
 function Entity:update()
 end

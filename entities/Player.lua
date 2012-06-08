@@ -18,6 +18,7 @@ function Player:initialize(x,y)
   GravityEntity.initialize(self,x,y,32,64)
   self.underFeet = {}
   self.canFly = false
+  self.coins = 0
 end
 
 function Player:shouldCollide(other)
@@ -27,6 +28,7 @@ end
 function Player:collision(other, dx, dy)
   if instanceOf(Coin, other) then
     other:destroy()
+    self.coins = self.coins + 1
   elseif dx~=0 or dy~=0 then -- it can only be a block then
     -- if we hit a wall, floor or ceiling reset the corresponding velocity to 0
     if dx~=0 and sign(self.vx) ~= sign(dx) then self.vx = 0 end

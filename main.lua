@@ -57,16 +57,26 @@ function love.update(dt)
   camera.lookAt(player:getCenter())
 end
 
+local function drawEntity(entity)
+  entity:draw()
+end
+
 function love.draw()
   camera.draw(function(l,t,w,h)
-    if drawDebug then bump_debug.draw() end
-    Entity:drawAll(l,t,w,h)
+    if drawDebug then bump_debug.draw(l,t,w,h) end
+    bump.each(drawEntity, l,t,w,h)
   end)
+
+  love.graphics.setColor(255, 255, 255)
+
   local msg = instructions:format(tostring(drawDebug), tostring(player.canFly))
   love.graphics.print(msg, 550, 10)
+  love.graphics.print(("coins: %d"):format(player.coins), 10, 10)
 
-  local statistics = ("fps: %d, mem: %dKB"):format(love.timer.getFPS(), collectgarbage("count"))
-  love.graphics.print(statistics, 630, 580 )
+  if drawDebug then
+    local statistics = ("fps: %d, mem: %dKB"):format(love.timer.getFPS(), collectgarbage("count"))
+    love.graphics.print(statistics, 630, 580 )
+  end
 end
 
 function love.keypressed(k)
