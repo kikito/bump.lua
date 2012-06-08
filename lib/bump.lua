@@ -198,7 +198,7 @@ end
 -- given an item and one of its neighbors, see if they collide. If yes,
 -- store the result in the collisions and tested tables
 -- invoke the bump collision callback and mark the collision as happened
-local function _collideItemWithNeighbor(item, neighbor, tested)
+local function _collideItemWithNeighbor(item, neighbor, collisions, tested)
   -- store the collision, if it happened
   local info, ninfo = bump._items[item], bump._items[neighbor]
   collision, dx, dy = _boxCollision(
@@ -208,8 +208,8 @@ local function _collideItemWithNeighbor(item, neighbor, tested)
 
   if collision then
     -- store the colllision
-    bump._collisions[item] = bump._collisions[item] or newWeakTable()
-    bump._collisions[item][neighbor] = true
+    collisions[item] = collisions[item] or newWeakTable()
+    collisions[item][neighbor] = true
 
     -- invoke the collision callback
     bump.collision(item, neighbor, dx, dy)
@@ -228,7 +228,7 @@ local function _collideItemWithNeighbor(item, neighbor, tested)
 end
 
 -- given an item, parse all its neighbors, updating the collisions & tested tables, and invoking the collision callback
-local function _collideItem(item, tested)
+local function _collideItemWithNeighbors(item, collisions, tested)
   local neighbor
   local neighbors, length = _getItemNeighborsSorted(item)
 
@@ -240,19 +240,17 @@ local function _collideItem(item, tested)
     and neighbor ~= item
     and not (tested[neighbor] and tested[neighbor][item])
     and bump.shouldCollide(item, neighbor) then
-      _collideItemWithNeighbor(item, neighbor, tested)
+      _collideItemWithNeighbor(item, neighbor, collisions, tested)
     end
   end
 end
 
 -- Calculates the collisions that occur, returning a table in the form: collisions[item][neigbor] = true
 local function _collideItems()
-  bump._collisions = newWeakTable()
-
-  local tested = newWeakTable(), newWeakTable()
+  local collisions, tested = newWeakTable(), newWeakTable()
 
   for item,_ in pairs(bump._items) do
-    _collideItem(item, tested)
+    _collideItemWithNeighbors(item, collisions, tested)
   end
 
   return collisions
@@ -322,11 +320,11 @@ end
 function bump.collide()
   _updateItems()
 
-  _collideItems()
+  local collisions = _collideItems()
 
   _invokeEndCollision()
 
-  bump._prevCollisions = bump._collisions
+  bump._prevCollisions = collisions
 end
 
 -- Applies a function (signature: function(cell, gx, gy) end) to all the cells that "touch"
