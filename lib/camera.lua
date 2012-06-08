@@ -37,16 +37,17 @@ local function lookAt(x,y)
   setViewport(math.floor(x - viewport.w / 2), math.floor(y - viewport.h / 2))
 end
 
-local function draw(f)
-  love.graphics.push()
-  love.graphics.translate(-viewport.l, -viewport.t)
-  f()
-  love.graphics.pop()
-end
-
 local function getViewport()
   return viewport.l, viewport.t, viewport.w, viewport.h
 end
+
+local function draw(f)
+  love.graphics.push()
+  love.graphics.translate(-viewport.l, -viewport.t)
+  f(getViewport())
+  love.graphics.pop()
+end
+
 
 return {
   setViewport = setViewport,

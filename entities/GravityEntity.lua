@@ -1,3 +1,5 @@
+-- this file has common behaviour for entities affected by gravity (The player and Coins)
+
 local bump          = require 'lib.bump'
 local Entity        = require 'entities.Entity'
 

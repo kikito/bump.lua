@@ -1,7 +1,7 @@
 local map = {}
 
 local width = 4000
-local height = 4000
+local height = 2000
 
 local Entity     = require 'entities.Entity'
 local Block      = require 'entities.Block'
@@ -25,9 +25,9 @@ function map.reset()
   end
 
   -- random blocks
-  for i=1,200 do
+  for i=1,100 do
     Block:new(random(100, width-200),
-              random(100, height-100),
+              random(100, height-150),
               random(32, 100),
               random(32, 100))
   end

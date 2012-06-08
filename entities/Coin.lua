@@ -1,3 +1,5 @@
+-- This file represents coins. Coins can bounce around, and be taken by the player
+
 local GravityEntity = require 'entities.GravityEntity'
 local Block         = require 'entities.Block'
 

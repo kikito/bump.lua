@@ -8,6 +8,8 @@ local bump = {}
 
 local _weakKeys   = {__mode = 'k'}
 local _weakValues = {__mode = 'v'}
+local _defaultCellSize = 128
+
 local abs, floor, min, sort = math.abs, math.floor, math.min, table.sort
 
 local function newWeakTable(t, mt)
@@ -54,12 +56,6 @@ local function _squareDistance(item, neighbor)
   return dx*dx + dy*dy
 end
 
-local function _getNeighborSortFunction(item)
-  return function(a,b)
-    return _squareDistance(a, item) < _squareDistance(b,item)
-  end
-end
-
 -- given a world coordinate, return the coordinates of the cell that would contain it
 local function _toGrid(wx, wy)
   return floor(wx / bump._cellSize) + 1, floor(wy / bump._cellSize) + 1
@@ -73,30 +69,41 @@ local function _toGridBox(wl, wt, ww, wh)
   return l, t, r-l, b-t
 end
 
--- returns (or creates, if it doesn't exist) a cell, given its coordinates (on grid terms)
-local function _getCell(x, y)
-  bump._cells[y]    = bump._cells[y]    or newWeakTable({}, _weakValues)
-  bump._cells[y][x] = bump._cells[y][x] or newWeakTable({itemCount = 0, items = newWeakTable()})
-  return bump._cells[y][x]
+-- returns, given its coordinates (on grid terms)
+-- If createIfNil is true, it creates the cells if they don't exist
+local function _getCell(gx, gy, createIfNil)
+  if not createIfNil then return bump._cells[gy] and bump._cells[gy][gx] end
+  bump._cells[gy]     = bump._cells[gy]     or newWeakTable({}, _weakValues)
+  bump._cells[gy][gx] = bump._cells[gy][gx] or newWeakTable({itemCount = 0, items = newWeakTable()})
+  return bump._cells[gy][gx]
 end
 
--- parses the cells touching one item, and removes the item from their list of items
--- does not create new cells
-local function _unlink(item, info)
-  info = info or bump._items[item]
-  if info then
-    local row, cell
-    for y=info.gt, info.gt+info.gh do
-      row = bump._cells[y]
-      if row then
-        for x=info.gl, info.gl+info.gw do
-          cell = row[x]
-          if cell then
-            cell.items[item] = nil
-            cell.itemCount = cell.itemCount - 1
-            if cell.itemCount == 0 then
-              bump._occupiedCells[cell] = nil
-            end
+
+-- applies a function to all cells in a given region. The region must be given in the form of gl,gt,gw,gh
+-- (if the region desired is on world coordinates, it must be transformed in grid coords with _toGridBox)
+-- if the last parameter is true, the function will also create the cells as it moves
+local function _eachCell(f, gl,gt,gw,gh, createIfNil)
+  local cell
+  for y=gt, gt+gh do
+    for x=gl, gl+gw do
+      cell = _getCell(x,y, createIfNil)
+      if cell then f(cell, x, y) end
+    end
+  end
+end
+
+-- Applies f to all the items contained in the grid region described by gl,gt,gw,gh
+-- Keeps an account of all the items in the region
+local function _eachItem(f, gl,gt,gw,gh)
+  local parsed = {}
+  for y=gt, gt+gh do
+    for x=gl, gl+gw do
+      cell = _getCell(x,y)
+      if cell and cell.itemCount > 0 then
+        for item,_ in pairs(cell.items) do
+          if not parsed[item] then
+            f(item)
+            parsed[item]=true
           end
         end
       end
@@ -104,23 +111,44 @@ local function _unlink(item, info)
   end
 end
 
+-- Given an item and a cell, remove the item from the cell's list of items
+local function _unlinkItemAndCell(item, cell)
+  cell.items[item] = nil
+  cell.itemCount = cell.itemCount - 1
+  if cell.itemCount == 0 then
+    bump._occupiedCells[cell] = nil
+  end
+end
+
+-- parses the cells touching one item, and removes the item from their list of items
+-- does not create new cells
+local function _unlinkItem(item)
+  local info = bump._items[item]
+  if info and info.gl then
+    info.unlinkCell = info.unlinkCell or function(cell) _unlinkItemAndCell(item, cell) end
+    _eachCell(info.unlinkCell, info.gl, info.gt, info.gw, info.gh)
+  end
+end
+
+-- Given an item and a cell, add the item to the items list of the cell. Mark the cell as "not empty"
+local function _linkItemAndCell(item, cell)
+  cell.items[item] = true
+  cell.itemCount = cell.itemCount + 1
+  bump._occupiedCells[cell] = true
+end
+
 -- parses all the cells that touch one item, adding the item to their list of items
 -- creates cells if they don't exist
-local function _link(item, gl, gt, gw, gh)
-  local cell
-  for y=gt, gt+gh do
-    for x=gl, gl+gw do
-     cell = _getCell(x,y)
-     cell.items[item] = true
-     cell.itemCount = cell.itemCount + 1
-     bump._occupiedCells[cell] = true
-    end
-  end
+local function _linkItem(item, gl, gt, gw, gh)
+  local info = bump._items[item]
+  info.linkCell = info.linkCell or function(cell) _linkItemAndCell(item, cell) end
+  _eachCell(info.linkCell, info.gl, info.gt, info.gw, info.gh, true)
 end
 
 -- updates the information bump has about one item - its boundingbox, and containing cells
 local function _updateItem(item)
-  local info = bump._items[item] or {}
+  local info = bump._items[item]
+  if not info then return end
 
   -- if the new bounding box is different from the stored one
   local l,t,w,h = bump.getBBox(item)
@@ -129,19 +157,16 @@ local function _updateItem(item)
     local gl, gt, gw, gh = _toGridBox(l, t, w, h)
     if gl ~= info.gl or gt ~= info.gt or gw ~= info.gw or gh ~= info.gh then
       -- remove this item from all the cells that used to contain it
-      _unlink(item)
-      -- then add it to the new cells
-      _link(item, gl, gt, gw, gh)
-      -- and update the grid info
+      _unlinkItem(item)
+      -- update the grid info
       info.gl, info.gt, info.gw, info.gh = gl, gt, gw, gh
+      -- then add it to the new cells
+      _linkItem(item)
     end
 
     -- update the bounding box, center, and neighbor sorting function
     info.l, info.t, info.w, info.h = l, t, w, h
     info.cx, info.cy = l+w*.5, t+h*0.5
-    info.neighborSort = info.neighborSort or _getNeighborSortFunction(item)
-
-    bump._items[item] = info
   end
 end
 
@@ -156,29 +181,24 @@ end
 local function _getItemNeighborsSorted(item)
   local info = bump._items[item]
   local neighbors, length = {}, 0
-  local row, cell
-  for y=info.gt, info.gt + info.gh do
-    row = bump._cells[y]
-    if row then
-      for x=info.gl, info.gl + info.gw do
-        cell = row[x]
-        if cell and cell.itemCount > 0 then
-          for neighbor,_ in pairs(cell.items) do
-            length = length + 1
-            neighbors[length] = neighbor
-          end
-        end
-      end
+  local collectNeighbor = function(neighbor)
+    if neighbor ~= item then
+      length = length + 1
+      neighbors[length] = neighbor
     end
   end
+  _eachItem(collectNeighbor, info.gl, info.gt, info.gw, info.gh)
+
+  info.neighborSort    = info.neighborSort or function(a,b)  return _squareDistance(a, item) < _squareDistance(b,item) end
   sort(neighbors, info.neighborSort)
+
   return neighbors, length
 end
 
 -- given an item and one of its neighbors, see if they collide. If yes,
 -- store the result in the collisions and tested tables
 -- invoke the bump collision callback and mark the collision as happened
-local function _collideItemWithNeighbor(item, neighbor, collisions, tested)
+local function _collideItemWithNeighbor(item, neighbor, tested)
   -- store the collision, if it happened
   local info, ninfo = bump._items[item], bump._items[neighbor]
   collision, dx, dy = _boxCollision(
@@ -188,8 +208,8 @@ local function _collideItemWithNeighbor(item, neighbor, collisions, tested)
 
   if collision then
     -- store the colllision
-    collisions[item] = collisions[item] or newWeakTable()
-    collisions[item][neighbor] = true
+    bump._collisions[item] = bump._collisions[item] or newWeakTable()
+    bump._collisions[item][neighbor] = true
 
     -- invoke the collision callback
     bump.collision(item, neighbor, dx, dy)
@@ -203,12 +223,12 @@ local function _collideItemWithNeighbor(item, neighbor, collisions, tested)
   end
 
   -- mark the couple item-neighbor as tested, so the inverse is not calculated
-  tested[item] = tested[item] or {}
+  tested[item] = tested[item] or newWeakTable()
   tested[item][neighbor] = true
 end
 
 -- given an item, parse all its neighbors, updating the collisions & tested tables, and invoking the collision callback
-local function _collideItem(item, collisions, tested)
+local function _collideItem(item, tested)
   local neighbor
   local neighbors, length = _getItemNeighborsSorted(item)
 
@@ -220,22 +240,23 @@ local function _collideItem(item, collisions, tested)
     and neighbor ~= item
     and not (tested[neighbor] and tested[neighbor][item])
     and bump.shouldCollide(item, neighbor) then
-      _collideItemWithNeighbor(item, neighbor, collisions, tested)
+      _collideItemWithNeighbor(item, neighbor, tested)
     end
   end
 end
 
 -- Calculates the collisions that occur, returning a table in the form: collisions[item][neigbor] = true
 local function _collideItems()
-  local collisions, tested = newWeakTable(), {}
+  bump._collisions = newWeakTable()
+
+  local tested = newWeakTable(), newWeakTable()
 
   for item,_ in pairs(bump._items) do
-    _collideItem(item, collisions, tested)
+    _collideItem(item, tested)
   end
 
   return collisions
 end
-
 
 
 -- fires bump.endCollision with the appropiate parameters
@@ -254,52 +275,79 @@ end
 
 -- public interface
 
+-- (Optional) Initializes the lib with a cell size (see detault at the begining of file)
 function bump.initialize(cellSize)
-  bump._cellSize       = cellSize or 32
+  bump._cellSize       = cellSize or _defaultCellSize
   bump._cells          = newWeakTable()
   bump._occupiedCells  = {} -- stores strong references to cells so that they are not gc'ed
   bump._items          = newWeakTable()
   bump._prevCollisions = newWeakTable()
 end
 
-function bump.collision(item1, item2, vx, vy)
+-- (Overridable). Called when two objects start colliding
+-- dx, dy is how much you have to move item1 so it doesn't
+-- collide any more
+function bump.collision(item1, item2, dx, dy)
 end
 
+-- (Overridable) Called when two objects stop colliding
 function bump.endCollision(item1, item2)
 end
 
+-- (Overridable) Returns true if two objects can collide, false otherwise
+-- Useful for making categories, and groups of objects that don't collide
+-- Between each other
 function bump.shouldCollide(item1, item2)
   return true
 end
 
+-- (Overridable) Given an item, return its bounding box (l,t,w,h)
 function bump.getBBox(item)
   return item:getBBox()
 end
 
+-- Adds an item to bump
 function bump.add(item)
+  bump._items[item] = bump._items[item] or {}
   _updateItem(item)
 end
 
+-- Removes an item from bump
 function bump.remove(item)
-  _unlink(item, bump._items[item])
+  _unlinkItem(item)
   bump._items[item] = nil
 end
 
-function bump.check()
+-- Performs collisions and invokes callbacks
+function bump.collide()
   _updateItems()
 
-  local collisions = _collideItems()
+  _collideItems()
 
   _invokeEndCollision()
 
-  bump._prevCollisions = collisions
+  bump._prevCollisions = bump._collisions
 end
 
+-- Applies a function (signature: function(cell, gx, gy) end) to all the cells that "touch"
+-- the specified rectangle. If no rectangle is specified, use all cells instead
+function bump.eachCell(f, l,t,w,h)
+  _eachCell(f, _toGridBox(l,t,w,h))
+end
+
+-- Applies a function (signature: function(item) end) to all the items that "touch"
+-- the cells specified by a rectangle. If no rectangle is given, the function
+-- is applied to all items
+function bump.each(f, l,t,w,h)
+  _eachItem(f, _toGridBox(l,t,w,h))
+end
+
+-- returns the size of the cell that bump is using
 function bump.getCellSize()
   return bump._cellSize
 end
 
-bump.initialize(128)
+bump.initialize()
 
 
 return bump

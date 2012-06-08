@@ -53,14 +53,14 @@ end
 function love.update(dt)
   dt = math.min(dt, maxdt)
   Entity:updateAll(dt, maxdt)
-  bump.check()
+  bump.collide()
   camera.lookAt(player:getCenter())
 end
 
 function love.draw()
-  camera.draw(function()
+  camera.draw(function(l,t,w,h)
     if drawDebug then bump_debug.draw() end
-    Entity:drawAll()
+    Entity:drawAll(l,t,w,h)
   end)
   local msg = instructions:format(tostring(drawDebug), tostring(player.canFly))
   love.graphics.print(msg, 550, 10)
