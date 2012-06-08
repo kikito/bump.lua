@@ -61,11 +61,13 @@ local function drawEntity(entity)
   entity:draw()
 end
 
+local function drawCameraStuff(l,t,w,h)
+  if drawDebug then bump_debug.draw(l,t,w,h) end
+  bump.each(drawEntity, l,t,w,h)
+end
+
 function love.draw()
-  camera.draw(function(l,t,w,h)
-    if drawDebug then bump_debug.draw(l,t,w,h) end
-    bump.each(drawEntity, l,t,w,h)
-  end)
+  camera.draw(drawCameraStuff)
 
   love.graphics.setColor(255, 255, 255)
 

@@ -9,8 +9,10 @@ function Block:initialize(l,t,w,h)
 end
 
 function Entity:draw()
+  love.graphics.setColor(220,150,150,100)
+  love.graphics.rectangle('fill', self:getBBox())
   love.graphics.setColor(220,150,150)
-  love.graphics.rectangle('line', self.l, self.t, self.w, self.h)
+  love.graphics.rectangle('line', self:getBBox())
 end
 
 function Block:shouldCollide(other)

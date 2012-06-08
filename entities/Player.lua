@@ -76,7 +76,11 @@ function Player:update(dt, maxdt)
 end
 
 function Player:draw()
-  love.graphics.setColor(0,255,0)
+  local r,g,b = 0,255,255
+  if self.canFly then r,g,b = 0,255,0 end
+  love.graphics.setColor(r,g,b,100)
+  love.graphics.rectangle('fill', self:getBBox())
+  love.graphics.setColor(r,g,b)
   love.graphics.rectangle('line', self:getBBox())
 end
 

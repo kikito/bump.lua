@@ -33,6 +33,8 @@ function Coin:collision(other, dx, dy)
 end
 
 function Coin:draw()
+  love.graphics.setColor(255,255,0,100)
+  love.graphics.rectangle('fill', self:getBBox())
   love.graphics.setColor(255,255,0)
   love.graphics.rectangle('line', self:getBBox())
 end
