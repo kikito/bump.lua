@@ -207,7 +207,7 @@ local function _collideItemWithNeighbor(item, neighbor, collisions, tested)
   )
 
   if collision then
-    -- store the colllision
+    -- store the collision
     collisions[item] = collisions[item] or newWeakTable()
     collisions[item][neighbor] = true
 
