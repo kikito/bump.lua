@@ -10,11 +10,18 @@ local _weakKeys   = {__mode = 'k'}
 local _weakValues = {__mode = 'v'}
 local _defaultCellSize = 128
 
-local abs, floor, min, sort = math.abs, math.floor, math.min, table.sort
+local abs, floor, sort = math.abs, math.floor, table.sort
 
 local function newWeakTable(t, mt)
   return setmetatable(t or {}, mt or _weakKeys)
 end
+
+-- a bit faster than math.min
+local function min(a,b) return a < b and a or b end
+
+-- private bump properties
+local  __cellSize, __cells, __occupiedCells, __items, __prevCollisions
+
 
 -- performs the collision between two bounding boxes
 -- if no collision, it returns false
@@ -50,7 +57,7 @@ end
 
 -- returns the squared distance between the center of item and the closest point in neighbor
 local function _squareDistance(item, neighbor)
-  local info, ninfo = bump._items[item], bump._items[neighbor]
+  local info, ninfo = __items[item], __items[neighbor]
   local cx,cy,l,t,w,h = info.cx, info.cy, ninfo.l, ninfo.t, ninfo.w, ninfo.h
   local dx,dy = _monoDistance(cx, l, l+w), _monoDistance(cy, t, t+h)
   return dx*dx + dy*dy
@@ -58,7 +65,7 @@ end
 
 -- given a world coordinate, return the coordinates of the cell that would contain it
 local function _toGrid(wx, wy)
-  return floor(wx / bump._cellSize) + 1, floor(wy / bump._cellSize) + 1
+  return floor(wx / __cellSize) + 1, floor(wy / __cellSize) + 1
 end
 
 -- given a box in world coordinates, return a box in cell coordinates that contains it
@@ -72,10 +79,10 @@ end
 -- returns, given its coordinates (on grid terms)
 -- If createIfNil is true, it creates the cells if they don't exist
 local function _getCell(gx, gy, createIfNil)
-  if not createIfNil then return bump._cells[gy] and bump._cells[gy][gx] end
-  bump._cells[gy]     = bump._cells[gy]     or newWeakTable({}, _weakValues)
-  bump._cells[gy][gx] = bump._cells[gy][gx] or newWeakTable({itemCount = 0, items = newWeakTable()})
-  return bump._cells[gy][gx]
+  if not createIfNil then return __cells[gy] and __cells[gy][gx] end
+  __cells[gy]     = __cells[gy]     or newWeakTable({}, _weakValues)
+  __cells[gy][gx] = __cells[gy][gx] or newWeakTable({itemCount = 0, items = newWeakTable()})
+  return __cells[gy][gx]
 end
 
 
@@ -116,14 +123,14 @@ local function _unlinkItemAndCell(item, cell)
   cell.items[item] = nil
   cell.itemCount = cell.itemCount - 1
   if cell.itemCount == 0 then
-    bump._occupiedCells[cell] = nil
+    __occupiedCells[cell] = nil
   end
 end
 
 -- parses the cells touching one item, and removes the item from their list of items
 -- does not create new cells
 local function _unlinkItem(item)
-  local info = bump._items[item]
+  local info = __items[item]
   if info and info.gl then
     info.unlinkCell = info.unlinkCell or function(cell) _unlinkItemAndCell(item, cell) end
     _eachCell(info.unlinkCell, info.gl, info.gt, info.gw, info.gh)
@@ -134,20 +141,20 @@ end
 local function _linkItemAndCell(item, cell)
   cell.items[item] = true
   cell.itemCount = cell.itemCount + 1
-  bump._occupiedCells[cell] = true
+  __occupiedCells[cell] = true
 end
 
 -- parses all the cells that touch one item, adding the item to their list of items
 -- creates cells if they don't exist
 local function _linkItem(item, gl, gt, gw, gh)
-  local info = bump._items[item]
+  local info = __items[item]
   info.linkCell = info.linkCell or function(cell) _linkItemAndCell(item, cell) end
   _eachCell(info.linkCell, info.gl, info.gt, info.gw, info.gh, true)
 end
 
 -- updates the information bump has about one item - its boundingbox, and containing cells
 local function _updateItem(item)
-  local info = bump._items[item]
+  local info = __items[item]
   if not info then return end
 
   -- if the new bounding box is different from the stored one
@@ -172,14 +179,14 @@ end
 
 -- Updates the cells occupied by all items
 local function _updateItems()
-  for item,_ in pairs(bump._items) do
+  for item,_ in pairs(__items) do
     _updateItem(item)
   end
 end
 
 -- Returns the neighbors of an item, sorted by distance (closests first) & the list length
 local function _getItemNeighborsSorted(item)
-  local info = bump._items[item]
+  local info = __items[item]
   local neighbors, length = {}, 0
   local collectNeighbor = function(neighbor)
     if neighbor ~= item then
@@ -200,7 +207,7 @@ end
 -- invoke the bump collision callback and mark the collision as happened
 local function _collideItemWithNeighbor(item, neighbor, collisions, tested)
   -- store the collision, if it happened
-  local info, ninfo = bump._items[item], bump._items[neighbor]
+  local info, ninfo = __items[item], __items[neighbor]
   collision, dx, dy = _boxCollision(
     info.l,  info.t,  info.w,  info.h,
     ninfo.l, ninfo.t, ninfo.w, ninfo.h
@@ -215,7 +222,7 @@ local function _collideItemWithNeighbor(item, neighbor, collisions, tested)
     bump.collision(item, neighbor, dx, dy)
 
     -- mark the collision has "happened"
-    if bump._prevCollisions[item] then bump._prevCollisions[item][neighbor] = nil end
+    if __prevCollisions[item] then __prevCollisions[item][neighbor] = nil end
 
     -- recalculate the item & neighbor (in case they have moved)
     _updateItem(item)
@@ -235,8 +242,8 @@ local function _collideItemWithNeighbors(item, collisions, tested)
   -- check if there are any neighbors on that group of cells
   for i=1,length do
     neighbor = neighbors[i]
-    if  bump._items[item]
-    and bump._items[neighbor]
+    if  __items[item]
+    and __items[neighbor]
     and neighbor ~= item
     and not (tested[neighbor] and tested[neighbor][item])
     and bump.shouldCollide(item, neighbor) then
@@ -249,7 +256,7 @@ end
 local function _collideItems()
   local collisions, tested = newWeakTable(), newWeakTable()
 
-  for item,_ in pairs(bump._items) do
+  for item,_ in pairs(__items) do
     _collideItemWithNeighbors(item, collisions, tested)
   end
 
@@ -259,10 +266,10 @@ end
 
 -- fires bump.endCollision with the appropiate parameters
 local function _invokeEndCollision()
-  for item,neighbors in pairs(bump._prevCollisions) do
-    if bump._items[item] then
+  for item,neighbors in pairs(__prevCollisions) do
+    if __items[item] then
       for neighbor, d in pairs(neighbors) do
-        if bump._items[neighbor] then
+        if __items[neighbor] then
           bump.endCollision(item, neighbor)
         end
       end
@@ -275,11 +282,11 @@ end
 
 -- (Optional) Initializes the lib with a cell size (see detault at the begining of file)
 function bump.initialize(cellSize)
-  bump._cellSize       = cellSize or _defaultCellSize
-  bump._cells          = newWeakTable()
-  bump._occupiedCells  = {} -- stores strong references to cells so that they are not gc'ed
-  bump._items          = newWeakTable()
-  bump._prevCollisions = newWeakTable()
+  __cellSize       = cellSize or _defaultCellSize
+  __cells          = newWeakTable()
+  __occupiedCells  = {} -- stores strong references to cells so that they are not gc'ed
+  __items          = newWeakTable()
+  __prevCollisions = newWeakTable()
 end
 
 -- (Overridable). Called when two objects start colliding
@@ -306,14 +313,14 @@ end
 
 -- Adds an item to bump
 function bump.add(item)
-  bump._items[item] = bump._items[item] or {}
+  __items[item] = __items[item] or {}
   _updateItem(item)
 end
 
 -- Removes an item from bump
 function bump.remove(item)
   _unlinkItem(item)
-  bump._items[item] = nil
+  __items[item] = nil
 end
 
 -- Performs collisions and invokes callbacks
@@ -324,7 +331,7 @@ function bump.collide()
 
   _invokeEndCollision()
 
-  bump._prevCollisions = collisions
+  __prevCollisions = collisions
 end
 
 -- Applies a function (signature: function(cell, gx, gy) end) to all the cells that "touch"
@@ -342,7 +349,7 @@ end
 
 -- returns the size of the cell that bump is using
 function bump.getCellSize()
-  return bump._cellSize
+  return __cellSize
 end
 
 bump.initialize()
