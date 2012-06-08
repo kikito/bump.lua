@@ -2,8 +2,8 @@ h1. bump.lua
 
 Lua collision-detection library for axis-aligned boxes. Its main features are:
 
-* Handles axis-aligned boxes only
-* Distributes the boxes in an internal grid to optimize the amount of comparisons done
+* Handles axis-aligned boxes only (no circles, polygons, etc)
+* Strives to be fast and have a very small memory footprint
 * Detects collisions and collision stops
 * When a collision occurs, the lib provides a minimal displacement vector
 
@@ -21,13 +21,15 @@ h1. Example
 -- By default, the cell size is 32
 bump.initialize(50)
 
--- bump has 3 callbacks:
+-- bump has 4 callbacks:
 -- * collision is called every time a collision occurs
 -- * endCollision is called every time a collision ends
 -- * getBBox must accept an item and return its bounding box: left, top, width and height
+-- * shouldCollide is used to skip collisions
 -- None of the callbacks is mandatory.
 -- collision and stopCollision do nothing by default.
 -- getBBox calls item:getBBox() by default
+
 function bump.collision(item1, item2, dx, dy)
   print(item1.name, "collision with", item2.name, "displacement vector:", dx, dy)
 end
@@ -40,6 +42,10 @@ function bump.getBBox(item)
   return item.l, item.t, item.w, item.h
 end
 
+function bump.shouldCollide(item1, item2)
+  return true -- we could add certain conditions here - for example, make objects of the same group not collide
+end
+
 -- here we create two rectangles
 local rect1 = {name="rect1", l=0  , t=0, w=100, h=100} -- name, left, top, width, height
 local rect2 = {name="rect2", l=300, t=0, w=100, h=100}
@@ -48,18 +54,19 @@ local rect2 = {name="rect2", l=300, t=0, w=100, h=100}
 bump.add(rect1)
 bump.add(rect2)
 
--- Now every time we call bump.check() it will call bump.collision/endCollision appropiatedly.
--- For example:
+-- Now every time we call bump.collide() it will call bump.collision/endCollision appropiatedly.
+-- bump.collide() is usually called once per "update" cycle in a game. But you could also invoke it directly if
+-- you wanted. For example:
 
-bump.check() -- nothing happens, there are no collisions
+bump.collide() -- nothing happens, there are no collisions
 
 rect2.l = 50 -- move rect2 so it collides with rect1
 
-bump.check() -- prints "rect1 started colliding with rect2 displacement vector: -50 0"
+bump.collide() -- prints "rect1 started colliding with rect2 displacement vector: -50 0"
 
 rect2.l = 100 -- move rect2 so it does not collide any more with rect1
 
-bump.check()  -- prints "rect1 stopped colliding with rect2"
+bump.collide()  -- prints "rect1 stopped colliding with rect2"
 
 </pre>
 
@@ -73,4 +80,12 @@ If you copied bump.lua to a file not accesible from the root folder (for example
 
 <pre>local bump = require 'lib.bump'</pre>
 
-Please make sure that you read the license, too (for your convenience it's now included at the beginning of the middleclass.lua file).
+Please make sure that you read the license, too (for your convenience it's now included at the beginning of the bump.lua file.
+
+h1. Demo
+
+There is a demo in the demo branch of this repository:
+
+http://github.com/kikito/bump.lua/tree/demo
+
+You will need "LÖVE":http://love2d.org in order to try it.
