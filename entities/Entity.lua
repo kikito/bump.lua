@@ -48,20 +48,6 @@ function Entity:getCenter()
   return self.l + self.w/2, self.t + self.h/2
 end
 
-local function _drawEntity(entity)
-  entity:draw()
-end
-
-function Entity.static:drawAll(l,t,w,h)
-  bump.each(_drawEntity, l,t,w,h)
-end
-
-function Entity.static:updateAll(dt, maxdt)
-  for entity,_ in pairs(entities) do
-    entity:update(dt, maxdt)
-  end
-end
-
 function Entity.static:destroyAll()
   for entity,_ in pairs(copy(entities)) do
     entity:destroy()
