@@ -28,7 +28,8 @@ local  __cellSize, __cells, __occupiedCells, __items, __collisions, __prevCollis
 -- else, it returns true, dx, dy, where dx and dy are
 -- the minimal direction to where the first box has to be moved
 -- in order to not intersect with the second any more
-local function _boxCollision(l1,t1,w1,h1, l2,t2,w2,h2)
+-- prevDx and prevDy are previous collisions. They affect how the next dx and dy are calculated
+local function _boxCollision(l1,t1,w1,h1, l2,t2,w2,h2, prevDx, prevDy)
 
   -- if there is a collision
   if l1 < l2+w2 and l1+w1 > l2 and t1 < t2+h2 and t1+h1 > t2 then
@@ -41,7 +42,11 @@ local function _boxCollision(l1,t1,w1,h1, l2,t2,w2,h2)
     local dx = l2 - l1 + (c1x < c2x and -w1 or w2)
     local dy = t2 - t1 + (c1y < c2y and -h1 or h2)
 
-    -- return the smallest overlap, and set the other to 0
+    -- if there was a previous collision between these two items, keep pressing on the same direction
+    if prevDx > 0 then return true, dx,  0 end
+    if prevDy > 0 then return true,  0, dy end
+
+    -- otherwise resolve using the smallest possible and set the other to 0
     if abs(dx) < abs(dy) then return true, dx, 0 end
 
     return true, 0, dy
@@ -218,15 +223,22 @@ end
 local function _collideItemWithNeighbor(item, neighbor)
   -- store the collision, if it happened
   local info, ninfo = __items[item], __items[neighbor]
+  local prevDx, prevDy = 0,0
+  if __prevCollisions[item] and __prevCollisions[item][neighbor] then
+    local prevVector = __prevCollisions[item][neighbor]
+    prevDx, prevDy = prevVector.dx, prevVector.dy
+  end
+
   collision, dx, dy = _boxCollision(
     info.l,  info.t,  info.w,  info.h,
-    ninfo.l, ninfo.t, ninfo.w, ninfo.h
+    ninfo.l, ninfo.t, ninfo.w, ninfo.h,
+    prevDx, prevDy
   )
 
   if collision then
     -- store the collision
     __collisions[item] = __collisions[item] or newWeakTable()
-    __collisions[item][neighbor] = true
+    __collisions[item][neighbor] = {dx = dx, dy = dy}
 
     -- invoke the collision callback
     bump.collision(item, neighbor, dx, dy)

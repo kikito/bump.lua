@@ -19,7 +19,7 @@ local function zero(x, limit)
 end
 
 local function padVelocity(maxdt, vx, vy)
-  local max = bump.getCellSize()/maxdt
+  local max = bump.getCellSize()/maxdt*0.5
   local min = -max
   return pad(vx, min, max), pad(vy, min, max)
 end
