@@ -8,7 +8,7 @@ local Entity     = require 'entities.Entity'
 local Player     = require 'entities.Player'
 
 local maxdt       = 0.1    -- if the window loses focus/etc, use this instead of dt
-local drawDebug   = false  -- draw bump's cells
+local drawDebug   = false  -- draw bump's debug info, fps and memory
 local player               -- a reference to the player (so the camera can follow him)
 local instructions = [[
   bump.lua demo
@@ -20,6 +20,8 @@ local instructions = [[
     tab:         toggle debug info (%s)
     right shift: toggle fly (%s)
 ]]
+
+-- bump.lua configuration
 
 function bump.collision(obj1, obj2, dx, dy)
   obj1:collision(obj2,  dx,  dy)
@@ -40,7 +42,9 @@ function bump.getBBox(obj)
   return obj:getBBox()
 end
 
-function reset()
+-- loading/resetting the map
+
+local function reset()
   map.reset()
   player = Player:new(60, 60)
 end
@@ -50,17 +54,23 @@ function love.load()
   reset()
 end
 
+-- Updating
+-- Note that we only update elements that are visible to the camera. This is optional
 function love.update(dt)
   dt = math.min(dt, maxdt)
-  Entity:updateAll(dt, maxdt)
-  bump.collide()
+
   camera.lookAt(player:getCenter())
+  local l,t,w,h = camera.getViewport()
+
+  local updateEntity = function(entity) entity:update(dt, maxdt) end
+
+  bump.each(updateEntity, l,t,w,h)
+  bump.collide(l,t,w,h)
 end
 
-local function drawEntity(entity)
-  entity:draw()
-end
+-- Drawing
 
+local function drawEntity(entity) entity:draw() end
 local function drawCameraStuff(l,t,w,h)
   if drawDebug then bump_debug.draw(l,t,w,h) end
   bump.each(drawEntity, l,t,w,h)
@@ -80,6 +90,8 @@ function love.draw()
     love.graphics.print(statistics, 630, 580 )
   end
 end
+
+-- Non-player keypresses
 
 function love.keypressed(k)
   if k=="escape" then love.event.quit() end

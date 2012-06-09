@@ -318,12 +318,13 @@ function bump.remove(item)
   __items[item] = nil
 end
 
--- Performs collisions and invokes callbacks
-function bump.collide()
-  _eachItem(_updateItem)
+-- Performs collisions and invokes bump.collision and bump.endCollision callbacks
+-- If a world region is specified, only the items in that region are updated. Else all items are updated
+function bump.collide(l,t,w,h)
+  bump.each(_updateItem, l,t,w,h)
 
   __collisions, __tested = newWeakTable(), newWeakTable()
-  _eachItem(_collideItemWithNeighbors)
+  bump.each(_collideItemWithNeighbors, l,t,w,h)
 
   _invokeEndCollision()
 
