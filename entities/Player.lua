@@ -9,9 +9,14 @@ local Player        = class('Player', GravityEntity)
 local runAccel      =  500 -- the player acceleration while going left/right
 local breakAccel    = 1000 -- the player acceleration when stopping/turning around
 local jumpVelocity  =  400 -- the initial upwards velocity when jumping
+local minVelocity   =    5 -- the velocity at which the player stops moving when no key is pressed
 
 local function sign(x)
   return x < 0 and -1 or (x > 0 and 1 or 0)
+end
+
+local function abs(x)
+  return x < 0 and -x or x
 end
 
 function Player:initialize(x,y)
@@ -64,6 +69,7 @@ function Player:update(dt, maxdt)
     vx = vx + dt * (vx < 0 and breakAccel or runAccel)
   else -- break until stopping
     vx = vx - dt * breakAccel * sign(vx)
+    if abs(vx) < minVelocity then vx = 0 end
   end
 
   if love.keyboard.isDown("up") and (self.canFly or self:isOnGround()) then -- jump/fly
