@@ -71,6 +71,7 @@ end
 -- given a box in world coordinates, return a box in cell coordinates that contains it
 -- returns the x,y coordinates of the top-left cell, the number of cells to the right and the number of cells down.
 local function _toGridBox(wl, wt, ww, wh)
+  if not wl or not wt or not ww or not wh then return nil end
   local l,t = _toGrid(wl, wt)
   local r,b = _toGrid(wl+ww, wt+wh)
   return l, t, r-l, b-t
@@ -89,7 +90,7 @@ end
 -- applies a function to all cells in a given region. The region must be given in the form of gl,gt,gw,gh
 -- (if the region desired is on world coordinates, it must be transformed in grid coords with _toGridBox)
 -- if the last parameter is true, the function will also create the cells as it moves
-local function _eachCell(f, gl,gt,gw,gh, createIfNil)
+local function _eachCellInRegion(f, gl,gt,gw,gh, createIfNil)
   local cell
   for y=gt, gt+gh do
     for x=gl, gl+gw do
@@ -99,9 +100,18 @@ local function _eachCell(f, gl,gt,gw,gh, createIfNil)
   end
 end
 
+-- applies a function to all cells in bump
+local function _eachCell(f)
+  for _,row in pairs(__cells) do
+    for _,cell in pairs(row) do
+      f(cell)
+    end
+  end
+end
+
 -- Applies f to all the items contained in the grid region described by gl,gt,gw,gh
 -- Keeps an account of all the items in the region
-local function _eachItem(f, gl,gt,gw,gh)
+local function _eachItemInRegion(f, gl,gt,gw,gh)
   local parsed = {}
   for y=gt, gt+gh do
     for x=gl, gl+gw do
@@ -115,6 +125,13 @@ local function _eachItem(f, gl,gt,gw,gh)
         end
       end
     end
+  end
+end
+
+-- applies f to all items in bump
+local function _eachItem(f)
+  for item,_ in pairs(__items) do
+    f(item)
   end
 end
 
@@ -133,7 +150,7 @@ local function _unlinkItem(item)
   local info = __items[item]
   if info and info.gl then
     info.unlinkCell = info.unlinkCell or function(cell) _unlinkItemAndCell(item, cell) end
-    _eachCell(info.unlinkCell, info.gl, info.gt, info.gw, info.gh)
+    _eachCellInRegion(info.unlinkCell, info.gl, info.gt, info.gw, info.gh)
   end
 end
 
@@ -149,7 +166,7 @@ end
 local function _linkItem(item, gl, gt, gw, gh)
   local info = __items[item]
   info.linkCell = info.linkCell or function(cell) _linkItemAndCell(item, cell) end
-  _eachCell(info.linkCell, info.gl, info.gt, info.gw, info.gh, true)
+  _eachCellInRegion(info.linkCell, info.gl, info.gt, info.gw, info.gh, true)
 end
 
 -- updates the information bump has about one item - its boundingbox, and containing cells
@@ -177,13 +194,6 @@ local function _updateItem(item)
   end
 end
 
--- Updates the cells occupied by all items
-local function _updateItems()
-  for item,_ in pairs(__items) do
-    _updateItem(item)
-  end
-end
-
 -- Returns the neighbors of an item, sorted by distance (closests first) & the list length
 local function _getItemNeighborsSorted(item)
   local info = __items[item]
@@ -194,7 +204,7 @@ local function _getItemNeighborsSorted(item)
       neighbors[length] = neighbor
     end
   end
-  _eachItem(collectNeighbor, info.gl, info.gt, info.gw, info.gh)
+  _eachItemInRegion(collectNeighbor, info.gl, info.gt, info.gw, info.gh)
 
   info.neighborSort    = info.neighborSort or function(a,b)  return _squareDistance(a, item) < _squareDistance(b,item) end
   sort(neighbors, info.neighborSort)
@@ -325,7 +335,7 @@ end
 
 -- Performs collisions and invokes callbacks
 function bump.collide()
-  _updateItems()
+  _eachItem(_updateItem)
 
   local collisions = _collideItems()
 
@@ -334,17 +344,25 @@ function bump.collide()
   __prevCollisions = collisions
 end
 
--- Applies a function (signature: function(cell, gx, gy) end) to all the cells that "touch"
+-- Applies a function (signature: function(cell) end) to all the cells that "touch"
 -- the specified rectangle. If no rectangle is specified, use all cells instead
 function bump.eachCell(f, l,t,w,h)
-  _eachCell(f, _toGridBox(l,t,w,h))
+  if l and t and w and h then
+    _eachCellInRegion(f, _toGridBox(l,t,w,h))
+  else
+    _eachCell(f)
+  end
 end
 
 -- Applies a function (signature: function(item) end) to all the items that "touch"
 -- the cells specified by a rectangle. If no rectangle is given, the function
 -- is applied to all items
 function bump.each(f, l,t,w,h)
-  _eachItem(f, _toGridBox(l,t,w,h))
+  if l and t and w and h then
+    _eachItemInRegion(f, _toGridBox(l,t,w,h))
+  else
+    _eachItem(f)
+  end
 end
 
 -- returns the size of the cell that bump is using
