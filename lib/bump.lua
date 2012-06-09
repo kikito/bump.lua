@@ -20,7 +20,7 @@ end
 local function min(a,b) return a < b and a or b end
 
 -- private bump properties
-local  __cellSize, __cells, __occupiedCells, __items, __prevCollisions
+local  __cellSize, __cells, __occupiedCells, __items, __collisions, __prevCollisions, __tested
 
 
 -- performs the collision between two bounding boxes
@@ -215,7 +215,7 @@ end
 -- given an item and one of its neighbors, see if they collide. If yes,
 -- store the result in the collisions and tested tables
 -- invoke the bump collision callback and mark the collision as happened
-local function _collideItemWithNeighbor(item, neighbor, collisions, tested)
+local function _collideItemWithNeighbor(item, neighbor)
   -- store the collision, if it happened
   local info, ninfo = __items[item], __items[neighbor]
   collision, dx, dy = _boxCollision(
@@ -225,8 +225,8 @@ local function _collideItemWithNeighbor(item, neighbor, collisions, tested)
 
   if collision then
     -- store the collision
-    collisions[item] = collisions[item] or newWeakTable()
-    collisions[item][neighbor] = true
+    __collisions[item] = __collisions[item] or newWeakTable()
+    __collisions[item][neighbor] = true
 
     -- invoke the collision callback
     bump.collision(item, neighbor, dx, dy)
@@ -240,39 +240,25 @@ local function _collideItemWithNeighbor(item, neighbor, collisions, tested)
   end
 
   -- mark the couple item-neighbor as tested, so the inverse is not calculated
-  tested[item] = tested[item] or newWeakTable()
-  tested[item][neighbor] = true
+  __tested[item] = __tested[item] or newWeakTable()
+  __tested[item][neighbor] = true
 end
 
 -- given an item, parse all its neighbors, updating the collisions & tested tables, and invoking the collision callback
-local function _collideItemWithNeighbors(item, collisions, tested)
+local function _collideItemWithNeighbors(item)
   local neighbor
   local neighbors, length = _getItemNeighborsSorted(item)
 
   -- check if there are any neighbors on that group of cells
   for i=1,length do
     neighbor = neighbors[i]
-    if  __items[item]
-    and __items[neighbor]
-    and neighbor ~= item
-    and not (tested[neighbor] and tested[neighbor][item])
+    if  __items[item] and __items[neighbor]
+    and not (__tested[neighbor] and __tested[neighbor][item])
     and bump.shouldCollide(item, neighbor) then
-      _collideItemWithNeighbor(item, neighbor, collisions, tested)
+      _collideItemWithNeighbor(item, neighbor)
     end
   end
 end
-
--- Calculates the collisions that occur, returning a table in the form: collisions[item][neigbor] = true
-local function _collideItems()
-  local collisions, tested = newWeakTable(), newWeakTable()
-
-  for item,_ in pairs(__items) do
-    _collideItemWithNeighbors(item, collisions, tested)
-  end
-
-  return collisions
-end
-
 
 -- fires bump.endCollision with the appropiate parameters
 local function _invokeEndCollision()
@@ -286,7 +272,6 @@ local function _invokeEndCollision()
     end
   end
 end
-
 
 -- public interface
 
@@ -337,11 +322,12 @@ end
 function bump.collide()
   _eachItem(_updateItem)
 
-  local collisions = _collideItems()
+  __collisions, __tested = newWeakTable(), newWeakTable()
+  _eachItem(_collideItemWithNeighbors)
 
   _invokeEndCollision()
 
-  __prevCollisions = collisions
+  __prevCollisions = __collisions
 end
 
 -- Applies a function (signature: function(cell) end) to all the cells that "touch"
