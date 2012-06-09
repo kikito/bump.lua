@@ -1,4 +1,4 @@
--- bump.lua - v0.5 (2012-06)
+-- bump.lua - v1.0 (2012-06)
 -- Copyright (c) 2012 Enrique García Cota
 -- Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 -- The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
@@ -20,7 +20,7 @@ end
 local function min(a,b) return a < b and a or b end
 
 -- private bump properties
-local  __cellSize, __cells, __occupiedCells, __items, __prevCollisions
+local  __cellSize, __cells, __occupiedCells, __items, __collisions, __prevCollisions, __tested
 
 
 -- performs the collision between two bounding boxes
@@ -28,7 +28,8 @@ local  __cellSize, __cells, __occupiedCells, __items, __prevCollisions
 -- else, it returns true, dx, dy, where dx and dy are
 -- the minimal direction to where the first box has to be moved
 -- in order to not intersect with the second any more
-local function _boxCollision(l1,t1,w1,h1, l2,t2,w2,h2)
+-- prevDx and prevDy are previous collisions. They affect how the next dx and dy are calculated
+local function _boxCollision(l1,t1,w1,h1, l2,t2,w2,h2, prevDx, prevDy)
 
   -- if there is a collision
   if l1 < l2+w2 and l1+w1 > l2 and t1 < t2+h2 and t1+h1 > t2 then
@@ -41,7 +42,11 @@ local function _boxCollision(l1,t1,w1,h1, l2,t2,w2,h2)
     local dx = l2 - l1 + (c1x < c2x and -w1 or w2)
     local dy = t2 - t1 + (c1y < c2y and -h1 or h2)
 
-    -- return the smallest overlap, and set the other to 0
+    -- if there was a previous collision between these two items, keep pressing on the same direction
+    if prevDx > 0 then return true, dx,  0 end
+    if prevDy > 0 then return true,  0, dy end
+
+    -- otherwise resolve using the smallest possible and set the other to 0
     if abs(dx) < abs(dy) then return true, dx, 0 end
 
     return true, 0, dy
@@ -71,6 +76,7 @@ end
 -- given a box in world coordinates, return a box in cell coordinates that contains it
 -- returns the x,y coordinates of the top-left cell, the number of cells to the right and the number of cells down.
 local function _toGridBox(wl, wt, ww, wh)
+  if not wl or not wt or not ww or not wh then return nil end
   local l,t = _toGrid(wl, wt)
   local r,b = _toGrid(wl+ww, wt+wh)
   return l, t, r-l, b-t
@@ -89,7 +95,7 @@ end
 -- applies a function to all cells in a given region. The region must be given in the form of gl,gt,gw,gh
 -- (if the region desired is on world coordinates, it must be transformed in grid coords with _toGridBox)
 -- if the last parameter is true, the function will also create the cells as it moves
-local function _eachCell(f, gl,gt,gw,gh, createIfNil)
+local function _eachCellInRegion(f, gl,gt,gw,gh, createIfNil)
   local cell
   for y=gt, gt+gh do
     for x=gl, gl+gw do
@@ -99,9 +105,18 @@ local function _eachCell(f, gl,gt,gw,gh, createIfNil)
   end
 end
 
+-- applies a function to all cells in bump
+local function _eachCell(f)
+  for _,row in pairs(__cells) do
+    for _,cell in pairs(row) do
+      f(cell)
+    end
+  end
+end
+
 -- Applies f to all the items contained in the grid region described by gl,gt,gw,gh
 -- Keeps an account of all the items in the region
-local function _eachItem(f, gl,gt,gw,gh)
+local function _eachItemInRegion(f, gl,gt,gw,gh)
   local parsed = {}
   for y=gt, gt+gh do
     for x=gl, gl+gw do
@@ -115,6 +130,13 @@ local function _eachItem(f, gl,gt,gw,gh)
         end
       end
     end
+  end
+end
+
+-- applies f to all items in bump
+local function _eachItem(f)
+  for item,_ in pairs(__items) do
+    f(item)
   end
 end
 
@@ -133,7 +155,7 @@ local function _unlinkItem(item)
   local info = __items[item]
   if info and info.gl then
     info.unlinkCell = info.unlinkCell or function(cell) _unlinkItemAndCell(item, cell) end
-    _eachCell(info.unlinkCell, info.gl, info.gt, info.gw, info.gh)
+    _eachCellInRegion(info.unlinkCell, info.gl, info.gt, info.gw, info.gh)
   end
 end
 
@@ -149,7 +171,7 @@ end
 local function _linkItem(item, gl, gt, gw, gh)
   local info = __items[item]
   info.linkCell = info.linkCell or function(cell) _linkItemAndCell(item, cell) end
-  _eachCell(info.linkCell, info.gl, info.gt, info.gw, info.gh, true)
+  _eachCellInRegion(info.linkCell, info.gl, info.gt, info.gw, info.gh, true)
 end
 
 -- updates the information bump has about one item - its boundingbox, and containing cells
@@ -177,13 +199,6 @@ local function _updateItem(item)
   end
 end
 
--- Updates the cells occupied by all items
-local function _updateItems()
-  for item,_ in pairs(__items) do
-    _updateItem(item)
-  end
-end
-
 -- Returns the neighbors of an item, sorted by distance (closests first) & the list length
 local function _getItemNeighborsSorted(item)
   local info = __items[item]
@@ -194,7 +209,7 @@ local function _getItemNeighborsSorted(item)
       neighbors[length] = neighbor
     end
   end
-  _eachItem(collectNeighbor, info.gl, info.gt, info.gw, info.gh)
+  _eachItemInRegion(collectNeighbor, info.gl, info.gt, info.gw, info.gh)
 
   info.neighborSort    = info.neighborSort or function(a,b)  return _squareDistance(a, item) < _squareDistance(b,item) end
   sort(neighbors, info.neighborSort)
@@ -205,18 +220,25 @@ end
 -- given an item and one of its neighbors, see if they collide. If yes,
 -- store the result in the collisions and tested tables
 -- invoke the bump collision callback and mark the collision as happened
-local function _collideItemWithNeighbor(item, neighbor, collisions, tested)
+local function _collideItemWithNeighbor(item, neighbor)
   -- store the collision, if it happened
   local info, ninfo = __items[item], __items[neighbor]
+  local prevDx, prevDy = 0,0
+  if __prevCollisions[item] and __prevCollisions[item][neighbor] then
+    local prevVector = __prevCollisions[item][neighbor]
+    prevDx, prevDy = prevVector.dx, prevVector.dy
+  end
+
   collision, dx, dy = _boxCollision(
     info.l,  info.t,  info.w,  info.h,
-    ninfo.l, ninfo.t, ninfo.w, ninfo.h
+    ninfo.l, ninfo.t, ninfo.w, ninfo.h,
+    prevDx, prevDy
   )
 
   if collision then
     -- store the collision
-    collisions[item] = collisions[item] or newWeakTable()
-    collisions[item][neighbor] = true
+    __collisions[item] = __collisions[item] or newWeakTable()
+    __collisions[item][neighbor] = {dx = dx, dy = dy}
 
     -- invoke the collision callback
     bump.collision(item, neighbor, dx, dy)
@@ -230,39 +252,25 @@ local function _collideItemWithNeighbor(item, neighbor, collisions, tested)
   end
 
   -- mark the couple item-neighbor as tested, so the inverse is not calculated
-  tested[item] = tested[item] or newWeakTable()
-  tested[item][neighbor] = true
+  __tested[item] = __tested[item] or newWeakTable()
+  __tested[item][neighbor] = true
 end
 
 -- given an item, parse all its neighbors, updating the collisions & tested tables, and invoking the collision callback
-local function _collideItemWithNeighbors(item, collisions, tested)
+local function _collideItemWithNeighbors(item)
   local neighbor
   local neighbors, length = _getItemNeighborsSorted(item)
 
   -- check if there are any neighbors on that group of cells
   for i=1,length do
     neighbor = neighbors[i]
-    if  __items[item]
-    and __items[neighbor]
-    and neighbor ~= item
-    and not (tested[neighbor] and tested[neighbor][item])
+    if  __items[item] and __items[neighbor]
+    and not (__tested[neighbor] and __tested[neighbor][item])
     and bump.shouldCollide(item, neighbor) then
-      _collideItemWithNeighbor(item, neighbor, collisions, tested)
+      _collideItemWithNeighbor(item, neighbor)
     end
   end
 end
-
--- Calculates the collisions that occur, returning a table in the form: collisions[item][neigbor] = true
-local function _collideItems()
-  local collisions, tested = newWeakTable(), newWeakTable()
-
-  for item,_ in pairs(__items) do
-    _collideItemWithNeighbors(item, collisions, tested)
-  end
-
-  return collisions
-end
-
 
 -- fires bump.endCollision with the appropiate parameters
 local function _invokeEndCollision()
@@ -276,7 +284,6 @@ local function _invokeEndCollision()
     end
   end
 end
-
 
 -- public interface
 
@@ -323,28 +330,38 @@ function bump.remove(item)
   __items[item] = nil
 end
 
--- Performs collisions and invokes callbacks
-function bump.collide()
-  _updateItems()
+-- Performs collisions and invokes bump.collision and bump.endCollision callbacks
+-- If a world region is specified, only the items in that region are updated. Else all items are updated
+function bump.collide(l,t,w,h)
+  bump.each(_updateItem, l,t,w,h)
 
-  local collisions = _collideItems()
+  __collisions, __tested = newWeakTable(), newWeakTable()
+  bump.each(_collideItemWithNeighbors, l,t,w,h)
 
   _invokeEndCollision()
 
-  __prevCollisions = collisions
+  __prevCollisions = __collisions
 end
 
--- Applies a function (signature: function(cell, gx, gy) end) to all the cells that "touch"
+-- Applies a function (signature: function(cell) end) to all the cells that "touch"
 -- the specified rectangle. If no rectangle is specified, use all cells instead
 function bump.eachCell(f, l,t,w,h)
-  _eachCell(f, _toGridBox(l,t,w,h))
+  if l and t and w and h then
+    _eachCellInRegion(f, _toGridBox(l,t,w,h))
+  else
+    _eachCell(f)
+  end
 end
 
 -- Applies a function (signature: function(item) end) to all the items that "touch"
 -- the cells specified by a rectangle. If no rectangle is given, the function
 -- is applied to all items
 function bump.each(f, l,t,w,h)
-  _eachItem(f, _toGridBox(l,t,w,h))
+  if l and t and w and h then
+    _eachItemInRegion(f, _toGridBox(l,t,w,h))
+  else
+    _eachItem(f)
+  end
 end
 
 -- returns the size of the cell that bump is using
