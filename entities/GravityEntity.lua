@@ -27,6 +27,12 @@ end
 function GravityEntity:initialize(x,y,w,h)
   Entity.initialize(self, x,y,w,h)
   self.vx, self.vy = 0,0
+  bump.add(self)
+end
+
+function GravityEntity:destroy()
+  bump.remove(self)
+  Entity.destroy(self)
 end
 
 

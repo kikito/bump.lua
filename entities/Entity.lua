@@ -1,10 +1,10 @@
 -- An entity is anything "interesting" for the game: the player, each block...
 
-local bump = require 'lib.bump'
-
 local entities = {} -- this will hold the list of entities
 
 local Entity = class('Entity')
+
+local entityCounter = 0
 
 local function copy(t)
   local c = {}
@@ -16,11 +16,11 @@ end
 function Entity:initialize(l,t,w,h)
   self.l, self.t, self.w, self.h = l,t,w,h
   entities[self] = true
-  bump.add(self)
+  self.id = entityCounter
+  entityCounter = entityCounter + 1
 end
 
 function Entity:destroy()
-  bump.remove(self)
   entities[self] = nil
 end
 
@@ -46,6 +46,10 @@ end
 
 function Entity:getCenter()
   return self.l + self.w/2, self.t + self.h/2
+end
+
+function Entity:__tostring()
+  return ("%d -> [%d, %d, %d, %d]"):format(self.id, self:getBBox())
 end
 
 function Entity.static:destroyAll()
