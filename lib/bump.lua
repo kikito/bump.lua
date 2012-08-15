@@ -10,7 +10,7 @@ local _weakKeys   = {__mode = 'k'}
 local _weakValues = {__mode = 'v'}
 local _defaultCellSize = 128
 
-local abs, floor, sort = math.abs, math.floor, table.sort
+local abs, floor, ceil, sort = math.abs, math.floor, math.ceil, table.sort
 
 local function newWeakTable(t, mt)
   return setmetatable(t or {}, mt or _weakKeys)
@@ -50,12 +50,17 @@ local function _toGrid(wx, wy)
   return floor(wx / __cellSize) + 1, floor(wy / __cellSize) + 1
 end
 
+-- Same as _toGrid, but useful for calculating the right/bottom borders of a rectangle (so they are still inside the cell when touching borders)
+local function _toGridFromInside(wx,wy)
+  return ceil(wx / __cellSize), ceil(wy / __cellSize)
+end
+
 -- given a box in world coordinates, return a box in grid coordinates that contains it
 -- returns the x,y coordinates of the top-left cell, the number of cells to the right and the number of cells down.
 local function _toGridBox(l, t, w, h)
   if not (l and t and w and h) then return nil end
   local gl,gt = _toGrid(l, t)
-  local gr,gb = _toGrid(l+w, t+h)
+  local gr,gb = _toGridFromInside(l+w, t+h)
   return gl, gt, gr-gl, gb-gt
 end
 
@@ -189,15 +194,13 @@ end
 -- performs some caching for performance reasons
 -- Notice that neighbors is a read/write parameter
 local function _sortNeighbors(item, neighbors)
-  local info = __items[item]
   local distanceCache = {}
-  info.neighborSort    = info.neighborSort or function(a,b)
+  local neighborSort = function(a,b)
     distanceCache[a] = distanceCache[a] or _squareDistance(a, item)
     distanceCache[b] = distanceCache[b] or _squareDistance(b,item)
     return distanceCache[a] < distanceCache[b]
   end
-  distanceCache = {}
-  sort(neighbors, info.neighborSort)
+  sort(neighbors, neighborSort)
 end
 
 -- given an item and one of its neighbors, see if they collide. If yes,
@@ -216,7 +219,7 @@ local function _collideItemWithNeighbor(item, neighbor)
                                          ninfo.l, ninfo.t, ninfo.w, ninfo.h, ninfo.cx, ninfo.cy)
     -- store the collision
     __collisions[item] = __collisions[item] or newWeakTable()
-    __collisions[item][neighbor] = {dx = dx, dy = dy}
+    __collisions[item][neighbor] = true
 
     -- invoke the collision callback
     bump.collision(item, neighbor, dx, dy)
@@ -243,7 +246,7 @@ local function _collideItemWithNeighbors(item)
   local info = __items[item]
   if not info or info.static then return end
 
-  local visited, finished = {item=true}, false
+  local visited, finished = {[item]=true}, false
   local neighbors, length, neighbor
   while __items[item] and not finished do
     finished = true
@@ -282,6 +285,7 @@ function bump.initialize(cellSize)
   __occupiedCells  = {} -- stores strong references to cells so that they are not gc'ed
   __items          = newWeakTable()
   __prevCollisions = newWeakTable()
+  bump.items = __items
 end
 
 -- (Overridable). Called when two objects start colliding
@@ -356,12 +360,15 @@ function bump.each(f, l,t,w,h)
   _eachInRegion(f, _toGridBox(l,t,w,h))
 end
 
+function bump.collect(l,t,w,h)
+  return _getKeys(_collectItemsInRegion(_toGridBox(l,t,w,h)))
+end
+
 -- returns the size of the cell that bump is using
 function bump.getCellSize()
   return __cellSize
 end
 
 bump.initialize()
-
 
 return bump
