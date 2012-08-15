@@ -10,7 +10,7 @@ local _weakKeys   = {__mode = 'k'}
 local _weakValues = {__mode = 'v'}
 local _defaultCellSize = 128
 
-local abs, floor, ceil, sort = math.abs, math.floor, math.ceil, table.sort
+local abs, floor, ceil = math.abs, math.floor, math.ceil
 
 local function newWeakTable(t, mt)
   return setmetatable(t or {}, mt or _weakKeys)
@@ -37,12 +37,15 @@ local function _boxesIntersect(l1,t1,w1,h1, l2,t2,w2,h2)
   return l1 < l2+w2 and l1+w1 > l2 and t1 < t2+h2 and t1+h1 > t2
 end
 
--- returns the displacement vector given two intersecting boxes
-local function _getDisplacementVector(l1,t1,w1,h1,c1x,c1y, l2,t2,w2,h2,c2x,c2y)
+-- returns the area & minimum displacement vector given two intersecting boxes
+local function _getOverlapAndDisplacementVector(l1,t1,w1,h1,c1x,c1y, l2,t2,w2,h2,c2x,c2y)
   local dx = l2 - l1 + (c1x < c2x and -w1 or w2)
   local dy = t2 - t1 + (c1y < c2y and -h1 or h2)
-  if abs(dx) < abs(dy) then return dx, 0 end
-  return 0, dy
+  local ax, ay = abs(dx), abs(dy)
+  local area = ax * ay
+
+  if ax < ay then return area, dx, 0 end
+  return area, 0, dy
 end
 
 -- given a world coordinate, return the coordinates of the cell that would contain it
@@ -168,97 +171,106 @@ local function _updateItem(item)
   end
 end
 
--- Obtain the list of neighbors (list of items touching the cells touched by item)
--- minus the already visited ones
-local function _getItemNeighbors(item, visited)
-  local info = __items[item]
-  local neighbors = _collectItemsInRegion(info.gl, info.gt, info.gw, info.gh)
-  for n,_ in pairs(visited) do neighbors[n] = nil end
-  return _getKeys(neighbors)
-end
-
--- helper function for squareDistance
-local function _monoDistance(c, lower, upper)
-  return c < lower and lower - c or (c > upper and c - upper or min(c - lower, upper - c))
-end
-
--- returns the squared distance between the center of item and the closest point in neighbor
-local function _squareDistance(item, neighbor)
-  local info, ninfo = __items[item], __items[neighbor]
-  local cx,cy,l,t,w,h = info.cx, info.cy, ninfo.l, ninfo.t, ninfo.w, ninfo.h
-  local dx,dy = _monoDistance(cx, l, l+w), _monoDistance(cy, t, t+h)
-  return dx*dx + dy*dy
-end
-
--- sorts a list of neighbors by their square distance to the given item.
--- performs some caching for performance reasons
--- Notice that neighbors is a read/write parameter
-local function _sortNeighbors(item, neighbors)
-  local distanceCache = {}
-  local neighborSort = function(a,b)
-    distanceCache[a] = distanceCache[a] or _squareDistance(a, item)
-    distanceCache[b] = distanceCache[b] or _squareDistance(b,item)
-    return distanceCache[a] < distanceCache[b]
-  end
-  sort(neighbors, neighborSort)
-end
-
--- given an item and one of its neighbors, see if they collide. If yes,
+-- given an item and the neighbor which is colliding with it the most,
 -- store the result in the collisions and tested tables
--- invoke the bump collision callback and mark the collision as happened
-local function _collideItemWithNeighbor(item, neighbor)
-  local info, ninfo = __items[item], __items[neighbor]
-  local collisionHappened = false
+-- invoke the bump collision callback and mark the collision as "still happening"
+local function _collideItemWithNeighbor(item, neighbor, dx, dy)
+  -- store the collision
+  __collisions[item] = __collisions[item] or newWeakTable()
+  __collisions[item][neighbor] = true
 
-  if info and ninfo
-  and not (__tested[neighbor] and __tested[neighbor][item])
-  and bump.shouldCollide(item, neighbor)
-  and _boxesIntersect(info.l, info.t, info.w, info.h, ninfo.l, ninfo.t, ninfo.w, ninfo.h) then
-    collisionHappened = true
-    local dx,dy = _getDisplacementVector(info.l,  info.t,  info.w,  info.h, info.cx, info.cy,
-                                         ninfo.l, ninfo.t, ninfo.w, ninfo.h, ninfo.cx, ninfo.cy)
-    -- store the collision
-    __collisions[item] = __collisions[item] or newWeakTable()
-    __collisions[item][neighbor] = true
+  -- invoke the collision callback
+  bump.collision(item, neighbor, dx, dy)
 
-    -- invoke the collision callback
-    bump.collision(item, neighbor, dx, dy)
+  -- remove the collison from the "previous collisions" list. The collisions that remain there will trigger the "endCollision" callback
+  if __prevCollisions[item] then __prevCollisions[item][neighbor] = nil end
 
-    -- mark the collision has "happened"
-    if __prevCollisions[item] then __prevCollisions[item][neighbor] = nil end
-
-    -- recalculate the item & neighbor (in case they have moved)
-    _updateItem(item)
-    _updateItem(neighbor)
-  end
+  -- recalculate the item & neighbor (in case they have moved)
+  _updateItem(item)
+  _updateItem(neighbor)
 
   -- mark the couple item-neighbor as tested, so the inverse is not calculated
   __tested[item] = __tested[item] or newWeakTable()
   __tested[item][neighbor] = true
+end
 
-  return collisionHappened
+
+-- Obtain the list of neighbors (list of items touching the cells touched by item)
+-- minus the already visited ones
+-- The neighbors are returned as keys in a table
+local function _getNeighbors(item, visited)
+  local info = __items[item]
+  local neighbors = _collectItemsInRegion(info.gl, info.gt, info.gw, info.gh)
+  neighbors[item] = nil
+  for n,_ in pairs(visited) do neighbors[n] = nil end
+  return neighbors
+end
+
+-- Given an item and a list of neighbors,
+-- find the overlaps between the item and each neighbor. The resulting table has this structure:
+-- { {neighbor=n1, area=1, dx=1, dy=1}, {neighbor=n2, ...} }
+local function _getOverlaps(item, neighbors)
+  local overlaps, overlapsLength = {},0
+  local info = __items[item]
+  local area, dx, dy, ninfo
+  for neighbor,_ in pairs(neighbors) do
+    ninfo = __items[neighbor]
+    if ninfo
+    and not (__tested[neighbor] and __tested[neighbor][item])
+    and _boxesIntersect(info.l, info.t, info.w, info.h, ninfo.l, ninfo.t, ninfo.w, ninfo.h)
+    and bump.shouldCollide(item, neighbor)
+    then
+      area, dx, dy = _getOverlapAndDisplacementVector(info.l, info.t, info.w, info.h, info.cx, info.cy,
+                                                      ninfo.l, ninfo.t, ninfo.w, ninfo.h, ninfo.cx, ninfo.cy)
+      overlapsLength = overlapsLength + 1
+      overlaps[overlapsLength] = {neighbor=neighbor, area=area, dx=dx, dy=dy}
+    end
+  end
+  return overlaps, overlapsLength
+end
+
+-- Given a table of overlaps in the form { {area=1, ...}, {area=2, ...} } and its length,
+-- find the element with the biggest area, and return element.neighbor, element.dx, element.dy
+-- returns nil if the table is empty
+local function _getMaximumAreaOverlap(overlaps, overlapsLength)
+  if overlapsLength == 0 then return nil end
+  local maxOverlap = overlaps[1]
+  local overlap
+  for i=2,overlapsLength do
+    overlap = overlaps[i]
+    if maxOverlap.area < overlap.area then
+      maxOverlap = overlap
+    end
+  end
+  return maxOverlap.neighbor, maxOverlap.dx, maxOverlap.dy
+end
+
+-- Given an item and a list of items to ignore (already visited),
+-- find the neighbor (if any) which is colliding with it the most
+-- (the one who occludes more surface)
+-- returns neighbor, dx, dy or nil if no collisions happen
+local function _getNextCollisionForItem(item, visited)
+  return _getMaximumAreaOverlap(_getOverlaps(item, _getNeighbors(item, visited)))
 end
 
 -- given an item, parse all its neighbors, updating the collisions & tested tables, and invoking the collision callback
 -- if there is a collision, the list of neighbors is recalculated. However, the same
--- neighbor is not checked twice
+-- neighbor is not checked for collisions twice
+-- static items are ignored
 local function _collideItemWithNeighbors(item)
   local info = __items[item]
   if not info or info.static then return end
 
-  local visited, finished = {[item]=true}, false
-  local neighbors, length, neighbor
+  local visited  = {}
+  local finished = false
+  local neighbor, dx, dy
   while __items[item] and not finished do
-    finished = true
-    neighbors, length = _getItemNeighbors(item, visited)
-    _sortNeighbors(item, neighbors)
-    for i=1,length do
-      neighbor = neighbors[i]
+    neighbor, dx, dy = _getNextCollisionForItem(item, visited)
+    if neighbor then
       visited[neighbor] = true
-      if _collideItemWithNeighbor(item, neighbor) then
-        finished = false
-        break
-      end
+      _collideItemWithNeighbor(item, neighbor, dx, dy)
+    else
+      finished = true
     end
   end
 end
