@@ -35,7 +35,7 @@ function bump.collision(item1, item2, dx, dy)
 end
 
 function bump.endCollision(item1, item2)
-  print(a.name, "stopped colliding with", b.name)
+  print(item1.name, "stopped colliding with", item2.name)
 end
 
 function bump.getBBox(item)
