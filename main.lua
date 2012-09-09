@@ -1,89 +1,132 @@
-require 'lib.middleclass'
-local bump       = require 'lib.bump'
-local bump_debug = require 'lib.bump_debug'
-local camera     = require 'lib.camera'
-
-local map        = require 'map'
-local Entity     = require 'entities.Entity'
-local Player     = require 'entities.Player'
+local bump       = require 'bump'
+local bump_debug = require 'bump_debug'
 
 local maxdt       = 0.1    -- if the window loses focus/etc, use this instead of dt
 local drawDebug   = false  -- draw bump's debug info, fps and memory
-local player               -- a reference to the player (so the camera can follow him)
 local instructions = [[
-  bump.lua demo
+  bump.lua simple demo
 
-    left,right: move
-    up:     jump/fly
-    return: reset map
+    arrows: move
     delete: run garbage collection
-    tab:         toggle debug info (%s)
-    right shift: toggle fly (%s)
+    tab:    toggle debug info (%s)
 ]]
 
--- bump.lua configuration
+local function drawBox(box, r,g,b)
+  love.graphics.setColor(r,g,b,70)
+  love.graphics.rectangle("fill", box.l, box.t, box.w, box.h)
+  love.graphics.setColor(r,g,b)
+  love.graphics.rectangle("line", box.l, box.t, box.w, box.h)
+end
 
+
+-- Player functions
+
+local player = { l=50,t=50,w=20,h=20 }
+
+local function updatePlayer(dt)
+  local speed = 80
+  if love.keyboard.isDown('up') then
+    player.t = player.t - speed * dt
+  elseif love.keyboard.isDown('down') then
+    player.t = player.t + speed * dt
+  end
+
+  if love.keyboard.isDown('left') then
+    player.l = player.l - speed * dt
+  elseif love.keyboard.isDown('right') then
+    player.l = player.l + speed * dt
+  end
+end
+
+local function collidePlayerWithBlock(dx,dy)
+  player.l = player.l + dx
+  player.t = player.t + dy
+end
+
+local function drawPlayer()
+  drawBox(player, 0, 255, 0)
+end
+
+
+-- Block functions
+
+local blocks = {}
+
+local function addBlock(l,t,w,h)
+  local block = {l=l,t=t,w=w,h=h}
+  blocks[#blocks+1] = block
+  bump.add(block)
+end
+
+local function drawBlocks()
+  for _,block in ipairs(blocks) do
+    drawBox(block, 255,0,0)
+  end
+end
+
+
+-- bump config
+
+-- When a collision occurs, call collideWithBlock with the appropiate parameters
 function bump.collision(obj1, obj2, dx, dy)
-  obj1:collision(obj2,  dx,  dy)
-  obj2:collision(obj1, -dx, -dy)
+  if obj1 == player then
+    collidePlayerWithBlock(dx,dy)
+  elseif obj2 == player then
+    collidePlayerWithBlock(-dx,-dy)
+  end
 end
 
-function bump.endCollision(obj1, obj2)
-  obj1:endCollision(obj2)
-  obj2:endCollision(obj1)
-end
-
+-- only the player collides with stuff. Blocks don't collide with themselves
 function bump.shouldCollide(obj1, obj2)
-  return obj1:shouldCollide(obj2) or
-         obj2:shouldCollide(obj1)
+  return obj1 == player or obj2 == player
 end
 
+-- return the bounding box of an object - the player or a block
 function bump.getBBox(obj)
-  return obj:getBBox()
+  return obj.l, obj.t, obj.w, obj.h
 end
 
--- loading/resetting the map
-
-local function reset()
-  map.reset()
-  player = Player:new(60, 60)
-end
+-- love config
 
 function love.load()
-  camera.setBoundary(0,0,map.width,map.height)
-  reset()
+  player = { l=50,t=50,w=20,h=20 }
+  bump.add(player)
+
+  addBlock(0,       0,     800, 32)
+  addBlock(0,      32,      32, 600-32*2)
+  addBlock(800-32, 32,      32, 600-32*2)
+  addBlock(0,      600-32, 800, 32)
+
+  for i=1,30 do
+    addBlock( math.random(100, 600),
+              math.random(100, 400),
+              math.random(10, 100),
+              math.random(10, 100)
+    )
+  end
 end
 
--- Updating
--- Note that we only update elements that are visible to the camera. This is optional
 function love.update(dt)
   dt = math.min(dt, maxdt)
 
-  camera.lookAt(player:getCenter())
-  local l,t,w,h = camera.getViewport()
+  updatePlayer(dt)
 
-  local updateEntity = function(entity) entity:update(dt, maxdt) end
-
-  bump.each(updateEntity, l,t,w,h)
-  bump.collide(l,t,w,h)
-end
-
--- Drawing
-
-local function drawEntity(entity) entity:draw() end
-local function drawCameraStuff(l,t,w,h)
-  if drawDebug then bump_debug.draw(l,t,w,h) end
-  bump.each(drawEntity, l,t,w,h)
+  bump.collide()
 end
 
 function love.draw()
-  camera.draw(drawCameraStuff)
+
+  if drawDebug then
+    bump_debug.draw(0,0,800,600)
+  end
+
+  drawBlocks()
+  drawPlayer()
 
   love.graphics.setColor(255, 255, 255)
 
-  local msg = instructions:format(tostring(drawDebug), tostring(player.canFly))
+  local msg = instructions:format(tostring(drawDebug))
   love.graphics.print(msg, 550, 10)
-  love.graphics.print(("coins: %d"):format(player.coins), 10, 10)
 
   if drawDebug then
     local statistics = ("fps: %d, mem: %dKB"):format(love.timer.getFPS(), collectgarbage("count"))
@@ -92,17 +135,10 @@ function love.draw()
 end
 
 -- Non-player keypresses
-
 function love.keypressed(k)
   if k=="escape" then love.event.quit() end
   if k=="tab"    then drawDebug = not drawDebug end
   if k=="delete" then
     collectgarbage("collect")
-  end
-  if k=="return" then
-    reset()
-  end
-  if k=="rshift" then
-    player.canFly = not player.canFly
   end
 end
