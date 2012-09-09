@@ -345,10 +345,11 @@ end
 -- Performs collisions and invokes bump.collision and bump.endCollision callbacks
 -- If a world region is specified, only the items in that region are updated. Else all items are updated
 function bump.collide(l,t,w,h)
-  bump.each(_updateItem, l,t,w,h)
+  local gl,gt,gw,gh = _toGridBox(l,t,w,h)
+  _eachInRegion(_updateItem, gl,gt,gw,gh)
 
   __collisions, __tested = newWeakTable(), newWeakTable()
-  bump.each(_collideItemWithNeighbors, l,t,w,h)
+  _eachInRegion(_collideItemWithNeighbors, gl,gt,gw,gh)
 
   _invokeEndCollision()
 
@@ -369,7 +370,13 @@ end
 -- the cells specified by a rectangle. If no rectangle is given, the function
 -- is applied to all items
 function bump.each(f, l,t,w,h)
-  _eachInRegion(f, _toGridBox(l,t,w,h))
+  local g = function(item)
+    if _boxesIntersect(l,t,w,h, bump.getBBox(item)) then
+      f(item)
+    end
+  end
+
+  _eachInRegion(g, _toGridBox(l,t,w,h))
 end
 
 function bump.collect(l,t,w,h)
