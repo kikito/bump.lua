@@ -72,15 +72,13 @@ bump.collide()  -- prints "rect1 stopped colliding with rect2"
 
 h1. Installation
 
-Just copy the bump.lua file wherever you want it. Then require it where you need it:
+Just copy the bump folder wherever you want it. Then require it where you need it:
 
 <pre>local bump = require 'bump'</pre>
 
-If you copied bump.lua to a file not accesible from the root folder (for example a lib folder), change the code accordingly:
+Notice that the folder you need to copy is not the one which is next to this README, *not the one that contains it*. In other words, if you have downloaded this from the internet and have it on a folder called bump.lua, then you need to copy bump.lua/bump/ to your project.
 
-<pre>local bump = require 'lib.bump'</pre>
-
-Please make sure that you read the license, too (for your convenience it's now included at the beginning of the bump.lua file.
+Please make sure that you read the license, too (for your convenience it's now included inside the bump folder, too.
 
 h1. Demo
 
