@@ -6,6 +6,8 @@ local nodes = require(path .. '.nodes')
 local cells = require(path .. '.cells')
 local grid  = require(path .. '.grid')
 
+bump.nodes, bump.cells, bump.grid = nodes, cells, grid
+
 
 function bump.initialize(newCellSize)
   nodes.reset()
@@ -25,7 +27,7 @@ function bump.add(item)
   local l,t,w,h = bump.getBBox(item)
   local gl,gt,gw,gh = grid.getBox(l,t,w,h)
 
-  nodes.create(item)
+  nodes.create(item, l,t,w,h, gl,gt,gw,gh)
   cells.addItem(item, gl,gt,gw,gh)
 end
 

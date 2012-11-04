@@ -49,5 +49,12 @@ describe("bump", function()
       bump.add({l=1, t=1, w=70, h=70})
       assert.equal(bump.countCells(), 4)
     end)
+
+    it("caches the bounding box info into the node", function()
+      local item = {l=1, t=1, w=70, h=70}
+      bump.add(item)
+      local n = bump.nodes.get(item)
+      assert.same({1,1,70,70,1,1,1,1}, {n.l,n.t,n.w,n.h, n.gl,n.gt,n.gw,n.gh})
+    end)
   end)
 end)

@@ -37,6 +37,13 @@ describe("bump.nodes", function()
       assert.equal(0, nodes.count())
     end)
 
+    it("adds bounding box info into the new node", function()
+      local item = {}
+      nodes.create(item, 1,2,3,4,5,6,7,8)
+      local n = nodes.get(item)
+      assert.same({1,2,3,4,5,6,7,8}, {n.l, n.t, n.w, n.h, n.gl, n.gt, n.gw, n.gh})
+    end)
+
   end)
 
   describe(".count", function()
