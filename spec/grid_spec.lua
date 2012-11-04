@@ -1,7 +1,7 @@
 local grid = require 'bump.grid'
 
 describe("bump.grid", function()
-  before(grid.reset)
+  before_each(grid.reset)
 
   it("is a table", function()
     assert.equal(type(grid), "table")

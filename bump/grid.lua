@@ -5,12 +5,13 @@ local defaultCellSize = 64
 local floor  = math.floor
 local ceil   = math.ceil
 
-function grid.getCoords(wx,wy)
+local function getCoords(wx,wy)
   return floor(wx / cellSize) + 1, floor(wy / cellSize) + 1
 end
+grid.getCoords = getCoords
 
 function grid.getBox(wl,wt,ww,wh)
-  local l,t = cells.toGridCoords(wl, wt)
+  local l,t = getCoords(wl, wt)
   local r,b = ceil((wl+ww) / cellSize), ceil((wt+wh) / cellSize)
   return l, t, r-l, b-t
 end
