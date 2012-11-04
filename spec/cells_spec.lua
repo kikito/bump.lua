@@ -40,10 +40,22 @@ describe("bump.cells", function()
       it("includes the item in the cell", function()
         assert.truthy(cells.getOrCreate(1,1).items[item])
       end)
+
       it("forgets the item when it's garbage collected", function()
         item = nil
         collectgarbage('collect')
         assert.empty(cells.getOrCreate(1,1).items)
+      end)
+
+      it("forgets the empty cells when they are garbage collected", function()
+        cells.create(1,2)
+        cells.create(2,1)
+        collectgarbage('collect')
+        assert.truthy(cells.store.rows[1])
+        assert.truthy(cells.store.rows[1][1])
+        assert.falsy(cells.store.rows[1][2])
+        assert.truthy(cells.store.rows[2])
+        assert.falsy(cells.store.rows[2][1])
       end)
     end)
 
@@ -66,9 +78,6 @@ describe("bump.cells", function()
       cells.create(1,1)
       assert.equal(1, cells.count())
     end)
-  end)
-
-  describe("when items are removed", function()
   end)
 
 end)

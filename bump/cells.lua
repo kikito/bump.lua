@@ -1,23 +1,24 @@
 local cells = {} -- (public/exported) holds the public cell interface
 local store      -- (private) holds references to the individual rows and cells
 
-local function newWeakTable()
-  return setmetatable({}, {__mode='k'})
+local function newWeakTable(mode)
+  return setmetatable({}, {__mode = mode or 'k'})
 end
 
 function cells.reset(newCellSize)
   store = { rows = {}, nonEmptyCells = {} }
+  cells.store = store
 end
 
 function cells.create(x,y)
-  store[y] = store[y] or newWeakTable()
+  store.rows[y] = store.rows[y] or newWeakTable('v')
   local cell = {items = newWeakTable()}
-  store[y][x] = cell
+  store.rows[y][x] = cell
   return cell
 end
 
 function cells.getOrCreate(x,y)
-  return store[y] and store[y][x] or cells.create(x,y)
+  return store.rows[y] and store.rows[y][x] or cells.create(x,y)
 end
 
 function cells.addItem(item, gl,gt,gw,gh)
@@ -26,6 +27,7 @@ function cells.addItem(item, gl,gt,gw,gh)
     for y=gt,gt+gh do
       cell = cells.getOrCreate(x,y)
       cell.items[item] = true
+      store.nonEmptyCells[cell] = true
     end
   end
 end
