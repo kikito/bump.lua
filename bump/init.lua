@@ -4,15 +4,17 @@ local path = (...):gsub("%.init$","")
 
 local nodes = require(path .. '.nodes')
 local cells = require(path .. '.cells')
+local grid  = require(path .. '.grid')
 
 
 function bump.initialize(newCellSize)
   nodes.reset()
-  cells.reset(newCellSize)
+  grid.reset(newCellSize)
+  cells.reset()
 end
 
 function bump.getCellSize()
-  return cells.getSize()
+  return grid.getCellSize()
 end
 
 function bump.getBBox(item)
