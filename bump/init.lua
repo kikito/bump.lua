@@ -1,18 +1,30 @@
 local bump = {}
 
-local defaultCellSize = 64
-local cellSize = defaultCellSize
+local path = (...):gsub("%.init$","")
+
+local nodes = require(path .. '.nodes')
+local cells = require(path .. '.cells')
+
 
 function bump.initialize(newCellSize)
-  cellSize = newCellSize or defaultCellSize
+  nodes.reset()
+  cells.reset(newCellSize)
 end
 
 function bump.getCellSize()
-  return cellSize
+  return cells.getSize()
 end
 
 function bump.getBBox(item)
   return item.l, item.t, item.w, item.h
+end
+
+function bump.add(item)
+  nodes.create(item)
+end
+
+function bump.countItems()
+  return nodes.count()
 end
 
 return bump
