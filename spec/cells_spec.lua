@@ -28,13 +28,13 @@ describe("bump.cells", function()
     end)
   end)
 
-  describe(".addItem", function()
+  describe(".add", function()
     describe("when the item bbox only takes one cell", function()
       local item
 
       before_each(function()
         item = {}
-        cells.addItem(item, 1,1,0,0)
+        cells.add(item, 1,1,0,0)
       end)
 
       it("includes the item in the cell", function()
@@ -62,7 +62,7 @@ describe("bump.cells", function()
     describe("when the item bbox only takes more than one cell", function()
       it("inserts the item in all the affected cells", function()
         local item = {}
-        cells.addItem(item, 1,1,1,1)
+        cells.add(item, 1,1,1,1)
         assert.truthy(cells.getOrCreate(1,1).items[item])
         assert.truthy(cells.getOrCreate(1,2).items[item])
         assert.truthy(cells.getOrCreate(2,1).items[item])
@@ -71,6 +71,23 @@ describe("bump.cells", function()
         assert.equal(cells.count(), 4)
       end)
     end)
+  end)
+
+  describe(".remove", function()
+    it("removes the item from all the cells that contain it", function()
+      local item = {}
+      cells.add(item, 1,1,1,1)
+      cells.remove(item, 1,1,1,1)
+      assert.falsy(cells.getOrCreate(1,1).items[item])
+      assert.falsy(cells.getOrCreate(1,2).items[item])
+      assert.falsy(cells.getOrCreate(2,1).items[item])
+      assert.falsy(cells.getOrCreate(2,2).items[item])
+
+      collectgarbage('collect')
+      assert.equal(cells.count(), 0)
+
+    end)
+
   end)
 
   describe(".count", function()

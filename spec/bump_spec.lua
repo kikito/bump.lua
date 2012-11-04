@@ -57,4 +57,25 @@ describe("bump", function()
       assert.same({1,1,70,70,1,1,1,1}, {n.l,n.t,n.w,n.h, n.gl,n.gt,n.gw,n.gh})
     end)
   end)
+
+  describe(".remove", function()
+    it("raises an error if nil is passed", function()
+      assert.error(function() bump.remove() end)
+    end)
+
+    it("decreases the item count by 1", function()
+      local item = {l=1, t=2, w=3, h=4}
+      bump.add(item)
+      bump.remove(item)
+      assert.equal(bump.countItems(), 0)
+    end)
+
+    it("removes the item from as many cells as needed", function()
+      local item = {l=1, t=2, w=70, h=70}
+      bump.add(item)
+      bump.remove(item)
+      collectgarbage('collect')
+      assert.equal(bump.countCells(), 0)
+    end)
+  end)
 end)

@@ -1,8 +1,7 @@
 local nodes = {} -- (public/exported) holds the public methods of this module
 local store      -- (private) holds the list of created nodes
 
-function nodes.create(item, l,t,w,h, gl,gt,gw,gh)
-  assert(item, "item expected, got nil")
+function nodes.add(item, l,t,w,h, gl,gt,gw,gh)
   store[item] = {l=l,t=t,w=w,h=h, gl=gl,gt=gt,gw=gw,gh=gh}
 end
 
@@ -20,7 +19,7 @@ function nodes.count()
   return count
 end
 
-function nodes.destroy(item)
+function nodes.remove(item)
   store[item] = nil
 end
 

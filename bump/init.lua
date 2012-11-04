@@ -24,11 +24,19 @@ function bump.getBBox(item)
 end
 
 function bump.add(item)
+  assert(item, "item expected, got nil")
   local l,t,w,h = bump.getBBox(item)
   local gl,gt,gw,gh = grid.getBox(l,t,w,h)
 
-  nodes.create(item, l,t,w,h, gl,gt,gw,gh)
-  cells.addItem(item, gl,gt,gw,gh)
+  nodes.add(item, l,t,w,h, gl,gt,gw,gh)
+  cells.add(item, gl,gt,gw,gh)
+end
+
+function bump.remove(item)
+  assert(item, "item expected, got nil")
+
+  nodes.remove(item)
+  cells.remove(item, grid.getBox(bump.getBBox(item)))
 end
 
 function bump.countItems()
