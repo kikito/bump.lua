@@ -22,11 +22,19 @@ function bump.getBBox(item)
 end
 
 function bump.add(item)
+  local l,t,w,h = bump.getBBox(item)
+  local gl,gt,gw,gh = grid.getBox(l,t,w,h)
+
   nodes.create(item)
+  cells.addItem(item, gl,gt,gw,gh)
 end
 
 function bump.countItems()
   return nodes.count()
+end
+
+function bump.countCells()
+  return cells.count()
 end
 
 return bump

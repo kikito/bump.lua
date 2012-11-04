@@ -23,14 +23,14 @@ describe("bump", function()
       assert.equal(64, bump:getCellSize())
     end)
     it("sets the item count back to 0", function()
-      bump.add({})
+      bump.add({l=1, t=1, w=1, h=1})
       bump.initialize()
       assert.equal(bump.countItems(), 0)
     end)
   end)
 
   describe(".getBBox", function()
-    it("calculates the default of a box by returning l,t,w,h", function()
+    it("obtains the bounding box by getting the l,t,w,h properties by default", function()
       assert.same({1,2,3,4}, { bump.getBBox({ l=1, t=2, w=3, h=4 }) })
     end)
   end)
@@ -41,12 +41,13 @@ describe("bump", function()
     end)
 
     it("increases the item count by 1", function()
-      bump.add({})
+      bump.add({l=1, t=2, w=3, h=4})
       assert.equal(bump.countItems(), 1)
     end)
+
+    it("inserts the item in as many cells as needed", function()
+      bump.add({l=1, t=1, w=70, h=70})
+      assert.equal(bump.countCells(), 4)
+    end)
   end)
-
-
-
-
 end)

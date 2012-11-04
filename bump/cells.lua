@@ -34,7 +34,7 @@ end
 
 function cells.count()
   local count = 0
-  for _,row in pairs(store) do
+  for _,row in pairs(store.rows) do
     for _,_ in pairs(row) do
       count = count + 1
     end
