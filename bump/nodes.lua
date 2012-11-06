@@ -1,6 +1,8 @@
 local nodes = {} -- (public/exported) holds the public methods of this module
 local store      -- (private) holds the list of created nodes
 
+local inspect = require('inspect')
+
 function nodes.add(item, l,t,w,h, gl,gt,gw,gh)
   store[item] = {l=l,t=t,w=w,h=h, gl=gl,gt=gt,gw=gw,gh=gh}
 end
@@ -21,6 +23,14 @@ end
 
 function nodes.remove(item)
   store[item] = nil
+end
+
+function nodes.update(item, l,t,w,h, gl,gt,gw,gh)
+  local n = store[item]
+  if not n then
+    print(inspect({n=n, item=item, store=store}))
+  end
+  n.l,n.t,n.w,n.h,n.gl,n.gt,n.gw,n.gh = l,t,w,h, gl,gt,gw,gh
 end
 
 nodes.reset()

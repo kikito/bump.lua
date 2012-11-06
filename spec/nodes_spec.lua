@@ -65,4 +65,14 @@ describe("bump.nodes", function()
     end)
   end)
 
+  describe(".update", function()
+    it("updates the bbox of an item", function()
+      local item = {}
+      nodes.add(item, 1,2,3,4,5,6,7,8)
+      nodes.update(item, 2,2,2,2,2,2,2,2)
+      local n = nodes.get(item)
+      assert.same({2,2,2,2,2,2,2,2}, {n.l, n.t, n.w, n.h, n.gl, n.gt, n.gw, n.gh})
+    end)
+  end)
+
 end)

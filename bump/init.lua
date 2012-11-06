@@ -39,6 +39,20 @@ function bump.remove(item)
   cells.remove(item, grid.getBox(bump.getBBox(item)))
 end
 
+function bump.update(item)
+  assert(item, "item expected, got nil")
+  local n = nodes.get(item)
+  local l,t,w,h = bump.getBBox(item)
+  if n.l ~= l or n.t ~= t or n.w ~= w or n.h ~= h then
+    local gl,gt,gw,gh = grid.getBox(l,t,w,h)
+    if n.gl ~= gl or n.gt ~= gt or n.gw ~= gw or n.gh ~= gh then
+      cells.remove(item, n.gl, n.gt, n.gw, n.gh)
+      cells.add(item, gl, gt, gw, gh)
+    end
+    nodes.update(item, l,t,w,h, gl,gt,gw,gh)
+  end
+end
+
 function bump.countItems()
   return nodes.count()
 end

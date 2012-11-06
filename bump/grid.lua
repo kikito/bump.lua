@@ -18,6 +18,7 @@ end
 
 function grid.reset(newCellSize)
   cellSize = newCellSize or defaultCellSize
+
 end
 
 function grid.getCellSize()

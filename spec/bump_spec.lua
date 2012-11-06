@@ -78,4 +78,44 @@ describe("bump", function()
       assert.equal(bump.countCells(), 0)
     end)
   end)
+
+  describe(".update", function()
+
+    it("raises an error if nil is passed", function()
+      assert.error(function() bump.update() end)
+    end)
+
+    it("does nothing if the bbox has not changed", function()
+      local item = {l=1, t=2, w=3, h=4}
+      bump.add(item)
+      spy.on(bump.nodes, 'update')
+      spy.on(bump.cells, 'remove')
+      bump.update(item)
+      assert.spy(bump.nodes.update).was_not_called()
+      assert.spy(bump.cells.remove).was_not_called()
+    end)
+
+    it("updates the node if the bbox has changed", function()
+      local item = {l=1, t=2, w=3, h=4}
+      bump.add(item)
+      local node = bump.nodes.get(item)
+      item.w, item.h = 70,70
+      bump.update(item)
+      local node = bump.nodes.get(item)
+      assert.same({node.w, node.h, node.gw, node.gh}, {70,70,1,1})
+    end)
+
+    it("updates the cells if the grid bbox has changed", function()
+      local item = {l=1, t=2, w=3, h=4}
+      bump.add(item)
+      item.l, item.t, item.w, item.h = 100, 100, 60, 60
+      bump.update(item)
+      assert.falsy(bump.cells.getOrCreate(1,1).items[item])
+
+      assert.truthy(bump.cells.getOrCreate(2,2).items[item])
+      assert.truthy(bump.cells.getOrCreate(2,3).items[item])
+      assert.truthy(bump.cells.getOrCreate(3,2).items[item])
+      assert.truthy(bump.cells.getOrCreate(3,3).items[item])
+    end)
+  end)
 end)
