@@ -8,7 +8,6 @@ local grid  = require(path .. '.grid')
 
 bump.nodes, bump.cells, bump.grid = nodes, cells, grid
 
-
 function bump.initialize(newCellSize)
   nodes.reset()
   grid.reset(newCellSize)
@@ -59,6 +58,10 @@ end
 
 function bump.countCells()
   return cells.count()
+end
+
+function bump.each(callback)
+  return nodes.eachItem(callback)
 end
 
 return bump

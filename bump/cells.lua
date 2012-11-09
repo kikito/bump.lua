@@ -10,22 +10,22 @@ function cells.reset(newCellSize)
   cells.store = store
 end
 
-function cells.create(x,y)
-  store.rows[y] = store.rows[y] or newWeakTable('v')
-  local cell = {items = newWeakTable()}
-  store.rows[y][x] = cell
+function cells.create(gx,gy)
+  store.rows[gy] = store.rows[gy] or newWeakTable('v')
+  local cell = {items = newWeakTable(), gx=gx, gy=gy}
+  store.rows[gy][gx] = cell
   return cell
 end
 
-function cells.getOrCreate(x,y)
-  return store.rows[y] and store.rows[y][x] or cells.create(x,y)
+function cells.getOrCreate(gx,gy)
+  return store.rows[gy] and store.rows[gy][gx] or cells.create(gx,gy)
 end
 
 function cells.add(item, gl,gt,gw,gh)
   local cell
-  for x=gl,gl+gw do
-    for y=gt,gt+gh do
-      cell = cells.getOrCreate(x,y)
+  for gx=gl,gl+gw do
+    for gy=gt,gt+gh do
+      cell = cells.getOrCreate(gx,gy)
       cell.items[item] = true
       store.nonEmptyCells[cell] = store.nonEmptyCells[cell] or 0
       store.nonEmptyCells[cell] = store.nonEmptyCells[cell] + 1
@@ -34,17 +34,29 @@ function cells.add(item, gl,gt,gw,gh)
 end
 
 function cells.remove(item, gl,gt,gw,gh)
-  local row, cell
-  for y=gt,gt+gh do
-    row = store.rows[y]
-    if row then
-      for x=gl,gl+gw do
-        cell = row[x]
-        if cell then
-          cell.items[item] = nil
-          store.nonEmptyCells[cell] = store.nonEmptyCells[cell] - 1
-          if store.nonEmptyCells[cell] == 0 then store.nonEmptyCells[cell] = nil end
+  cells.each(function(cell)
+    cell.items[item] = nil
+    store.nonEmptyCells[cell] = store.nonEmptyCells[cell] - 1
+    if store.nonEmptyCells[cell] == 0 then store.nonEmptyCells[cell] = nil end
+  end)
+end
+
+function cells.each(callback, gl,gt,gw,gh)
+  if gl then
+    local row, cell
+    for gy=gt,gt+gh do
+      row = store.rows[gy]
+      if row then
+        for gx=gl,gl+gw do
+          cell = row[gx]
+          if cell then callback(cell) end
         end
+      end
+    end
+  else
+    for _,row in pairs(store.rows) do
+      for _,cell in pairs(row) do
+        callback(cell)
       end
     end
   end
@@ -52,11 +64,7 @@ end
 
 function cells.count()
   local count = 0
-  for _,row in pairs(store.rows) do
-    for _,_ in pairs(row) do
-      count = count + 1
-    end
-  end
+  cells.each(function() count = count + 1 end)
   return count
 end
 

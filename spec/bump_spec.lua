@@ -118,4 +118,34 @@ describe("bump", function()
       assert.truthy(bump.cells.getOrCreate(3,3).items[item])
     end)
   end)
+
+  describe(".each", function()
+    local i11, i12, i21, i22
+
+    local function mark(item) item.mark = true end
+
+    before_each(function()
+      i11 = {l=1, t=1,  w=1, h=1}
+      i12 = {l=80,t=1,  w=1, h=1}
+      i21 = {l=1, t=80, w=1, h=1}
+      i22 = {l=80,t=80, w=1, h=1}
+      bump.add(i11)
+      bump.add(i12)
+      bump.add(i21)
+      bump.add(i22)
+    end)
+
+    it("affects all items if given one callback function", function()
+      bump.each(mark)
+      assert.same({true, true, true, true}, {i11.mark, i12.mark, i21.mark, i22.mark})
+    end)
+
+    describe("when given a bounding box", function()
+      it("affects only the items inside that box", function()
+        bump.each(mark, 0,0,20,20)
+        assert.same({true, false, false, false}, {i11.mark, i12.mark, i21.mark, i22.mark})
+      end)
+    end)
+
+  end)
 end)
