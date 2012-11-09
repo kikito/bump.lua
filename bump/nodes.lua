@@ -33,10 +33,6 @@ function nodes.update(item, l,t,w,h, gl,gt,gw,gh)
   n.l,n.t,n.w,n.h,n.gl,n.gt,n.gw,n.gh = l,t,w,h, gl,gt,gw,gh
 end
 
-function nodes.eachItem(callback)
-  for item,_ in pairs(store) do callback(item) end
-end
-
 nodes.reset()
 
 return nodes

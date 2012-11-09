@@ -2,9 +2,10 @@ local bump = {}
 
 local path = (...):gsub("%.init$","")
 
-local nodes = require(path .. '.nodes')
-local cells = require(path .. '.cells')
-local grid  = require(path .. '.grid')
+local nodes      = require(path .. '.nodes')
+local cells      = require(path .. '.cells')
+local grid       = require(path .. '.grid')
+local intersect  = require(path .. '.intersect')
 
 bump.nodes, bump.cells, bump.grid = nodes, cells, grid
 
@@ -60,8 +61,25 @@ function bump.countCells()
   return cells.count()
 end
 
-function bump.each(callback)
-  return nodes.eachItem(callback)
+function bump.each(callback, l,t,w,h)
+  local cellCallback
+  if l then
+    cellCallback = function(cell)
+      for item,_ in pairs(cell.items) do
+        local node = nodes.get(item)
+        if intersect.quick(l,t,w,h, node.l, node.t, node.w, node.h) then
+          callback(item)
+        end
+      end
+    end
+  else
+    cellCallback = function(cell)
+      for item,_ in pairs(cell.items) do
+        callback(item)
+      end
+    end
+  end
+  cells.each(cellCallback, grid.getBox(l,t,w,h))
 end
 
 return bump
