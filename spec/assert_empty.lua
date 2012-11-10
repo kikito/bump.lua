@@ -2,8 +2,7 @@ local assert = require 'luassert'
 local say    = require 'say'
 
 local function empty(state, arguments)
-  for _,_ in pairs(arguments[1]) do return false end
-  return true
+  return next(arguments[1]) == nil
 end
 
 assert:register("assertion", "empty", empty, "assertion.empty.positive", "assertion.empty.negative")
