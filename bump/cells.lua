@@ -58,8 +58,8 @@ function cells.each(callback, gl,gt,gw,gh)
   end
 end
 
-function cells.eachItem(callback, gl,gt,gw,gh)
-  local visited = {}
+function cells.eachItem(callback, gl,gt,gw,gh, visited)
+  visited = visited or {}
   cells.each(function(cell)
     for item,_ in pairs(cell.items) do
       if not visited[item] then

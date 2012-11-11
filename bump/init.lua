@@ -79,36 +79,26 @@ function bump.each(callback, l,t,w,h)
   end
 end
 
-function bump.eachNeighbor(item, callback)
+function bump.eachNeighbor(item, callback, visited)
   local node = nodes.get(item)
   assert(node, "Item must be added to bump before calculating its neighbors")
 
   cells.eachItem(function(neighbor)
     if item ~= neighbor then callback(neighbor) end
-  end, node.gl, node.gt, node.gw, node.gh)
+  end, node.gl, node.gt, node.gw, node.gh, visited)
 end
 
 function bump.collision(item1, item2, dx, dy)
 end
 
-local function getNextCollisionForItem(item, visitedNeighbors)
-  local node = nodes.get(item)
-  cells.each(function(cell)
-    for neighbor,_ in pairs(cell.items) do
-      if not visitedNeighbors[neighbor] then
-        visitedNeighbors[neighbor] = true
-        return neighbor
-      end
-    end
-  end,
-  node.gl, node.gt, node.gw, node.gh)
-end
-
-function bump.collide()
-  local collidedPairs = {}
-  bump.each(function(item)
-    local ni = nodes.get(item)
-    bump.eachNeighbor(item, function(neighbor)
+function bump.collideItem(item, collidedPairs)
+  collidedPairs = collidedPairs or {}
+  local ni = nodes.get(item)
+  local visited = {}
+  local neighbor, dx, dy
+  repeat
+    neighbor, dx, dy = bump.getNearestNewCollision(item, visited)
+    if neighbor then
       if collidedPairs[neighbor] and collidedPairs[neighbor][item] then return end
 
       local nn = nodes.get(neighbor)
@@ -124,8 +114,35 @@ function bump.collide()
 
       collidedPairs[item] = collidedPairs[item] or {}
       collidedPairs[item][neighbor] = true
-    end)
-  end)
+    end
+  until not neighbor
+end
+
+local function copy(t)
+  local c = {}
+  for k,v in pairs(t) do c[k] = v end
+  return c
+end
+
+function bump.getNearestNewCollision(item, visited)
+  visited = visited or {}
+  local nNeighbor, nDx, nDy, nArea = nil, 0,0,0
+  local ni = nodes.get(item)
+  bump.eachNeighbor(item, function(neighbor)
+    local nn = nodes.get(neighbor)
+    local area, dx, dy = intersect.areaAndDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
+    if area > nArea then
+      nArea, nDx, nDy = area, dx, dy
+      nNeighbor = neighbor
+    end
+  end, copy(visited))
+  if nNeighbor then visited[nNeighbor] = true end
+  return nNeighbor, nDx, nDy
+end
+
+function bump.collide()
+  local collidedPairs = {}
+  bump.each(function(item) bump.collideItem(item, collidedPairs) end)
 end
 
 return bump
