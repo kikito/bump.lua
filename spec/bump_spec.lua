@@ -189,6 +189,11 @@ describe("bump", function()
       bump.eachNeighbor(item, mark, {[n2]=true})
       assert.same({true}, {n1.mark, n2.mark, item.mark, extra.mark})
     end)
+    it("does not affect the visited list", function()
+      local visited = {}
+      bump.eachNeighbor(item, mark, visited)
+      assert.empty(visited)
+    end)
   end)
 
   describe("bump.collision", function()
@@ -236,7 +241,7 @@ describe("bump", function()
     end)
   end)
 
-  describe("getNearestNewCollision", function()
+  describe("getNearestCollision", function()
     local item1, item2, item3, item4
     before_each(function()
       item1 = {l=1,t=1,w=10,h=10, name='item1'}
@@ -247,21 +252,19 @@ describe("bump", function()
     end)
 
     it("returns the nearest collision data (neighbor, dx, dy) for a given item", function()
-      assert.same({item2, -9, -9}, { bump.getNearestNewCollision(item1) })
+      assert.same({item2, -9, -9}, { bump.getNearestCollision(item1) })
     end)
 
     it("returns the nearest collision data excluding already tested neighbors", function()
-      assert.same({item3, -8, -8}, { bump.getNearestNewCollision(item1, {[item2]=true}) })
-      assert.same({item4, -7, -7}, { bump.getNearestNewCollision(item1, {[item2]=true, [item3]=true}) })
-      assert.same({nil, 0, 0}, {bump.getNearestNewCollision(item1, {[item2]=true, [item3]=true, [item4]=true}) })
+      assert.same({item3, -8, -8}, { bump.getNearestCollision(item1, {[item2]=true}) })
+      assert.same({item4, -7, -7}, { bump.getNearestCollision(item1, {[item2]=true, [item3]=true}) })
+      assert.same({nil, 0, 0}, {bump.getNearestCollision(item1, {[item2]=true, [item3]=true, [item4]=true}) })
     end)
 
-    it("gradually marks the visited elements", function()
+    it("does not alter the visited table", function()
       local visited = {}
-      assert.same({item2, -9, -9}, { bump.getNearestNewCollision(item1, visited) })
-      assert.same({item3, -8, -8}, { bump.getNearestNewCollision(item1, visited) })
-      assert.same({item4, -7, -7}, { bump.getNearestNewCollision(item1, visited) })
-      assert.same({nil, 0, 0}, { bump.getNearestNewCollision(item1, visited) })
+      bump.getNearestCollision(item1, visited)
+      assert.empty(visited)
     end)
 
   end)

@@ -79,13 +79,18 @@ function bump.each(callback, l,t,w,h)
   end
 end
 
+local function copy(t)
+  local c = {}
+  for k,v in pairs(t) do c[k] = v end
+  return c
+end
+
 function bump.eachNeighbor(item, callback, visited)
   local node = nodes.get(item)
   assert(node, "Item must be added to bump before calculating its neighbors")
-
-  cells.eachItem(function(neighbor)
-    if item ~= neighbor then callback(neighbor) end
-  end, node.gl, node.gt, node.gw, node.gh, visited)
+  visited = visited and copy(visited) or {}
+  visited[item] = true -- don't visit the item, just its neighbors
+  cells.eachItem(callback, node.gl, node.gt, node.gw, node.gh, visited)
 end
 
 function bump.collision(item1, item2, dx, dy)
@@ -97,7 +102,7 @@ function bump.collideItem(item, collidedPairs)
   local visited = {}
   local neighbor, dx, dy
   repeat
-    neighbor, dx, dy = bump.getNearestNewCollision(item, visited)
+    neighbor, dx, dy = bump.getNearestCollision(item, visited)
     if neighbor then
       if collidedPairs[neighbor] and collidedPairs[neighbor][item] then return end
 
@@ -114,17 +119,14 @@ function bump.collideItem(item, collidedPairs)
 
       collidedPairs[item] = collidedPairs[item] or {}
       collidedPairs[item][neighbor] = true
+
+      visited[neighbor] = true
     end
   until not neighbor
 end
 
-local function copy(t)
-  local c = {}
-  for k,v in pairs(t) do c[k] = v end
-  return c
-end
 
-function bump.getNearestNewCollision(item, visited)
+function bump.getNearestCollision(item, visited)
   visited = visited or {}
   local nNeighbor, nDx, nDy, nArea = nil, 0,0,0
   local ni = nodes.get(item)
@@ -135,8 +137,7 @@ function bump.getNearestNewCollision(item, visited)
       nArea, nDx, nDy = area, dx, dy
       nNeighbor = neighbor
     end
-  end, copy(visited))
-  if nNeighbor then visited[nNeighbor] = true end
+  end, visited)
   return nNeighbor, nDx, nDy
 end
 

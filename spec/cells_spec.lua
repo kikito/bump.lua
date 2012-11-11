@@ -155,10 +155,10 @@ describe("bump.cells", function()
       cells.eachItem(mark, 1,1,0,0, {[i11]=true})
       assert.same({nil, nil, true}, {i11.mark, i22.mark, shared.mark})
     end)
-    it("alters the marks the visited table, adding the visited elements", function()
+    it("does not alter the visited table", function()
       local visited = {}
       cells.eachItem(function() end, 1,1,0,0, visited)
-      assert.same({[i11]=true, [shared]=true}, visited)
+      assert.empty(visited)
     end)
     it("does not touch the same item more than once", function()
       local counter = 0

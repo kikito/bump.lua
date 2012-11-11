@@ -58,8 +58,14 @@ function cells.each(callback, gl,gt,gw,gh)
   end
 end
 
+local function copy(t)
+  local c = {}
+  for k,v in pairs(t) do c[k] = v end
+  return c
+end
+
 function cells.eachItem(callback, gl,gt,gw,gh, visited)
-  visited = visited or {}
+  visited = visited and copy(visited) or {}
   cells.each(function(cell)
     for item,_ in pairs(cell.items) do
       if not visited[item] then
@@ -68,7 +74,6 @@ function cells.eachItem(callback, gl,gt,gw,gh, visited)
       end
     end
   end, gl, gt, gw, gh)
-  return visited
 end
 
 function cells.count()
