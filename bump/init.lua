@@ -9,11 +9,17 @@ local intersect  = require(path .. '.intersect')
 
 bump.nodes, bump.cells, bump.grid = nodes, cells, grid
 
-function bump.initialize(newCellSize)
-  nodes.reset()
-  grid.reset(newCellSize)
-  cells.reset()
+local function copy(t)
+  local c = {}
+  for k,v in pairs(t) do c[k] = v end
+  return c
 end
+
+local function abs(x)
+  return x < 0 and -x or x
+end
+
+
 
 function bump.getCellSize()
   return grid.getCellSize()
@@ -79,11 +85,6 @@ function bump.each(callback, l,t,w,h)
   end
 end
 
-local function copy(t)
-  local c = {}
-  for k,v in pairs(t) do c[k] = v end
-  return c
-end
 
 function bump.eachNeighbor(item, callback, visited)
   local node = nodes.get(item)
@@ -125,14 +126,14 @@ function bump.collideItem(item, collidedPairs)
   until not neighbor
 end
 
-
 function bump.getNearestIntersection(item, visited)
   visited = visited or {}
   local nNeighbor, nDx, nDy, nArea = nil, 0,0,0
   local ni = nodes.get(item)
   bump.eachNeighbor(item, function(neighbor)
     local nn = nodes.get(neighbor)
-    local area, dx, dy = intersect.areaAndDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
+    local dx, dy = intersect.displacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
+    local area = abs(dx*dy)
     if area > nArea then
       nArea, nDx, nDy = area, dx, dy
       nNeighbor = neighbor
@@ -145,5 +146,13 @@ function bump.collide()
   local collidedPairs = {}
   bump.each(function(item) bump.collideItem(item, collidedPairs) end)
 end
+
+function bump.initialize(newCellSize)
+  nodes.reset()
+  grid.reset(newCellSize)
+  cells.reset()
+end
+
+bump.initialize()
 
 return bump

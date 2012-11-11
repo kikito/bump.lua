@@ -15,10 +15,4 @@ function intersect.displacement(l1,t1,w1,h1, l2,t2,w2,h2)
          t2 - t1 + (c1y < c2y and -h1 or h2)
 end
 
-function intersect.areaAndDisplacement(l1,t1,w1,h1, l2,t2,w2,h2)
-  local dx, dy = intersect.displacement(l1,t1,w1,h1, l2,t2,w2,h2)
-  return abs(dx*dy), dx, dy
-end
-
-
 return intersect
