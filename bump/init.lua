@@ -102,7 +102,7 @@ function bump.collideItem(item, collidedPairs)
   local visited = {}
   local neighbor, dx, dy
   repeat
-    neighbor, dx, dy = bump.getNearestCollision(item, visited)
+    neighbor, dx, dy = bump.getNearestIntersection(item, visited)
     if neighbor then
       if collidedPairs[neighbor] and collidedPairs[neighbor][item] then return end
 
@@ -126,7 +126,7 @@ function bump.collideItem(item, collidedPairs)
 end
 
 
-function bump.getNearestCollision(item, visited)
+function bump.getNearestIntersection(item, visited)
   visited = visited or {}
   local nNeighbor, nDx, nDy, nArea = nil, 0,0,0
   local ni = nodes.get(item)

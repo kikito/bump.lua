@@ -1,9 +1,14 @@
 local bump = require 'bump.init'
 
+
+
 describe("bump", function()
+
+  local defaultCollision = bump.collision
 
   before_each(function()
     bump.initialize()
+    bump.collision = defaultCollision
   end)
 
   it("is a table", function()
@@ -196,6 +201,33 @@ describe("bump", function()
     end)
   end)
 
+  describe(".getNearestIntersection", function()
+    local item1, item2, item3, item4
+    before_each(function()
+      item1 = {l=1,t=1,w=10,h=10, name='item1'}
+      item2 = {l=2,t=2,w=10,h=10, name='item2'}
+      item3 = {l=3,t=3,w=10,h=10, name='item3'}
+      item4 = {l=4,t=4,w=10,h=10, name='item4'}
+      bump.add(item1, item2, item3, item4)
+    end)
+
+    it("returns the nearest collision data (neighbor, dx, dy) for a given item", function()
+      assert.same({item2, -9, -9}, { bump.getNearestIntersection(item1) })
+    end)
+
+    it("returns the nearest collision data excluding already tested neighbors", function()
+      assert.same({item3, -8, -8}, { bump.getNearestIntersection(item1, {[item2]=true}) })
+      assert.same({item4, -7, -7}, { bump.getNearestIntersection(item1, {[item2]=true, [item3]=true}) })
+      assert.same({nil, 0, 0}, {bump.getNearestIntersection(item1, {[item2]=true, [item3]=true, [item4]=true}) })
+    end)
+
+    it("does not alter the visited table", function()
+      local visited = {}
+      bump.getNearestIntersection(item1, visited)
+      assert.empty(visited)
+    end)
+  end)
+
   describe("bump.collision", function()
 
     it("is empty by default", function()
@@ -224,7 +256,7 @@ describe("bump", function()
         assert.same({{first='item1', second='item2',dx=-5,dy=-5}}, collisions)
       end)
 
-      it("the collisions are sorted out by area of intersection", function()
+      it("sorts collisions by area of intersection", function()
         local item1 = {l=1,t=1,w=10,h=10, name='item1'}
         local item2 = {l=2,t=2,w=10,h=10, name='item2'}
         local item3 = {l=3,t=3,w=10,h=10, name='item3'}
@@ -236,36 +268,19 @@ describe("bump", function()
           {first='item1', second='item3',dx=-8,dy=-8},
           {first='item1', second='item4',dx=-7,dy=-7}
         }, collisions)
-
       end)
-    end)
-  end)
 
-  describe("getNearestCollision", function()
-    local item1, item2, item3, item4
-    before_each(function()
-      item1 = {l=1,t=1,w=10,h=10, name='item1'}
-      item2 = {l=2,t=2,w=10,h=10, name='item2'}
-      item3 = {l=3,t=3,w=10,h=10, name='item3'}
-      item4 = {l=4,t=4,w=10,h=10, name='item4'}
-      bump.add(item1, item2, item3, item4)
-    end)
+      it("updates every colliding pair of items", function()
+        local item1 = {l=1,t=1,w=10,h=10, name='item1'}
+        local item2 = {l=2,t=2,w=10,h=10, name='item2'}
+        bump.add(item1, item2)
+        spy.on(bump, "update")
 
-    it("returns the nearest collision data (neighbor, dx, dy) for a given item", function()
-      assert.same({item2, -9, -9}, { bump.getNearestCollision(item1) })
-    end)
+        bump.collide()
+        assert.spy(bump.update).was.called_with(item1)
+        assert.spy(bump.update).was.called_with(item2)
+      end)
 
-    it("returns the nearest collision data excluding already tested neighbors", function()
-      assert.same({item3, -8, -8}, { bump.getNearestCollision(item1, {[item2]=true}) })
-      assert.same({item4, -7, -7}, { bump.getNearestCollision(item1, {[item2]=true, [item3]=true}) })
-      assert.same({nil, 0, 0}, {bump.getNearestCollision(item1, {[item2]=true, [item3]=true, [item4]=true}) })
     end)
-
-    it("does not alter the visited table", function()
-      local visited = {}
-      bump.getNearestCollision(item1, visited)
-      assert.empty(visited)
-    end)
-
   end)
 end)
