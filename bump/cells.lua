@@ -5,10 +5,6 @@ local function newWeakTable(mode)
   return setmetatable({}, {__mode = mode or 'k'})
 end
 
-function cells.reset(newCellSize)
-  store = { rows = {}, nonEmptyCells = {} }
-  cells.store = store
-end
 
 function cells.create(gx,gy)
   store.rows[gy] = store.rows[gy] or newWeakTable('v')
@@ -62,10 +58,28 @@ function cells.each(callback, gl,gt,gw,gh)
   end
 end
 
+function cells.eachItem(callback, gl,gt,gw,gh)
+  local visited = {}
+  cells.each(function(cell)
+    for item,_ in pairs(cell.items) do
+      if not visited[item] then
+        visited[item] = true
+        callback(item)
+      end
+    end
+  end, gl, gt, gw, gh)
+  return visited
+end
+
 function cells.count()
   local count = 0
   cells.each(function() count = count + 1 end)
   return count
+end
+
+function cells.reset(newCellSize)
+  store = { rows = {}, nonEmptyCells = {} }
+  cells.store = store
 end
 
 cells.reset()

@@ -133,4 +133,29 @@ describe("bump.cells", function()
     end)
   end)
 
+  describe(".eachItem", function()
+    local i11, i22, shared
+    local mark = function(item) item.mark = true end
+    before_each(function()
+      i11, i22, shared = {}, {}, {}
+      cells.add(i11, 1,1,0,0)
+      cells.add(i22, 2,2,0,0)
+      cells.add(shared, 1,1,1,1)
+    end)
+
+    it("does nothing if the box is outside the boundaries", function()
+      cells.eachItem(mark, 20,20,0,0)
+      assert.same({}, {i11.mark, i22.mark, shared.mark})
+    end)
+    it("touches the items inside one box, but not the others", function()
+      cells.eachItem(mark, 1,1,0,0)
+      assert.same({true, nil, true}, {i11.mark, i22.mark, shared.mark})
+    end)
+    it("does not touch the same item more than once", function()
+      local counter = 0
+      cells.eachItem(function() counter = counter + 1 end, 1,1,1,1)
+      assert.equals(counter, 3)
+    end)
+  end)
 end)
+

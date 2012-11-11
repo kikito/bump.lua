@@ -56,6 +56,14 @@ describe("bump", function()
       local n = bump.nodes.get(item)
       assert.same({1,1,70,70,1,1,1,1}, {n.l,n.t,n.w,n.h, n.gl,n.gt,n.gw,n.gh})
     end)
+
+    it("can add more than one item in one go", function()
+      local item1 = {l=1, t=1, w=70, h=70}
+      local item2 = {l=100, t=100, w=70, h=70}
+      bump.add(item1, item2)
+      assert.truthy(bump.nodes.get(item1))
+      assert.truthy(bump.nodes.get(item2))
+    end)
   end)
 
   describe(".remove", function()
@@ -120,27 +128,35 @@ describe("bump", function()
   end)
 
   describe(".each", function()
-    local i11, i12, i21, i22
+    local i11, i12, i21, i22, count
 
-    local function mark(item) item.mark = true end
+    local function mark(item)
+      count = count + 1
+      item.mark = true
+    end
 
     before_each(function()
+      count = 0
       i11 = {l=1, t=1,  w=1, h=1}
       i12 = {l=80,t=1,  w=1, h=1}
       i21 = {l=1, t=80, w=1, h=1}
       i22 = {l=80,t=80, w=1, h=1}
-      bump.add(i11)
-      bump.add(i12)
-      bump.add(i21)
-      bump.add(i22)
+      bump.add(i11, i12, i21, i22)
     end)
 
-    it("affects all items if given one callback function", function()
+    it("affects all items if given just one callback function", function()
       bump.each(mark)
       assert.same({true, true, true, true}, {i11.mark, i12.mark, i21.mark, i22.mark})
     end)
 
-    describe("when given a bounding box", function()
+    it("executes the callback function only once per item, even if they touch several cells", function()
+      local big = {l=1, t=1, w=80, h=1}
+      bump.add(big)
+      bump.each(mark)
+      assert.equal(5, count)
+    end)
+
+    describe("when given a callback plus a  bounding box", function()
       it("affects only the items inside that box", function()
         bump.each(mark, 0,0,20,20)
         assert.same({true}, {i11.mark, i12.mark, i21.mark, i22.mark})
@@ -149,6 +165,56 @@ describe("bump", function()
         bump.each(mark, 0,0,70,20)
         assert.same({true}, {i11.mark, i12.mark, i21.mark, i22.mark})
       end)
+    end)
+  end)
+
+  describe("bump.eachNeighbor", function()
+    it("returns an error if an item is not in the node list", function()
+      assert.error(function() bump.eachNeighbor({}, function() end) end)
+    end)
+    it("executes the callback for all the item's neighbors, but not the item or others", function()
+      local item = { l=1,t=1,w=80,h=80 }
+      local n1   = { l=1,t=90,w=1,h=1 }
+      local n2   = { l=90,t=1,w=1,h=1 }
+      local extra = {l=140,t=1,w=1,h=1}
+      bump.add(item, n1, n2, extra)
+
+      local mark = function(item) item.mark = true end
+      bump.eachNeighbor(item, mark)
+
+      assert.same({true, true}, {n1.mark, n2.mark, item.mark, extra.mark})
+    end)
+  end)
+
+  describe("bump.collision", function()
+
+    it("is empty by default", function()
+      assert.equal(type(bump.collision), "function")
+    end)
+
+    describe("When defined", function()
+      local collisions
+      before_each(function()
+        collisions = {}
+        bump.collision = function(item1, item2, dx, dy)
+          collisions[#collisions + 1] = {item1=item1, item2=item2, dx=dx, dy=dy}
+        end
+      end)
+
+      it("is never called if there are no items to collide", function()
+        bump.collide()
+        assert.empty(collisions)
+      end)
+
+      it("is called once if two items collide", function()
+        local item1 = {l=0,t=0,w=10,h=10}
+        local item2 = {l=5,t=5,w=10,h=10}
+        bump.add(item1)
+        bump.add(item2)
+        bump.collide()
+        assert.same({{item1=item1, item2=item2,dx=-5,dy=-5}}, collisions)
+      end)
+
     end)
 
   end)
