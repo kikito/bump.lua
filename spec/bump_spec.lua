@@ -1,6 +1,6 @@
+require 'spec.assert_has_value'
+
 local bump = require 'bump.init'
-
-
 
 describe("bump", function()
 
@@ -334,22 +334,23 @@ describe("bump", function()
     describe("when collisions do happen", function()
       local item1, item2, item3
       before_each(function()
-        item1 = {l=1,t=1,w=10,h=10, name='item1'}
+        item1 = {l=1,t=1,w=20,h=20, name='item1'}
         item2 = {l=2,t=2,w=10,h=10, name='item2'}
         item3 = {l=3,t=3,w=10,h=10, name='item3'}
         bump.add(item1, item2, item3)
+        bump.shouldCollide = function(a,b) return a == item1 end
       end)
 
-      pending("is called once for each pair of items which are not colliding any more", function()
+      it("is called once for each pair of items which are not colliding any more", function()
         bump.collide()
         assert.empty(endedCollisions)
         item1.l, item1.t = 100,100
+        bump.update(item1)
         bump.collide()
-        assert.same({{'item1', 'item2'}, {'item1', 'item3'}}, endedCollisions)
+        assert.same(#endedCollisions, 2)
+        assert.has_value(endedCollisions[1], 'item1')
+        assert.has_value(endedCollisions[2], 'item1')
       end)
     end)
   end)
-
-
-
 end)

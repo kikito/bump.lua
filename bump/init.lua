@@ -10,7 +10,39 @@ local util       = require(path .. '.util')
 
 bump.nodes, bump.cells, bump.grid = nodes, cells, grid
 
-local prevCollisions
+--------------------------------------
+-- Private stuff
+local collisions, prevCollisions
+
+local function _collideItemWithNeighbors(item)
+  local ni = nodes.get(item)
+  local visited = {}
+  local neighbor, dx, dy
+  repeat
+    neighbor, dx, dy = bump.getNearestIntersection(item, visited)
+    if neighbor then
+      if collisions[neighbor] and collisions[neighbor][item] then return end
+
+      local nn = nodes.get(neighbor)
+
+      if not intersect.quick(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
+
+      local dx, dy = intersect.displacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
+
+      bump.collision(item, neighbor, dx, dy)
+
+      bump.update(item)
+      bump.update(neighbor)
+
+      collisions[item] = collisions[item] or util.newWeakTable()
+      collisions[item][neighbor] = true
+
+      if prevCollisions[item] then prevCollisions[item][neighbor] = nil end
+
+      visited[neighbor] = true
+    end
+  until not neighbor
+end
 
 --------------------------------------
 -- Public functions
@@ -104,36 +136,15 @@ function bump.getNearestIntersection(item, visited)
 end
 
 function bump.collide()
-  local collisions = {}
-  bump.each(function(item)
-    local ni = nodes.get(item)
-    local visited = {}
-    local neighbor, dx, dy
-    repeat
-      neighbor, dx, dy = bump.getNearestIntersection(item, visited)
-      if neighbor then
-        if collisions[neighbor] and collisions[neighbor][item] then return end
+  collisions = util.newWeakTable()
+  bump.each(_collideItemWithNeighbors)
 
-        local nn = nodes.get(neighbor)
+  for item,neighbors in pairs(prevCollisions) do
+    for neighbor,_ in pairs(neighbors) do
+      bump.endCollision(item, neighbor)
+    end
+  end
 
-        if not intersect.quick(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
-
-        local dx, dy = intersect.displacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
-
-        bump.collision(item, neighbor, dx, dy)
-
-        bump.update(item)
-        bump.update(neighbor)
-
-        collisions[item] = collisions[item] or util.newWeakTable()
-        collisions[item][neighbor] = true
-
-        if prevCollisions[item] then prevCollisions[item][neighbor] = nil end
-
-        visited[neighbor] = true
-      end
-    until not neighbor
-  end)
   prevCollisions = collisions
 end
 
@@ -154,6 +165,7 @@ end
 
 function bump.initialize(newCellSize)
   prevCollisions = util.newWeakTable()
+  collisions     = util.newWeakTable()
   nodes.reset()
   grid.reset(newCellSize)
   cells.reset()
