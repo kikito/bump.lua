@@ -12,30 +12,25 @@ bump.nodes, bump.cells, bump.grid, bump.geometry, bump.util = nodes, cells, grid
 
 --------------------------------------
 -- Private stuff
+
 local collisions, prevCollisions
 
-local function _eachNeighbor(item, callback, visited)
-  local node = assert(nodes.get(item))
-  visited = visited and util.copy(visited) or {}
-  visited[item] = true -- don't visit the item, just its neighbors
-  cells.eachItem(callback, node.gl, node.gt, node.gw, node.gh, visited)
-end
-
 local function _getNearestIntersection(item, visited)
-  visited = visited or {}
-  local nNeighbor, nDx, nDy, nArea = nil, 0,0,0
   local ni = nodes.get(item)
-  _eachNeighbor(item, function(neighbor)
-    if bump.shouldCollide(item, neighbor) then
-      local nn = nodes.get(neighbor)
-      local dx, dy = geometry.boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
-      local area = util.abs(dx*dy)
+  local nNeighbor, nDx, nDy, nArea = nil, 0,0,0
+  local nn, dx, dy, area
+  local eachIntersection = function(neighbor)
+    if item ~= neighbor and bump.shouldCollide(item, neighbor) then
+      nn = nodes.get(neighbor)
+      dx, dy = geometry.boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
+      area = util.abs(dx*dy)
       if area > nArea then
         nArea, nDx, nDy = area, dx, dy
         nNeighbor = neighbor
       end
     end
-  end, visited)
+  end
+  cells.eachItem(eachIntersection, ni.gl, ni.gt, ni.gw, ni.gh, visited)
   return nNeighbor, nDx, nDy
 end
 
@@ -91,7 +86,6 @@ end
 
 function bump.remove(item)
   assert(item, "item expected, got nil")
-
   nodes.remove(item)
   cells.remove(item, grid.getBox(bump.getBBox(item)))
 end
@@ -139,6 +133,14 @@ function bump.collide()
   prevCollisions = collisions
 end
 
+function bump.initialize(newCellSize)
+  grid.reset(newCellSize)
+  nodes.reset()
+  cells.reset()
+  prevCollisions = util.newWeakTable()
+  collisions     = nil
+end
+
 -- overridable functions
 function bump.collision(item1, item2, dx, dy)
 end
@@ -152,14 +154,6 @@ end
 
 function bump.getBBox(item)
   return item.l, item.t, item.w, item.h
-end
-
-function bump.initialize(newCellSize)
-  grid.reset(newCellSize)
-  nodes.reset()
-  cells.reset()
-  prevCollisions = util.newWeakTable()
-  collisions     = nil
 end
 
 bump.initialize()
