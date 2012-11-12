@@ -36,7 +36,7 @@ describe("bump", function()
     it("sets the item count back to 0", function()
       bump.add({l=1, t=1, w=1, h=1})
       bump.initialize()
-      assert.equal(bump.countItems(), 0)
+      assert.equal(bump.nodes.count(), 0)
     end)
   end)
 
@@ -53,12 +53,12 @@ describe("bump", function()
 
     it("increases the item count by 1", function()
       bump.add({l=1, t=2, w=3, h=4})
-      assert.equal(bump.countItems(), 1)
+      assert.equal(bump.nodes.count(), 1)
     end)
 
     it("inserts the item in as many cells as needed", function()
       bump.add({l=1, t=1, w=70, h=70})
-      assert.equal(bump.countCells(), 4)
+      assert.equal(bump.cells.count(), 4)
     end)
 
     it("caches the bounding box info into the node", function()
@@ -86,7 +86,7 @@ describe("bump", function()
       local item = {l=1, t=2, w=3, h=4}
       bump.add(item)
       bump.remove(item)
-      assert.equal(bump.countItems(), 0)
+      assert.equal(bump.nodes.count(), 0)
     end)
 
     it("removes the item from as many cells as needed", function()
@@ -94,7 +94,7 @@ describe("bump", function()
       bump.add(item)
       bump.remove(item)
       collectgarbage('collect')
-      assert.equal(bump.countCells(), 0)
+      assert.equal(bump.cells.count(), 0)
     end)
   end)
 
@@ -176,61 +176,6 @@ describe("bump", function()
         bump.each(mark, 0,0,70,20)
         assert.same({true}, {i11.mark, i12.mark, i21.mark, i22.mark})
       end)
-    end)
-  end)
-
-  describe("bump.eachNeighbor", function()
-    local item, n1, n2, extra
-    local mark = function(item) item.mark = true end
-    before_each(function()
-      item   = { l=1,t=1,w=80,h=80 }
-      n1     = { l=1,t=90,w=1,h=1 }
-      n2     = { l=90,t=1,w=1,h=1 }
-      extra  = { l=140,t=1,w=1,h=1 }
-      bump.add(item, n1, n2, extra)
-    end)
-    it("returns an error if an item is not in the node list", function()
-      assert.error(function() bump.eachNeighbor({}, function() end) end)
-    end)
-    it("executes the callback for all the item's neighbors, but not the item or others", function()
-      bump.eachNeighbor(item, mark)
-      assert.same({true, true}, {n1.mark, n2.mark, item.mark, extra.mark})
-    end)
-    it("excludes the neighbors present in the already visited list", function()
-      bump.eachNeighbor(item, mark, {[n2]=true})
-      assert.same({true}, {n1.mark, n2.mark, item.mark, extra.mark})
-    end)
-    it("does not affect the visited list", function()
-      local visited = {}
-      bump.eachNeighbor(item, mark, visited)
-      assert.empty(visited)
-    end)
-  end)
-
-  describe(".getNearestIntersection", function()
-    local item1, item2, item3, item4
-    before_each(function()
-      item1 = {l=1,t=1,w=10,h=10, name='item1'}
-      item2 = {l=2,t=2,w=10,h=10, name='item2'}
-      item3 = {l=3,t=3,w=10,h=10, name='item3'}
-      item4 = {l=4,t=4,w=10,h=10, name='item4'}
-      bump.add(item1, item2, item3, item4)
-    end)
-
-    it("returns the nearest collision data (neighbor, dx, dy) for a given item", function()
-      assert.same({item2, -9, -9}, { bump.getNearestIntersection(item1) })
-    end)
-
-    it("returns the nearest collision data excluding already tested neighbors", function()
-      assert.same({item3, -8, -8}, { bump.getNearestIntersection(item1, {[item2]=true}) })
-      assert.same({item4, -7, -7}, { bump.getNearestIntersection(item1, {[item2]=true, [item3]=true}) })
-      assert.same({nil, 0, 0}, {bump.getNearestIntersection(item1, {[item2]=true, [item3]=true, [item4]=true}) })
-    end)
-
-    it("does not alter the visited table", function()
-      local visited = {}
-      bump.getNearestIntersection(item1, visited)
-      assert.empty(visited)
     end)
   end)
 
