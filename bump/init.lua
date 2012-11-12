@@ -5,7 +5,7 @@ local path = (...):gsub("%.init$","")
 local nodes      = require(path .. '.nodes')
 local cells      = require(path .. '.cells')
 local grid       = require(path .. '.grid')
-local geometry  = require(path .. '.geometry')
+local geometry   = require(path .. '.geometry')
 local util       = require(path .. '.util')
 
 bump.nodes, bump.cells, bump.grid, bump.geometry, bump.util = nodes, cells, grid, geometry, util
@@ -14,11 +14,18 @@ bump.nodes, bump.cells, bump.grid, bump.geometry, bump.util = nodes, cells, grid
 -- Private stuff
 local collisions, prevCollisions
 
-local function _getNearestgeometryion(item, visited)
+local function _eachNeighbor(item, callback, visited)
+  local node = assert(nodes.get(item))
+  visited = visited and util.copy(visited) or {}
+  visited[item] = true -- don't visit the item, just its neighbors
+  cells.eachItem(callback, node.gl, node.gt, node.gw, node.gh, visited)
+end
+
+local function _getNearestIntersection(item, visited)
   visited = visited or {}
   local nNeighbor, nDx, nDy, nArea = nil, 0,0,0
   local ni = nodes.get(item)
-  bump.eachNeighbor(item, function(neighbor)
+  _eachNeighbor(item, function(neighbor)
     if bump.shouldCollide(item, neighbor) then
       local nn = nodes.get(neighbor)
       local dx, dy = geometry.boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
@@ -37,7 +44,7 @@ local function _collideItemWithNeighbors(item)
   local visited = {}
   local neighbor, dx, dy
   repeat
-    neighbor, dx, dy = _getNearestgeometryion(item, visited)
+    neighbor, dx, dy = _getNearestIntersection(item, visited)
     if neighbor then
       if collisions[neighbor] and collisions[neighbor][item] then return end
 
@@ -119,14 +126,6 @@ function bump.each(callback, l,t,w,h)
   end
 end
 
-function bump.eachNeighbor(item, callback, visited)
-  local node = nodes.get(item)
-  assert(node, "Item must be added to bump before calculating its neighbors")
-  visited = visited and util.copy(visited) or {}
-  visited[item] = true -- don't visit the item, just its neighbors
-  cells.eachItem(callback, node.gl, node.gt, node.gw, node.gh, visited)
-end
-
 function bump.collide()
   collisions = util.newWeakTable()
   bump.each(_collideItemWithNeighbors)
@@ -156,13 +155,12 @@ function bump.getBBox(item)
 end
 
 function bump.initialize(newCellSize)
-  prevCollisions = util.newWeakTable()
-  collisions     = util.newWeakTable()
-  nodes.reset()
   grid.reset(newCellSize)
+  nodes.reset()
   cells.reset()
+  prevCollisions = util.newWeakTable()
+  collisions     = nil
 end
-
 
 bump.initialize()
 
