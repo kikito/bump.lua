@@ -82,9 +82,7 @@ describe("bump.cells", function()
 
       collectgarbage('collect')
       assert.equal(cells.count(), 0)
-
     end)
-
   end)
 
   describe(".count", function()
