@@ -1,3 +1,6 @@
+-- bump.cells : This module contains the cells used in bump.lua, as well as the
+-- functions to manage them. You usually will not need to use any of these
+
 local cells = {} -- (public/exported) holds the public cell interface
 
 local path = (...):gsub("%.cells$","")
@@ -28,15 +31,7 @@ function cells.add(item, gl,gt,gw,gh)
   end
 end
 
-function cells.remove(item, gl,gt,gw,gh)
-  cells.each(function(cell)
-    cell.items[item] = nil
-    store.nonEmptyCells[cell] = store.nonEmptyCells[cell] - 1
-    if store.nonEmptyCells[cell] == 0 then store.nonEmptyCells[cell] = nil end
-  end)
-end
-
-function cells.each(callback, gl,gt,gw,gh)
+local function cells_each(callback, gl,gt,gw,gh)
   if gl then
     local row, cell
     for gy=gt,gt+gh do
@@ -56,10 +51,20 @@ function cells.each(callback, gl,gt,gw,gh)
     end
   end
 end
+cells.each = cells_each
+
+function cells.remove(item, gl,gt,gw,gh)
+  cells_each(function(cell)
+    cell.items[item] = nil
+    store.nonEmptyCells[cell] = store.nonEmptyCells[cell] - 1
+    if store.nonEmptyCells[cell] == 0 then store.nonEmptyCells[cell] = nil end
+  end, gl,gt,gw,gh)
+end
+
 
 function cells.eachItem(callback, gl,gt,gw,gh, visited)
   visited = visited and util.copy(visited) or {}
-  cells.each(function(cell)
+  cells_each(function(cell)
     for item,_ in pairs(cell.items) do
       if not visited[item] then
         visited[item] = true
@@ -71,13 +76,12 @@ end
 
 function cells.count()
   local count = 0
-  cells.each(function() count = count + 1 end)
+  cells_each(function() count = count + 1 end)
   return count
 end
 
 function cells.reset(newCellSize)
   store = { rows = {}, nonEmptyCells = {} }
-  cells.store = store
 end
 
 cells.reset()

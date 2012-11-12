@@ -1,3 +1,4 @@
+-- bump.util: Some utility functions for bump.lua
 local util = {}
 
 local modes = {
@@ -7,8 +8,7 @@ local modes = {
 }
 
 function util.newWeakTable(mode)
-  mode = mode or 'k'
-  return setmetatable({}, modes[mode])
+  return setmetatable({}, modes[mode or 'k'])
 end
 
 function util.copy(t)
@@ -20,6 +20,5 @@ end
 function util.abs(x)
   return x < 0 and -x or x
 end
-
 
 return util

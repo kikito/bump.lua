@@ -8,7 +8,24 @@ local grid       = require(path .. '.grid')
 local geometry   = require(path .. '.geometry')
 local util       = require(path .. '.util')
 
-bump.nodes, bump.cells, bump.grid, bump.geometry, bump.util = nodes, cells, grid, geometry, util
+bump.nodes, bump.cells, bump.grid, bump.geometry, bump.util =
+nodes, cells, grid, geometry, util
+
+--------------------------------------
+-- locals for faster acdess
+
+local nodes_get, nodes_add, nodes_remove, nodes_update =
+      nodes.get, nodes.add, nodes.remove, nodes.update
+
+local cells_eachItem, cells_add, cells_remove =
+      cells.eachItem, cells.add, cells.remove
+
+local grid_getBox, grid_getCellSize = grid.getBox, grid.getCellSize
+
+local geometry_boxesDisplacement, geometry_boxesIntersect =
+      geometry.boxesDisplacement, geometry.boxesIntersect
+
+local util_abs, util_newWeakTable = util.abs, util.newWeakTable
 
 --------------------------------------
 -- Private stuff
@@ -16,26 +33,26 @@ bump.nodes, bump.cells, bump.grid, bump.geometry, bump.util = nodes, cells, grid
 local collisions, prevCollisions
 
 local function _getNearestIntersection(item, visited)
-  local ni = nodes.get(item)
+  local ni = nodes_get(item)
   local nNeighbor, nDx, nDy, nArea = nil, 0,0,0
   local nn, dx, dy, area
   local compareIntersectionArea = function(neighbor)
     if item ~= neighbor and bump.shouldCollide(item, neighbor) then
-      nn = nodes.get(neighbor)
-      dx, dy = geometry.boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
-      area = util.abs(dx*dy)
+      nn = nodes_get(neighbor)
+      dx, dy = geometry_boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
+      area = util_abs(dx*dy)
       if area > nArea then
         nArea, nDx, nDy = area, dx, dy
         nNeighbor = neighbor
       end
     end
   end
-  cells.eachItem(compareIntersectionArea, ni.gl, ni.gt, ni.gw, ni.gh, visited)
+  cells_eachItem(compareIntersectionArea, ni.gl, ni.gt, ni.gw, ni.gh, visited)
   return nNeighbor, nDx, nDy
 end
 
 local function _collideItemWithNeighbors(item)
-  local ni = nodes.get(item)
+  local ni = nodes_get(item)
   local visited = {}
   local neighbor, dx, dy
   repeat
@@ -43,18 +60,18 @@ local function _collideItemWithNeighbors(item)
     if neighbor then
       if collisions[neighbor] and collisions[neighbor][item] then return end
 
-      local nn = nodes.get(neighbor)
+      local nn = nodes_get(neighbor)
 
-      if not geometry.boxesIntersect(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
+      if not geometry_boxesIntersect(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
 
-      local dx, dy = geometry.boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
+      local dx, dy = geometry_boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
 
       bump.collision(item, neighbor, dx, dy)
 
       bump.update(item)
       bump.update(neighbor)
 
-      collisions[item] = collisions[item] or util.newWeakTable()
+      collisions[item] = collisions[item] or util_newWeakTable()
       collisions[item][neighbor] = true
 
       if prevCollisions[item] then prevCollisions[item][neighbor] = nil end
@@ -65,65 +82,76 @@ local function _collideItemWithNeighbors(item)
 end
 
 --------------------------------------
--- Public functions
+-- Public stuff
 
-function bump.getCellSize()
-  return grid.getCellSize()
-end
+bump.getCellSize = grid_getCellSize
 
+-- adds one or more items into bump
 function bump.add(item1, ...)
   assert(item1, "at least one item expected, got nil")
   local items = {item1, ...}
   for i=1, #items do
     local item = items[i]
     local l,t,w,h = bump.getBBox(item)
-    local gl,gt,gw,gh = grid.getBox(l,t,w,h)
+    local gl,gt,gw,gh = grid_getBox(l,t,w,h)
 
-    nodes.add(item, l,t,w,h, gl,gt,gw,gh)
-    cells.add(item, gl,gt,gw,gh)
+    nodes_add(item, l,t,w,h, gl,gt,gw,gh)
+    cells_add(item, gl,gt,gw,gh)
   end
 end
 
+-- removes an item from bump
 function bump.remove(item)
   assert(item, "item expected, got nil")
-  nodes.remove(item)
-  cells.remove(item, grid.getBox(bump.getBBox(item)))
+  local node = nodes_get(item)
+  if node then
+    cells_remove(item, node.gl, node.gt, node.gw, node.gh)
+    nodes_remove(item)
+  end
 end
 
+-- Updates the cached information that bump has about an item (bounding boxes, etc)
 function bump.update(item)
   assert(item, "item expected, got nil")
-  local n = nodes.get(item)
+  local n = nodes_get(item)
   local l,t,w,h = bump.getBBox(item)
   if n.l ~= l or n.t ~= t or n.w ~= w or n.h ~= h then
 
-    local gl,gt,gw,gh = grid.getBox(l,t,w,h)
+    local gl,gt,gw,gh = grid_getBox(l,t,w,h)
     if n.gl ~= gl or n.gt ~= gt or n.gw ~= gw or n.gh ~= gh then
-      cells.remove(item, n.gl, n.gt, n.gw, n.gh)
-      cells.add(item, gl, gt, gw, gh)
+      cells_remove(item, n.gl, n.gt, n.gw, n.gh)
+      cells_add(item, gl, gt, gw, gh)
     end
 
-    nodes.update(item, l,t,w,h, gl,gt,gw,gh)
+    nodes_update(item, l,t,w,h, gl,gt,gw,gh)
   end
 end
 
+-- Execute callback in all the items on the region (if no region specified, do it
+-- in all items)
 function bump.each(callback, l,t,w,h)
   local visited = {}
   if l then
-    cells.eachItem(function(item)
-      local node = nodes.get(item)
-      if geometry.boxesIntersect(l,t,w,h, node.l, node.t, node.w, node.h) then
+    cells_eachItem(function(item)
+      local node = nodes_get(item)
+      if geometry_boxesIntersect(l,t,w,h, node.l, node.t, node.w, node.h) then
         callback(item)
       end
-    end, grid.getBox(l,t,w,h))
+    end, grid_getBox(l,t,w,h))
   else
-    cells.eachItem(callback)
+    cells_eachItem(callback)
   end
 end
 
+-- Invoke this function inside your 'update' loop. It will invoke bump.collision and
+-- bump.endCollision for all the pairs of items that should collide
+-- By default it updates the information of all items before performing the checks.
+-- You may choose to update the information manually by passing false in the param
+-- and using bump.update() on each item that moves manually.
 function bump.collide(globalUpdate)
   if globalUpdate ~= false then bump.each(bump.update) end
 
-  collisions = util.newWeakTable()
+  collisions = util_newWeakTable()
   bump.each(_collideItemWithNeighbors)
 
   for item,neighbors in pairs(prevCollisions) do
@@ -135,29 +163,45 @@ function bump.collide(globalUpdate)
   prevCollisions = collisions
 end
 
+-- This resets the library. You can use it to change the cell size, if you want
 function bump.initialize(newCellSize)
   grid.reset(newCellSize)
   nodes.reset()
   cells.reset()
-  prevCollisions = util.newWeakTable()
+  prevCollisions = util_newWeakTable()
   collisions     = nil
 end
 
--- overridable functions
+--------------------------------------
+-- Stuff that the user will probably want to override
+
+-- called when two items collide. dx, dy is how much must item1 be moved to stop
+-- intersecting with item2. Override this function to get a collision callback
 function bump.collision(item1, item2, dx, dy)
 end
 
+-- called at the end of the bump.collide() function, if two items where collidng
+-- before but not any more. Override this function to get a callback when a pair
+-- of items stop colliding
 function bump.endCollision(item1, item2)
 end
 
+-- This function must return true if item1 'interacts' with item2. If it returns
+-- false, then they will not collide. Override this function if you want to make
+-- 'groups of boxes that don't collide with each other', and that kind of thing.
+-- By default, all items collide with all items
 function bump.shouldCollide(item1, item2)
   return true
 end
 
+-- This is how the bounding box of an object is calculated. You might want to
+-- override it if your items have a different way to calculate it. Must return
+-- left, top, width and height, in that order.
 function bump.getBBox(item)
   return item.l, item.t, item.w, item.h
 end
 
 bump.initialize()
+
 
 return bump
