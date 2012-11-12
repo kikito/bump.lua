@@ -5,23 +5,23 @@ local path = (...):gsub("%.init$","")
 local nodes      = require(path .. '.nodes')
 local cells      = require(path .. '.cells')
 local grid       = require(path .. '.grid')
-local intersect  = require(path .. '.intersect')
+local geometry  = require(path .. '.geometry')
 local util       = require(path .. '.util')
 
-bump.nodes, bump.cells, bump.grid, bump.intersect, bump.util = nodes, cells, grid, intersect, util
+bump.nodes, bump.cells, bump.grid, bump.geometry, bump.util = nodes, cells, grid, geometry, util
 
 --------------------------------------
 -- Private stuff
 local collisions, prevCollisions
 
-local function _getNearestIntersection(item, visited)
+local function _getNearestgeometryion(item, visited)
   visited = visited or {}
   local nNeighbor, nDx, nDy, nArea = nil, 0,0,0
   local ni = nodes.get(item)
   bump.eachNeighbor(item, function(neighbor)
     if bump.shouldCollide(item, neighbor) then
       local nn = nodes.get(neighbor)
-      local dx, dy = intersect.displacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
+      local dx, dy = geometry.boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
       local area = util.abs(dx*dy)
       if area > nArea then
         nArea, nDx, nDy = area, dx, dy
@@ -37,15 +37,15 @@ local function _collideItemWithNeighbors(item)
   local visited = {}
   local neighbor, dx, dy
   repeat
-    neighbor, dx, dy = _getNearestIntersection(item, visited)
+    neighbor, dx, dy = _getNearestgeometryion(item, visited)
     if neighbor then
       if collisions[neighbor] and collisions[neighbor][item] then return end
 
       local nn = nodes.get(neighbor)
 
-      if not intersect.quick(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
+      if not geometry.boxesIntersect(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
 
-      local dx, dy = intersect.displacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
+      local dx, dy = geometry.boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
 
       bump.collision(item, neighbor, dx, dy)
 
@@ -110,7 +110,7 @@ function bump.each(callback, l,t,w,h)
   if l then
     cells.eachItem(function(item)
       local node = nodes.get(item)
-      if intersect.quick(l,t,w,h, node.l, node.t, node.w, node.h) then
+      if geometry.boxesIntersect(l,t,w,h, node.l, node.t, node.w, node.h) then
         callback(item)
       end
     end, grid.getBox(l,t,w,h))

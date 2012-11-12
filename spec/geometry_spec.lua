@@ -1,0 +1,20 @@
+local geometry = require 'bump.geometry'
+
+describe('bump.geometry', function()
+  describe('.boxesIntersect', function()
+    it('returns true when two boxes geometry', function()
+      assert.truthy(geometry.boxesIntersect(0,0,10,10, 5,5,10,10))
+    end)
+    it('returns false when two boxes do not geometry', function()
+      assert.falsy(geometry.boxesIntersect(0,0,10,10, 20,20,10,10))
+    end)
+  end)
+
+  describe('.boxesDisplacement', function()
+    it('returns the boxesDisplacement vector needed to move box1 out of box2', function()
+      assert.same({-6,-6}, {geometry.boxesDisplacement(0,0,10,10, 4,4,10,10)})
+      assert.same({-4,-4}, {geometry.boxesDisplacement(0,0,10,10, 6,6,10,10)})
+      assert.same({-5,-5}, {geometry.boxesDisplacement(0,0,10,10, 5,5,10,10)})
+    end)
+  end)
+end)
