@@ -179,10 +179,28 @@ describe("bump", function()
     end)
   end)
 
-  describe("bump.collision", function()
+  describe("bump.collision and bump.collide", function()
 
     it("is empty by efault", function()
       assert.equal(type(bump.collision), "function")
+    end)
+
+    describe("bump.collide's only param", function()
+      before_each(function()
+        spy.on(bump, "each")
+      end)
+      it("triggers a global item update by default", function()
+        bump.collide()
+        assert.spy(bump.each).was.called_with(bump.update)
+      end)
+      it("triggers a global item update if true", function()
+        bump.collide(true)
+        assert.spy(bump.each).was.called_with(bump.update)
+      end)
+      it("does not trigger a global item update if false", function()
+        bump.collide(false)
+        assert.spy(bump.each).was.Not.called_with(bump.update)
+      end)
     end)
 
     describe("When defined", function()
@@ -198,6 +216,7 @@ describe("bump", function()
         bump.collide()
         assert.empty(collisions)
       end)
+
 
       it("is called once if two items collide", function()
         local item1 = {l=0,t=0,w=10,h=10, name='item1'}
@@ -234,6 +253,7 @@ describe("bump", function()
         assert.spy(bump.update).was.called_with(item1)
         assert.spy(bump.update).was.called_with(item2)
       end)
+
     end)
   end)
 

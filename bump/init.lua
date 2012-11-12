@@ -120,7 +120,9 @@ function bump.each(callback, l,t,w,h)
   end
 end
 
-function bump.collide()
+function bump.collide(globalUpdate)
+  if globalUpdate ~= false then bump.each(bump.update) end
+
   collisions = util.newWeakTable()
   bump.each(_collideItemWithNeighbors)
 
