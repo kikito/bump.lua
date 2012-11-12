@@ -1,3 +1,7 @@
+-- bump.geometry
+-- This bump module contains functions related with spacial queries, like
+-- 'do these to boxes collide?'
+
 local geometry = {}
 
 function geometry.boxesIntersect(l1,t1,w1,h1, l2,t2,w2,h2)

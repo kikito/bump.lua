@@ -1,3 +1,8 @@
+-- bump.nodes
+-- A node in lua is 'the information bump has about that node'
+-- Typically, its boundingbox & gridbox. This module deals with managing and storing
+-- bump's nodes.
+
 local nodes = {} -- (public/exported) holds the public methods of this module
 
 local path = (...):gsub("%.nodes$","")
