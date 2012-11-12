@@ -19,7 +19,7 @@ local function _getNearestIntersection(item, visited)
   local ni = nodes.get(item)
   local nNeighbor, nDx, nDy, nArea = nil, 0,0,0
   local nn, dx, dy, area
-  local eachIntersection = function(neighbor)
+  local compareIntersectionArea = function(neighbor)
     if item ~= neighbor and bump.shouldCollide(item, neighbor) then
       nn = nodes.get(neighbor)
       dx, dy = geometry.boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
@@ -30,7 +30,7 @@ local function _getNearestIntersection(item, visited)
       end
     end
   end
-  cells.eachItem(eachIntersection, ni.gl, ni.gt, ni.gw, ni.gh, visited)
+  cells.eachItem(compareIntersectionArea, ni.gl, ni.gt, ni.gw, ni.gh, visited)
   return nNeighbor, nDx, nDy
 end
 
