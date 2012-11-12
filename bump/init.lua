@@ -19,14 +19,10 @@ local function abs(x)
   return x < 0 and -x or x
 end
 
-
+--------------------------------------
 
 function bump.getCellSize()
   return grid.getCellSize()
-end
-
-function bump.getBBox(item)
-  return item.l, item.t, item.w, item.h
 end
 
 function bump.add(item1, ...)
@@ -54,11 +50,13 @@ function bump.update(item)
   local n = nodes.get(item)
   local l,t,w,h = bump.getBBox(item)
   if n.l ~= l or n.t ~= t or n.w ~= w or n.h ~= h then
+
     local gl,gt,gw,gh = grid.getBox(l,t,w,h)
     if n.gl ~= gl or n.gt ~= gt or n.gw ~= gw or n.gh ~= gh then
       cells.remove(item, n.gl, n.gt, n.gw, n.gh)
       cells.add(item, gl, gt, gw, gh)
     end
+
     nodes.update(item, l,t,w,h, gl,gt,gw,gh)
   end
 end
@@ -85,7 +83,6 @@ function bump.each(callback, l,t,w,h)
   end
 end
 
-
 function bump.eachNeighbor(item, callback, visited)
   local node = nodes.get(item)
   assert(node, "Item must be added to bump before calculating its neighbors")
@@ -94,49 +91,19 @@ function bump.eachNeighbor(item, callback, visited)
   cells.eachItem(callback, node.gl, node.gt, node.gw, node.gh, visited)
 end
 
-function bump.collision(item1, item2, dx, dy)
-end
-
-function bump.collideItem(item, collidedPairs)
-  collidedPairs = collidedPairs or {}
-  local ni = nodes.get(item)
-  local visited = {}
-  local neighbor, dx, dy
-  repeat
-    neighbor, dx, dy = bump.getNearestIntersection(item, visited)
-    if neighbor then
-      if collidedPairs[neighbor] and collidedPairs[neighbor][item] then return end
-
-      local nn = nodes.get(neighbor)
-
-      if not intersect.quick(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
-
-      local dx, dy = intersect.displacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
-
-      bump.collision(item, neighbor, dx, dy)
-
-      bump.update(item)
-      bump.update(neighbor)
-
-      collidedPairs[item] = collidedPairs[item] or {}
-      collidedPairs[item][neighbor] = true
-
-      visited[neighbor] = true
-    end
-  until not neighbor
-end
-
 function bump.getNearestIntersection(item, visited)
   visited = visited or {}
   local nNeighbor, nDx, nDy, nArea = nil, 0,0,0
   local ni = nodes.get(item)
   bump.eachNeighbor(item, function(neighbor)
-    local nn = nodes.get(neighbor)
-    local dx, dy = intersect.displacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
-    local area = abs(dx*dy)
-    if area > nArea then
-      nArea, nDx, nDy = area, dx, dy
-      nNeighbor = neighbor
+    if bump.shouldCollide(item, neighbor) then
+      local nn = nodes.get(neighbor)
+      local dx, dy = intersect.displacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
+      local area = abs(dx*dy)
+      if area > nArea then
+        nArea, nDx, nDy = area, dx, dy
+        nNeighbor = neighbor
+      end
     end
   end, visited)
   return nNeighbor, nDx, nDy
@@ -144,7 +111,48 @@ end
 
 function bump.collide()
   local collidedPairs = {}
-  bump.each(function(item) bump.collideItem(item, collidedPairs) end)
+  bump.each(function(item)
+    local ni = nodes.get(item)
+    local visited = {}
+    local neighbor, dx, dy
+    repeat
+      neighbor, dx, dy = bump.getNearestIntersection(item, visited)
+      if neighbor then
+        if collidedPairs[neighbor] and collidedPairs[neighbor][item] then return end
+
+        local nn = nodes.get(neighbor)
+
+        if not intersect.quick(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
+
+        local dx, dy = intersect.displacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
+
+        bump.collision(item, neighbor, dx, dy)
+
+        bump.update(item)
+        bump.update(neighbor)
+
+        collidedPairs[item] = collidedPairs[item] or {}
+        collidedPairs[item][neighbor] = true
+
+        visited[neighbor] = true
+      end
+    until not neighbor
+  end)
+end
+
+-- overridable functions
+function bump.collision(item1, item2, dx, dy)
+end
+
+function bump.endCollision(item1, item2)
+end
+
+function bump.shouldCollide(item1, item2)
+  return true
+end
+
+function bump.getBBox(item)
+  return item.l, item.t, item.w, item.h
 end
 
 function bump.initialize(newCellSize)
@@ -152,6 +160,7 @@ function bump.initialize(newCellSize)
   grid.reset(newCellSize)
   cells.reset()
 end
+
 
 bump.initialize()
 

@@ -4,11 +4,17 @@ local bump = require 'bump.init'
 
 describe("bump", function()
 
-  local defaultCollision = bump.collision
+  local defaultCollision      = bump.collision
+  local defaultEndCollision   = bump.endCollision
+  local defaultShouldCollide  = bump.shouldCollide
+  local defaultGetBBox        = bump.getBBox
 
   before_each(function()
     bump.initialize()
-    bump.collision = defaultCollision
+    bump.collision      = defaultCollision
+    bump.endCollision   = defaultEndCollision
+    bump.shouldCollide  = defaultShouldCollide
+    bump.getBBox        = defaultGetBBox
   end)
 
   it("is a table", function()
@@ -230,7 +236,7 @@ describe("bump", function()
 
   describe("bump.collision", function()
 
-    it("is empty by default", function()
+    it("is empty by efault", function()
       assert.equal(type(bump.collision), "function")
     end)
 
@@ -262,7 +268,10 @@ describe("bump", function()
         local item3 = {l=3,t=3,w=10,h=10, name='item3'}
         local item4 = {l=4,t=4,w=10,h=10, name='item4'}
         bump.add(item1, item2, item3, item4)
-        bump.collideItem(item1)
+
+        bump.shouldCollide = function(a,b) return a == item1 end
+
+        bump.collide(item1)
         assert.same({
           {first='item1', second='item2',dx=-9,dy=-9},
           {first='item1', second='item3',dx=-8,dy=-8},
@@ -280,7 +289,69 @@ describe("bump", function()
         assert.spy(bump.update).was.called_with(item1)
         assert.spy(bump.update).was.called_with(item2)
       end)
-
     end)
   end)
+
+  describe(".shouldCollide", function()
+    it("returns true by default", function()
+      assert.truthy(bump.shouldCollide())
+    end)
+    describe("When defined", function()
+      it("conditions which objects collide and which ones don't", function()
+        local item1 = {l=1,t=1,w=10,h=10, name='item1'}
+        local item2 = {l=2,t=2,w=10,h=10, name='item2'}
+        local item3 = {l=3,t=3,w=10,h=10, name='item3'}
+        local item4 = {l=4,t=4,w=10,h=10, name='item4'}
+        bump.add(item1, item2, item3, item4)
+
+        bump.shouldCollide = function(a, b)
+          return a == item1 or b == item1
+        end
+        local counter = 0
+        bump.collision = function(item1, item2, dx, dy)
+          counter = counter + 1
+        end
+        bump.collide()
+        assert.equals(counter, 3) -- instead of 6
+      end)
+    end)
+  end)
+
+  describe('.endCollision', function()
+    local endedCollisions
+    before_each(function()
+      endedCollisions = {}
+      bump.endCollision = function(item1, item2)
+        endedCollisions[#endedCollisions + 1] = {item1.name, item2.name}
+      end
+    end)
+
+    it("is not called when no collisions happen", function()
+      bump.collide()
+      assert.empty(endedCollisions)
+    end)
+
+    describe("when collisions do happen", function()
+      local item1, item2, item3
+      before_each(function()
+        item1 = {l=1,t=1,w=10,h=10, name='item1'}
+        item2 = {l=2,t=2,w=10,h=10, name='item2'}
+        item3 = {l=3,t=3,w=10,h=10, name='item3'}
+        bump.add(item1, item2, item3)
+      end)
+
+      pending("is called once for each pair of items which are not colliding any more", function()
+        bump.collide()
+        assert.empty(endedCollisions)
+        item1.l, item1.t = 100,100
+        bump.collide()
+        assert.same({{'item1', 'item2'}, {'item1', 'item3'}}, endedCollisions)
+      end)
+
+    end)
+
+  end)
+
+
+
 end)
