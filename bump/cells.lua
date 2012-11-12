@@ -1,14 +1,13 @@
 local cells = {} -- (public/exported) holds the public cell interface
+
+local path = (...):gsub("%.cells$","")
+local util       = require(path .. '.util')
+
 local store      -- (private) holds references to the individual rows and cells
 
-local function newWeakTable(mode)
-  return setmetatable({}, {__mode = mode or 'k'})
-end
-
-
 function cells.create(gx,gy)
-  store.rows[gy] = store.rows[gy] or newWeakTable('v')
-  local cell = {items = newWeakTable(), gx=gx, gy=gy}
+  store.rows[gy] = store.rows[gy] or util.newWeakTable('v')
+  local cell = {items = util.newWeakTable(), gx=gx, gy=gy}
   store.rows[gy][gx] = cell
   return cell
 end
@@ -58,14 +57,8 @@ function cells.each(callback, gl,gt,gw,gh)
   end
 end
 
-local function copy(t)
-  local c = {}
-  for k,v in pairs(t) do c[k] = v end
-  return c
-end
-
 function cells.eachItem(callback, gl,gt,gw,gh, visited)
-  visited = visited and copy(visited) or {}
+  visited = visited and util.copy(visited) or {}
   cells.each(function(cell)
     for item,_ in pairs(cell.items) do
       if not visited[item] then

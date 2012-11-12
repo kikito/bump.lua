@@ -347,9 +347,7 @@ describe("bump", function()
         bump.collide()
         assert.same({{'item1', 'item2'}, {'item1', 'item3'}}, endedCollisions)
       end)
-
     end)
-
   end)
 
 

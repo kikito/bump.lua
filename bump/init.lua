@@ -6,20 +6,14 @@ local nodes      = require(path .. '.nodes')
 local cells      = require(path .. '.cells')
 local grid       = require(path .. '.grid')
 local intersect  = require(path .. '.intersect')
+local util       = require(path .. '.util')
 
 bump.nodes, bump.cells, bump.grid = nodes, cells, grid
 
-local function copy(t)
-  local c = {}
-  for k,v in pairs(t) do c[k] = v end
-  return c
-end
-
-local function abs(x)
-  return x < 0 and -x or x
-end
+local prevCollisions
 
 --------------------------------------
+-- Public functions
 
 function bump.getCellSize()
   return grid.getCellSize()
@@ -86,7 +80,7 @@ end
 function bump.eachNeighbor(item, callback, visited)
   local node = nodes.get(item)
   assert(node, "Item must be added to bump before calculating its neighbors")
-  visited = visited and copy(visited) or {}
+  visited = visited and util.copy(visited) or {}
   visited[item] = true -- don't visit the item, just its neighbors
   cells.eachItem(callback, node.gl, node.gt, node.gw, node.gh, visited)
 end
@@ -99,7 +93,7 @@ function bump.getNearestIntersection(item, visited)
     if bump.shouldCollide(item, neighbor) then
       local nn = nodes.get(neighbor)
       local dx, dy = intersect.displacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
-      local area = abs(dx*dy)
+      local area = util.abs(dx*dy)
       if area > nArea then
         nArea, nDx, nDy = area, dx, dy
         nNeighbor = neighbor
@@ -110,7 +104,7 @@ function bump.getNearestIntersection(item, visited)
 end
 
 function bump.collide()
-  local collidedPairs = {}
+  local collisions = {}
   bump.each(function(item)
     local ni = nodes.get(item)
     local visited = {}
@@ -118,7 +112,7 @@ function bump.collide()
     repeat
       neighbor, dx, dy = bump.getNearestIntersection(item, visited)
       if neighbor then
-        if collidedPairs[neighbor] and collidedPairs[neighbor][item] then return end
+        if collisions[neighbor] and collisions[neighbor][item] then return end
 
         local nn = nodes.get(neighbor)
 
@@ -131,13 +125,16 @@ function bump.collide()
         bump.update(item)
         bump.update(neighbor)
 
-        collidedPairs[item] = collidedPairs[item] or {}
-        collidedPairs[item][neighbor] = true
+        collisions[item] = collisions[item] or util.newWeakTable()
+        collisions[item][neighbor] = true
+
+        if prevCollisions[item] then prevCollisions[item][neighbor] = nil end
 
         visited[neighbor] = true
       end
     until not neighbor
   end)
+  prevCollisions = collisions
 end
 
 -- overridable functions
@@ -156,6 +153,7 @@ function bump.getBBox(item)
 end
 
 function bump.initialize(newCellSize)
+  prevCollisions = util.newWeakTable()
   nodes.reset()
   grid.reset(newCellSize)
   cells.reset()
