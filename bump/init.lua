@@ -32,41 +32,38 @@ local util_abs, util_newWeakTable = util.abs, util.newWeakTable
 
 local collisions, prevCollisions
 
-local function _getNearestIntersection(item, visited)
+local function _getBiggestIntersection(item, visited)
   local ni = nodes_get(item)
-  local nNeighbor, nDx, nDy, nArea = nil, 0,0,0
-  local nn, dx, dy, area
-  local compareIntersectionArea = function(neighbor)
-    if item ~= neighbor and bump.shouldCollide(item, neighbor) then
-      nn = nodes_get(neighbor)
-      dx, dy = geometry_boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
-      area = util_abs(dx*dy)
-      if area > nArea then
-        nArea, nDx, nDy = area, dx, dy
-        nNeighbor = neighbor
-      end
+  local nNeighbor, nMdx, nMdy, nDx, nDy, nArea = nil, 0,0,0,0,0
+  local nn, mdx, mdy, dx, dy, area
+  local compareNeighborIntersection = function(neighbor)
+    if item == neighbor or not bump.shouldCollide(item, neighbor) then return end
+    nn = nodes_get(neighbor)
+    if not geometry_boxesIntersect(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
+
+    mdx, mdy, dx, dy = geometry_boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
+    area = util_abs(dx*dy)
+    if area > nArea then
+      nArea, nMdx, nMdy, nDx, nDy = area, mdx, mdy, dx, dy
+      nNeighbor = neighbor
     end
   end
-  cells_eachItem(compareIntersectionArea, ni.gl, ni.gt, ni.gw, ni.gh, visited)
-  return nNeighbor, nDx, nDy
+  cells_eachItem(compareNeighborIntersection, ni.gl, ni.gt, ni.gw, ni.gh, visited)
+  return nNeighbor, nMdx, nMdy, nDx, nDy
 end
 
 local function _collideItemWithNeighbors(item)
   local ni = nodes_get(item)
   local visited = {}
-  local neighbor, dx, dy
+  local neighbor, mdx, mdy, dx, dy
   repeat
-    neighbor, dx, dy = _getNearestIntersection(item, visited)
+    neighbor, mdx, mdy, dx, dy = _getBiggestIntersection(item, visited)
     if neighbor then
       if collisions[neighbor] and collisions[neighbor][item] then return end
 
       local nn = nodes_get(neighbor)
 
-      if not geometry_boxesIntersect(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
-
-      local dx, dy = geometry_boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
-
-      bump.collision(item, neighbor, dx, dy)
+      bump.collision(item, neighbor, mdx, mdy, dx, dy)
 
       bump.update(item)
       bump.update(neighbor)

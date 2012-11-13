@@ -207,7 +207,7 @@ describe("bump", function()
       local collisions
       before_each(function()
         collisions = {}
-        bump.collision = function(item1, item2, dx, dy)
+        bump.collision = function(item1, item2, mdx, mdy, dx, dy)
           collisions[#collisions + 1] = {first=item1.name, second=item2.name, dx=dx, dy=dy}
         end
       end)
