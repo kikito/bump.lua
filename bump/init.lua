@@ -5,11 +5,11 @@ local path = (...):gsub("%.init$","")
 local nodes      = require(path .. '.nodes')
 local cells      = require(path .. '.cells')
 local grid       = require(path .. '.grid')
-local geometry   = require(path .. '.geometry')
+local geom   = require(path .. '.geom')
 local util       = require(path .. '.util')
 
-bump.nodes, bump.cells, bump.grid, bump.geometry, bump.util =
-nodes, cells, grid, geometry, util
+bump.nodes, bump.cells, bump.grid, bump.geom, bump.util =
+nodes, cells, grid, geom, util
 
 --------------------------------------
 -- locals for faster acdess
@@ -22,8 +22,8 @@ local cells_eachItem, cells_add, cells_remove =
 
 local grid_getBox, grid_getCellSize = grid.getBox, grid.getCellSize
 
-local geometry_boxesDisplacement, geometry_boxesIntersect =
-      geometry.boxesDisplacement, geometry.boxesIntersect
+local geom_boxesDisplacement, geom_boxesIntersect =
+      geom.boxesDisplacement, geom.boxesIntersect
 
 local util_abs, util_newWeakTable = util.abs, util.newWeakTable
 
@@ -39,9 +39,9 @@ local function _getBiggestIntersection(item, visited)
   local compareNeighborIntersection = function(neighbor)
     if item == neighbor or not bump.shouldCollide(item, neighbor) then return end
     nn = nodes_get(neighbor)
-    if not geometry_boxesIntersect(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
+    if not geom_boxesIntersect(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
 
-    mdx, mdy, dx, dy = geometry_boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
+    mdx, mdy, dx, dy = geom_boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
     area = util_abs(dx*dy)
     if area > nArea then
       nArea, nMdx, nMdy, nDx, nDy = area, mdx, mdy, dx, dy
@@ -131,7 +131,7 @@ function bump.each(callback, l,t,w,h)
   if l then
     cells_eachItem(function(item)
       local node = nodes_get(item)
-      if geometry_boxesIntersect(l,t,w,h, node.l, node.t, node.w, node.h) then
+      if geom_boxesIntersect(l,t,w,h, node.l, node.t, node.w, node.h) then
         callback(item)
       end
     end, grid_getBox(l,t,w,h))

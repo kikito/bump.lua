@@ -1,0 +1,20 @@
+local geom = require 'bump.geom'
+
+describe('bump.geom', function()
+  describe('.boxesIntersect', function()
+    it('returns true when two boxes geom', function()
+      assert.truthy(geom.boxesIntersect(0,0,10,10, 5,5,10,10))
+    end)
+    it('returns false when two boxes do not geom', function()
+      assert.falsy(geom.boxesIntersect(0,0,10,10, 20,20,10,10))
+    end)
+  end)
+
+  describe('.boxesDisplacement', function()
+    it('returns the minimum & total displacement vector needed to move box1 out of box2', function()
+      assert.same({0,-6,-6,-6}, {geom.boxesDisplacement(0,0,10,10, 4,4,10,10)})
+      assert.same({0,-4,-4,-4}, {geom.boxesDisplacement(0,0,10,10, 6,6,10,10)})
+      assert.same({0,-5,-5,-5}, {geom.boxesDisplacement(0,0,10,10, 5,5,10,10)})
+    end)
+  end)
+end)
