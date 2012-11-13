@@ -2,17 +2,15 @@ local bump = {}
 
 local path = (...):gsub("%.init$","")
 
-local nodes      = require(path .. '.nodes')
-local cells      = require(path .. '.cells')
-local grid       = require(path .. '.grid')
+local nodes  = require(path .. '.nodes')
+local cells  = require(path .. '.cells')
 local geom   = require(path .. '.geom')
-local util       = require(path .. '.util')
+local util   = require(path .. '.util')
 
-bump.nodes, bump.cells, bump.grid, bump.geom, bump.util =
-nodes, cells, grid, geom, util
+bump.nodes, bump.cells, bump.geom, bump.util = nodes, cells, geom, util
 
 --------------------------------------
--- locals for faster acdess
+-- Locals for faster acdess
 
 local nodes_get, nodes_add, nodes_remove, nodes_update =
       nodes.get, nodes.add, nodes.remove, nodes.update
@@ -20,17 +18,16 @@ local nodes_get, nodes_add, nodes_remove, nodes_update =
 local cells_eachItem, cells_add, cells_remove =
       cells.eachItem, cells.add, cells.remove
 
-local grid_getBox, grid_getCellSize = grid.getBox, grid.getCellSize
-
-local geom_boxesDisplacement, geom_boxesIntersect =
-      geom.boxesDisplacement, geom.boxesIntersect
+local geom_boxesDisplacement, geom_boxesIntersect, geom_gridBox =
+      geom.boxesDisplacement, geom.boxesIntersect, geom.gridBox
 
 local util_abs, util_newWeakTable = util.abs, util.newWeakTable
 
 --------------------------------------
 -- Private stuff
 
-local collisions, prevCollisions
+local defaultCellSize = 64
+local cellSize, collisions, prevCollisions
 
 local function _getBiggestIntersection(item, visited)
   local ni = nodes_get(item)
@@ -81,7 +78,9 @@ end
 --------------------------------------
 -- Public stuff
 
-bump.getCellSize = grid_getCellSize
+function bump.getCellSize()
+  return cellSize
+end
 
 -- adds one or more items into bump
 function bump.add(item1, ...)
@@ -90,7 +89,7 @@ function bump.add(item1, ...)
   for i=1, #items do
     local item = items[i]
     local l,t,w,h = bump.getBBox(item)
-    local gl,gt,gw,gh = grid_getBox(l,t,w,h)
+    local gl,gt,gw,gh = geom_gridBox(cellSize, l,t,w,h)
 
     nodes_add(item, l,t,w,h, gl,gt,gw,gh)
     cells_add(item, gl,gt,gw,gh)
@@ -114,7 +113,7 @@ function bump.update(item)
   local l,t,w,h = bump.getBBox(item)
   if n.l ~= l or n.t ~= t or n.w ~= w or n.h ~= h then
 
-    local gl,gt,gw,gh = grid_getBox(l,t,w,h)
+    local gl,gt,gw,gh = geom_gridBox(cellSize, l,t,w,h)
     if n.gl ~= gl or n.gt ~= gt or n.gw ~= gw or n.gh ~= gh then
       cells_remove(item, n.gl, n.gt, n.gw, n.gh)
       cells_add(item, gl, gt, gw, gh)
@@ -134,7 +133,7 @@ function bump.each(callback, l,t,w,h)
       if geom_boxesIntersect(l,t,w,h, node.l, node.t, node.w, node.h) then
         callback(item)
       end
-    end, grid_getBox(l,t,w,h))
+    end, geom_gridBox(cellSize, l,t,w,h))
   else
     cells_eachItem(callback)
   end
@@ -162,7 +161,7 @@ end
 
 -- This resets the library. You can use it to change the cell size, if you want
 function bump.initialize(newCellSize)
-  grid.reset(newCellSize)
+  cellSize = newCellSize or defaultCellSize
   nodes.reset()
   cells.reset()
   prevCollisions = util_newWeakTable()
@@ -199,6 +198,5 @@ function bump.getBBox(item)
 end
 
 bump.initialize()
-
 
 return bump
