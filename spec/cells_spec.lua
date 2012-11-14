@@ -160,6 +160,18 @@ describe("bump.cells", function()
       cells.eachItem(function() counter = counter + 1 end, 1,1,1,1)
       assert.equals(counter, 3)
     end)
+
+    describe("When it results in removing one item", function()
+      local remove11 = function(item)
+        if item == i11 then cells.remove(i11, 1,1,0,0) end
+      end
+      it("does not throw errors when given a box", function()
+        assert.Not.error(function() cells.eachItem(remove11, 1,1,1,1) end)
+      end)
+      it("does not throw errors when not given a box", function()
+        assert.Not.error(function() cells.eachItem(remove11) end)
+      end)
+    end)
   end)
 end)
 

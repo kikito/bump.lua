@@ -177,6 +177,15 @@ describe("bump", function()
         assert.same({true}, {i11.mark, i12.mark, i21.mark, i22.mark})
       end)
     end)
+
+    describe("when it triggers the removal of an item", function()
+      it("does not throw errors", function()
+        local removeItem12 = function(item)
+          if item == item12 then bump.remove(item) end
+        end
+        assert.Not.error(function() bump.each(removeItem12) end)
+      end)
+    end)
   end)
 
   describe("bump.collision and bump.collide", function()
@@ -203,7 +212,7 @@ describe("bump", function()
       end)
     end)
 
-    describe("When defined", function()
+    describe("When bump.collision is defined", function()
       local collisions
       before_each(function()
         collisions = {}
@@ -253,7 +262,33 @@ describe("bump", function()
         assert.spy(bump.update).was.called_with(item1)
         assert.spy(bump.update).was.called_with(item2)
       end)
+    end)
 
+    describe("when bump.collide triggers the removal of one item", function()
+      local item1, item2, item3, item4
+      before_each(function()
+        item1 = {l=1,t=1,w=10,h=10, name='item1'}
+        item2 = {l=2,t=2,w=10,h=10, name='item2'}
+        item3 = {l=3,t=3,w=10,h=10, name='item3'}
+        item4 = {l=4,t=4,w=10,h=10, name='item4'}
+        bump.add(item1, item2, item3, item4)
+      end)
+
+      it("allows removing first item", function()
+        bump.collision = function(item1, item2) bump.remove(item1) end
+        assert.Not.error(bump.collide)
+      end)
+      it("allows removing second item", function()
+        bump.collision = function(item1, item2) bump.remove(item2) end
+        assert.Not.error(bump.collide)
+      end)
+      it("allows removing both items", function()
+        bump.collision = function(item1, item2)
+          bump.remove(item1)
+          bump.remove(item2)
+        end
+        assert.Not.error(bump.collide)
+      end)
     end)
   end)
 
