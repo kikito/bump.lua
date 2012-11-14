@@ -7,7 +7,7 @@ local Block = class('Block', Entity)
 
 function Block:initialize(l,t,w,h)
   Entity.initialize(self, l,t,w,h)
-  bump.addStatic(self)
+  bump.add(self)
 end
 
 function Block:destroy()
