@@ -31,7 +31,7 @@ function cells.add(item, gl,gt,gw,gh)
   end
 end
 
-local function cells_each(callback, gl,gt,gw,gh)
+function cells.each(callback, gl,gt,gw,gh)
   if gl then
     local row, cell
     for gy=gt,gt+gh do
@@ -51,7 +51,7 @@ local function cells_each(callback, gl,gt,gw,gh)
     end
   end
 end
-cells.each = cells_each
+local cells_each = cells.each
 
 function cells.remove(item, gl,gt,gw,gh)
   cells_each(function(cell)
@@ -60,7 +60,6 @@ function cells.remove(item, gl,gt,gw,gh)
     if store.nonEmptyCells[cell] == 0 then store.nonEmptyCells[cell] = nil end
   end, gl,gt,gw,gh)
 end
-
 
 function cells.eachItem(callback, gl,gt,gw,gh, visited)
   visited = visited and util.copy(visited) or {}

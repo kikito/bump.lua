@@ -31,6 +31,7 @@ local cellSize, collisions, prevCollisions
 
 local function _getBiggestIntersection(item, visited)
   local ni = nodes_get(item)
+  if not ni then return end
   local nNeighbor, nMdx, nMdy, nDx, nDy, nArea = nil, 0,0,0,0,0
   local nn, mdx, mdy, dx, dy, area
   local compareNeighborIntersection = function(neighbor)
@@ -110,6 +111,7 @@ end
 function bump.update(item)
   assert(item, "item expected, got nil")
   local n = nodes_get(item)
+  if not n then return end
   local l,t,w,h = bump.getBBox(item)
   if n.l ~= l or n.t ~= t or n.w ~= w or n.h ~= h then
 
