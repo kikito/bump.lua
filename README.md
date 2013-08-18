@@ -20,41 +20,33 @@ h1. Example
 
     -- The grid cell size can be specified via the initialize method
     -- By default, the cell size is 32
-    bump.initialize(50)
-
-    function bump.collision(item1, item2, col)
-      print(item1.name, "collision with", item2.name, "displacement vector:", col.dx, col.dy)
-    end
-
-    function bump.endCollision(item1, item2)
-      print(item1.name, "stopped colliding with", item2.name)
-    end
+    local world = bump.newWorld(50)
 
     -- create two rectangles
-    local rect1 = {name="rect1", l=0  , t=0, w=100, h=100} -- name, left, top, width, height
-    local rect2 = {name="rect2", l=300, t=0, w=100, h=100}
+    local A = {name="A"}
+    local B = {name="B"}
 
     -- insert both rectangles into bump
-    bump.add(rect1)
-    bump.add(rect2)
+    world:add(rect1,   0, 0, 100, 100) -- l,t,w,h
+    world:add(rect2, 300, 0, 100, 100)
 
-    function bump.getBBox(item)
-      return item.l, item.t, item.w, item.h
+    -- see if rect1 is colliding with anything
+    local collisions = world:collide(rect1)
+    assert(#collisions == 0)
+
+    -- move rect2 so it collides with rect 1
+    world:update(rect2, 50, 0, 100, 100)
+
+    -- parse the collisions.
+    -- prints "Collision between A and B. dx: -50, dy: 0, t: 0"
+    local collisions = world:collide(rect1)
+    for _,col in ipairs(collision) do -- If more than one simultaneous collision, they are sorted out by proximity
+      print(("Collision between %s and %s. dx: %d, dy: %d, t: %d"):format(col.self.name, col.other.name, col.dx, col.dy, col.t)
     end
 
-    -- Now every time we call bump.collide() it will call bump.collision/endCollision appropiatedly.
-    -- bump.collide() is usually called once per "update" cycle in a game. But you could also invoke it directly if
-    -- you wanted. For example:
-
-    bump.collide() -- nothing happens, there are no collisions
-
-    rect2.l = 50 -- move rect2 so it collides with rect1
-
-    bump.collide() -- prints "rect1 started colliding with rect2 displacement vector: -50 0"
-
-    rect2.l = 100 -- move rect2 so it does not collide any more with rect1
-
-    bump.collide()  -- prints "rect1 stopped colliding with rect2"
+    -- remove rect1 and rect2 from the world
+    world:remove(rect1)
+    world:remove(rect2)
 
 
 Installation
