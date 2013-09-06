@@ -1,6 +1,5 @@
 local bump = {}
 
-
 local abs = math.abs
 
 local function checkType(desiredType, value, name)
