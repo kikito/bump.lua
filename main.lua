@@ -1,16 +1,13 @@
 local bump       = require 'bump'
-local bump_debug = require 'bump_debug'
 
 local maxdt       = 0.1    -- if the window loses focus/etc, use this instead of dt
-local drawDebug   = false  -- draw bump's debug info, fps and memory
 local instructions = [[
   bump.lua simple demo
 
     arrows: move
-    delete: run garbage collection
-    tab:    toggle debug info (%s)
 ]]
 
+-- helper function
 local function drawBox(box, r,g,b)
   love.graphics.setColor(r,g,b,70)
   love.graphics.rectangle("fill", box.l, box.t, box.w, box.h)
@@ -18,13 +15,15 @@ local function drawBox(box, r,g,b)
   love.graphics.rectangle("line", box.l, box.t, box.w, box.h)
 end
 
+-- World creation
+local world = bump.newWorld()
+
 
 -- Player functions
-
-local player = { l=50,t=50,w=20,h=20 }
+local player = { l=50,t=50,w=20,h=20, speed = 80 }
 
 local function updatePlayer(dt)
-  local speed = 80
+  local speed = player.speed
   if love.keyboard.isDown('up') then
     player.t = player.t - speed * dt
   elseif love.keyboard.isDown('down') then
@@ -36,17 +35,22 @@ local function updatePlayer(dt)
   elseif love.keyboard.isDown('right') then
     player.l = player.l + speed * dt
   end
-end
 
-local function collidePlayerWithBlock(dx,dy)
-  player.l = player.l + dx
-  player.t = player.t + dy
+  local collisions, length = world:add(player, player.l, player.t, player.w, player.h)
+
+  for i=1, length do
+    local col = collisions[i]
+    if math.abs(col.dx) < math.abs(col.dy) then
+      player.l = player.l + col.dx
+    else
+      player.t = player.t + col.dy
+    end
+  end
 end
 
 local function drawPlayer()
   drawBox(player, 0, 255, 0)
 end
-
 
 -- Block functions
 
@@ -55,7 +59,7 @@ local blocks = {}
 local function addBlock(l,t,w,h)
   local block = {l=l,t=t,w=w,h=h}
   blocks[#blocks+1] = block
-  bump.add(block)
+  world:add(block, l,t,w,h)
 end
 
 local function drawBlocks()
@@ -65,32 +69,7 @@ local function drawBlocks()
 end
 
 
--- bump config
-
--- When a collision occurs, call collideWithBlock with the appropiate parameters
-function bump.collision(obj1, obj2, dx, dy)
-  if obj1 == player then
-    collidePlayerWithBlock(dx,dy)
-  elseif obj2 == player then
-    collidePlayerWithBlock(-dx,-dy)
-  end
-end
-
--- only the player collides with stuff. Blocks don't collide with themselves
-function bump.shouldCollide(obj1, obj2)
-  return obj1 == player or obj2 == player
-end
-
--- return the bounding box of an object - the player or a block
-function bump.getBBox(obj)
-  return obj.l, obj.t, obj.w, obj.h
-end
-
--- love config
-
 function love.load()
-  player = { l=50,t=50,w=20,h=20 }
-  bump.add(player)
 
   addBlock(0,       0,     800, 32)
   addBlock(0,      32,      32, 600-32*2)
@@ -108,17 +87,10 @@ end
 
 function love.update(dt)
   dt = math.min(dt, maxdt)
-
   updatePlayer(dt)
-
-  bump.collide()
 end
 
 function love.draw()
-
-  if drawDebug then
-    bump_debug.draw(0,0,800,600)
-  end
 
   drawBlocks()
   drawPlayer()
