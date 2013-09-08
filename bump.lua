@@ -14,6 +14,13 @@ local function checkPositiveNumber(value, name)
   end
 end
 
+local function checkBox(l,t,w,h)
+  checkType('number', l, 'l')
+  checkType('number', t, 'w')
+  checkType('number', w, 'w')
+  checkType('number', h, 'h')
+end
+
 local World = {}
 
 local function box_overlap(l1,t1,w1,h1, l2,t2,w2,h2)
@@ -34,11 +41,7 @@ local function box_overlap(l1,t1,w1,h1, l2,t2,w2,h2)
 end
 
 function World:add(item, l,t,w,h)
-  checkType('table',  item, 'item')
-  checkType('number', l, 'l')
-  checkType('number', t, 'w')
-  checkType('number', w, 'w')
-  checkType('number', h, 'h')
+  checkBox(l,t,w,h)
 
   self.items[item] = nil
 
@@ -48,7 +51,23 @@ function World:add(item, l,t,w,h)
   return collisions, length
 end
 
+function World:move(item, l,t,w,h)
+  checkBox(l,t,w,h)
+
+  local pBox = self.items[item]
+
+  if not pBox then
+    error('Item ' .. tostring(item) .. ' must be added to the world before being moved. Use world:add(item, l,t,w,h) to add it first.')
+  end
+
+  local collisions, length = self:check(item, l,t,w,h)
+
+  self.items[item] = {l=l,t=t,w=w,h=h}
+  return collisions, length
+end
+
 function World:check(item, l,t,w,h)
+  checkBox(l,t,w,h)
   local collisions, length = {}, 0
 
   for other, hisBox in pairs(self.items) do
