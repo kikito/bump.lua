@@ -2,93 +2,156 @@ local bump = {}
 
 local abs = math.abs
 
-local function checkType(desiredType, value, name)
+local function assertType(desiredType, value, name)
   if type(value) ~= desiredType then
     error(name .. ' must be a ' .. desiredType .. ', but was ' .. tostring(value) .. '(a ' .. type(value) .. ')')
   end
 end
 
-local function checkPositiveNumber(value, name)
+local function assertIsPositiveNumber(value, name)
   if type(value) ~= 'number' or value <= 0 then
     error(name .. ' must be a positive integer, but was ' .. tostring(value) .. '(' .. type(value) .. ')')
   end
 end
 
-local function checkBox(l,t,w,h)
-  checkType('number', l, 'l')
-  checkType('number', t, 'w')
-  checkType('number', w, 'w')
-  checkType('number', h, 'h')
+local function assertIsBox(l,t,w,h)
+  assertType('number', l, 'l')
+  assertType('number', t, 'w')
+  assertType('number', w, 'w')
+  assertType('number', h, 'h')
 end
 
 local World = {}
 
-local function box_overlap(l1,t1,w1,h1, l2,t2,w2,h2)
-  -- check if there is a collision
-  if l1 < l2+w2 and l1+w1 > l2 and t1 < t2+h2 and t1+h1 > t2 then
+local function liangBarsky(l,t,w,h, x1,y1,x2,y2, t0,t1)
+  local dx, dy  = x2-x1, y2-y1
+  local p, q, r
 
-    -- get the two centers
-    local c1x, c1y = l1 + w1 * .5, t1 + h1 * .5
-    local c2x, c2y = l2 + w2 * .5, t2 + h2 * .5
+  for side = 1,4 do
+    if     side == 1 then p,q = -dx, x1 - l
+    elseif side == 2 then p,q =  dx, l + w - x1
+    elseif side == 3 then p,q = -dy, y1 - t
+    else                  p,q =  dy, t + h - y1
+    end
 
-    -- get the two overlaps
-    local dx = l2 - l1 + (c1x < c2x and -w1 or w2)
-    local dy = t2 - t1 + (c1y < c2y and -h1 or h2)
-
-    return dx, dy
-  end
-  -- no collision; return nil
-end
-
-function World:add(item, l,t,w,h)
-  checkBox(l,t,w,h)
-
-  self.items[item] = nil
-
-  local collisions, length = self:check(item, l,t,w,h)
-
-  self.items[item] = {l=l,t=t,w=w,h=h}
-  return collisions, length
-end
-
-function World:move(item, l,t,w,h)
-  checkBox(l,t,w,h)
-
-  local pBox = self.items[item]
-
-  if not pBox then
-    error('Item ' .. tostring(item) .. ' must be added to the world before being moved. Use world:add(item, l,t,w,h) to add it first.')
-  end
-
-  local collisions, length = self:check(item, l,t,w,h)
-
-  self.items[item] = {l=l,t=t,w=w,h=h}
-  return collisions, length
-end
-
-function World:check(item, l,t,w,h)
-  checkBox(l,t,w,h)
-  local collisions, length = {}, 0
-
-  for other, hisBox in pairs(self.items) do
-    local dx, dy = box_overlap(l,t,w,h, hisBox.l, hisBox.t, hisBox.w, hisBox.h)
-    if dx then
-      length = length + 1
-      collisions[length] = {
-        self   = item,
-        other  = other,
-        dx     = dx,
-        dy     = dy
-      }
+    if p == 0 then
+      if q < 0 then return nil end
+    else
+      r = q / p
+      if p < 0 then
+        if     r > t1 then return nil
+        elseif r > t0 then t0 = r
+        end
+      else -- p > 0
+        if     r < t0 then return nil
+        elseif r < t1 then t1 = r
+        end
+      end
     end
   end
 
-  return collisions, length
+  return t0, t1
+end
+
+local function getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
+  return l2 - l1 - w1,
+         t2 - t1 - h1,
+         w1 + w2,
+         h1 + h2
+end
+
+local function containsPoint(l,t,w,h, x,y)
+  return x > l and y > t and x < l + w and y < t + h
+end
+
+local function nearest(x, a, b)
+  return abs(a - x) < abs(b - x) and a or b
+end
+
+local function getNearestPointInPerimeter(l,t,w,h, x,y)
+  return nearest(x, l, l+w), nearest(y, t, t+h)
+end
+
+
+local function getCollisionDisplacement(l1,t1,w1,h1, l2,t2,w2,h2, vx,vy)
+  local ti
+
+  local l,t,w,h = getMinkowskyDiff(l1-vx,t1-vy,w1,h1, l2, t2, w2, h2)
+
+  if containsPoint(l,t,w,h, 0,0) then -- boxes are intersecting
+    local dx, dy = getNearestPointInPerimeter(l,t,w,h, 0,0)
+    return dx-vx, dy-vy, 0
+  else                                -- boxes are not intersecting
+    local t0,t1 = liangBarsky(l,t,w,h, 0,0,vx,vy, -math.huge,math.huge)
+    if t0 then
+      if     t0 > 0 and t0 < 1 then ti = t0
+      elseif t1 > 0 and t1 < 1 then ti = t1
+      end
+    end
+  end
+
+  if ti then
+    return vx*ti - vx, vy*ti - vy, ti
+  end
+end
+
+function World:add(item, l,t,w,h)
+  assertIsBox(l,t,w,h)
+
+  self.items[item] = {l=l,t=t,w=w,h=h}
+
+  return self:check(item)
+end
+
+function World:move(item, l,t,w,h)
+  assertIsBox(l,t,w,h)
+
+  local previousBox = self.items[item]
+
+  if not previousBox then
+    error('Item ' .. tostring(item) .. ' must be added to the world before being moved. Use world:add(item, l,t,w,h) to add it first.')
+  end
+
+  local pl, pt, pw, ph  = previousBox.l, previousBox.t, previousBox.w, previousBox.h
+  local pcx, pcy        = pl + pw/2, pt + ph/2
+  local cx, cy          = l + w/2, t + h/2
+  local vx, vy          = cx - pcx, cy - pcy
+
+  self.items[item] = {l=l,t=t,w=w,h=h}
+
+  return self:check(item, vx, vy)
+end
+
+function World:check(item, vx, vy)
+  vx, vy = vx or 0, vy or 0
+  local box = self.items[item]
+  if not box then
+    error('Item ' .. tostring(item) .. ' must be added to the world before being checked for collisions. Use world:add(item, l,t,w,h) to add it first.')
+  end
+  local l,t,w,h = box.l, box.t, box.w, box.h
+  local collisions, len = {}, 0
+
+  for other, oBox in pairs(self.items) do
+    if other ~= item then
+      local dx, dy = getCollisionDisplacement(l,t,w,h, oBox.l, oBox.t, oBox.w, oBox.h, vx, vy)
+      if dx then
+        len = len + 1
+        collisions[len] = {
+          self   = item,
+          other  = other,
+          dx     = dx,
+          dy     = dy
+        }
+      end
+    end
+  end
+
+  return collisions, len
 end
 
 bump.newWorld = function(cellSize)
   cellSize = cellSize or 64
-  checkPositiveNumber(cellSize, 'cellSize')
+  assertIsPositiveNumber(cellSize, 'cellSize')
   return setmetatable(
     { cellSize = cellSize,
       items = {}
@@ -96,6 +159,11 @@ bump.newWorld = function(cellSize)
     {__index = World }
   )
 end
+
+bump.aabb = {
+  getMinkowskyDiff = getMinkowskyDiff,
+  liangBarsky = liangBarsky
+}
 
 
 return bump
