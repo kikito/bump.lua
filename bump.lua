@@ -73,25 +73,22 @@ local function getNearestPointInPerimeter(l,t,w,h, x,y)
 end
 
 
-local function getCollisionDisplacement(l1,t1,w1,h1, l2,t2,w2,h2, vx,vy)
+local function collideBoxes(l1,t1,w1,h1, l2,t2,w2,h2, vx,vy)
   local ti
 
   local l,t,w,h = getMinkowskyDiff(l1-vx,t1-vy,w1,h1, l2, t2, w2, h2)
 
-  if containsPoint(l,t,w,h, 0,0) then -- boxes are intersecting
+  if containsPoint(l,t,w,h, 0,0) then -- boxes are tunneling
     local dx, dy = getNearestPointInPerimeter(l,t,w,h, 0,0)
-    return dx-vx, dy-vy, 0
-  else                                -- boxes are not intersecting
+    return dx-vx, dy-vy, 0, false
+  else                                -- boxes are not tunneling
     local t0,t1 = liangBarsky(l,t,w,h, 0,0,vx,vy, -math.huge,math.huge)
-    if t0 then
-      if     t0 > 0 and t0 < 1 then ti = t0
-      elseif t1 > 0 and t1 < 1 then ti = t1
-      end
+    if     t0 and t0 > 0 and t0 < 1 then ti = t0
+    elseif t1 and t1 > 0 and t1 < 1 then ti = t1
     end
-  end
-
-  if ti then
-    return vx*ti - vx, vy*ti - vy, ti
+    if ti then
+      return vx*ti - vx, vy*ti - vy, ti, true
+    end
   end
 end
 
@@ -133,14 +130,15 @@ function World:check(item, vx, vy)
 
   for other, oBox in pairs(self.items) do
     if other ~= item then
-      local dx, dy = getCollisionDisplacement(l,t,w,h, oBox.l, oBox.t, oBox.w, oBox.h, vx, vy)
+      local dx, dy, ti, tunneling = collideBoxes(l,t,w,h, oBox.l, oBox.t, oBox.w, oBox.h, vx, vy)
       if dx then
         len = len + 1
         collisions[len] = {
-          self   = item,
-          other  = other,
-          dx     = dx,
-          dy     = dy
+          item       = other,
+          dx         = dx,
+          dy         = dy,
+          ti         = ti,
+          tunneling  = tunneling
         }
       end
     end

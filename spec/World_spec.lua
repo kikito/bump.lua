@@ -25,7 +25,7 @@ describe('World', function()
         local cols = world:add(b, 4,6,10,10)
 
         assert.same(cols, {
-          { self = b, other = a, dx = 6, dy = 4 }
+          { item = a, dx = 6, dy = 4, tunneling = false, ti = 0 }
         })
 
       end)
@@ -54,7 +54,7 @@ describe('World', function()
 
         world:add(a, 0,0,10,10)
         assert.same(world:add(b, 4,6,10,10), {
-          { self = b, other = a, dx = 6, dy = 4 }
+          { item = a, dx = 6, dy = 4, tunneling = false, ti = 0 }
         })
 
       end)
@@ -84,7 +84,7 @@ describe('World', function()
         world:add(a, 0,0,10,10)
         world:add(b, 4,6,10,10)
         assert.same(world:check(b), {
-          { self = b, other = a, dx = 6, dy = 4 }
+          { item = a, dx = 6, dy = 4, tunneling = false, ti = 0 }
         })
 
       end)
@@ -96,7 +96,7 @@ describe('World', function()
           world:add(a, 1,0, 2,1)
           world:add(b, 5,0, 4,1)
           assert.same(world:check(b, 10, 0), {
-            { self = b, other = a, dx = -8, dy = 0 }
+            { item = a, dx = -8, dy = 0, tunneling = true, ti = 0.2 }
           })
         end)
 
