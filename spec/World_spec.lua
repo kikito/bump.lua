@@ -90,7 +90,7 @@ describe('World', function()
       end)
 
       describe('when a displacement vector is passed', function()
-        it('returns a list of collisions that move the box back linearly', function()
+        it('detects and tags tunneling correctly', function()
           local world, a, b = bump.newWorld(), {}, {}
 
           world:add(a, 1,0, 2,1)
