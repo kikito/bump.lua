@@ -50,7 +50,7 @@ describe('World', function()
 
     describe('when the world is not empty', function()
       it('returns a list of collisions', function()
-        local world, a, b = bump.newWorld(), {}, {}
+        local world, a, b = bump.newWorld(), {'a'}, {'b'}
 
         world:add(a, 0,0,10,10)
         assert.same(world:add(b, 4,6,10,10), {
@@ -79,7 +79,7 @@ describe('World', function()
 
     describe('when the world is not empty', function()
       it('returns a list of collisions', function()
-        local world, a, b = bump.newWorld(), {}, {}
+        local world, a, b = bump.newWorld(), {'a'}, {'b'}
 
         world:add(a, 0,0,10,10)
         world:add(b, 4,6,10,10)
@@ -91,7 +91,7 @@ describe('World', function()
 
       describe('when a displacement vector is passed', function()
         it('still handles intersections as before', function()
-          local world, a, b = bump.newWorld(), {}, {}
+          local world, a, b = bump.newWorld(), {'a'}, {'b'}
 
           world:add(a, 0,0, 2,2)
           world:add(b, 1,1, 2,2)
@@ -100,7 +100,7 @@ describe('World', function()
           })
         end)
         it('detects and tags tunneling correctly', function()
-          local world, a, b = bump.newWorld(), {}, {}
+          local world, a, b = bump.newWorld(), {'a'}, {'b'}
 
           world:add(a, 1,0, 2,1)
           world:add(b, 5,0, 4,1)
@@ -125,4 +125,23 @@ describe('World', function()
       end)
     end)
   end)
+
+  describe(':remove', function()
+    it('throws an error if the item does not exist', function()
+      local world = bump.newWorld()
+      assert.error(function() world:remove({}) end)
+    end)
+    it('makes the item disappear from the world', function()
+      local world, a, b = bump.newWorld(), {}, {}
+
+      world:add(a, 0,0, 10,10)
+      world:add(b, 5,0, 1,1)
+      assert.same(world:check(b), {
+        { item = a, dx = 5, dy = -1, tunneling = false, ti = 0 }
+      })
+      world:remove(a)
+      assert.same(world:check(b), {})
+    end)
+  end)
+
 end)

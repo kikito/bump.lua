@@ -74,7 +74,6 @@ end
 
 local function sortByTi(a,b) return a.ti < b.ti end
 
-
 local function collideBoxes(l1,t1,w1,h1, l2,t2,w2,h2, vx,vy)
   local ti
 
@@ -149,6 +148,14 @@ function World:check(item, vx, vy)
   table.sort(collisions, sortByTi)
 
   return collisions, len
+end
+
+function World:remove(item)
+  local box = self.items[item]
+  if not box then
+    error('Item ' .. tostring(item) .. ' must be added to the world before being removed. Use world:add(item, l,t,w,h) to add it first.')
+  end
+  self.items[item] = nil
 end
 
 bump.newWorld = function(cellSize)
