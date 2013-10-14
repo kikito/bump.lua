@@ -72,6 +72,8 @@ local function getNearestPointInPerimeter(l,t,w,h, x,y)
   return nearest(x, l, l+w), nearest(y, t, t+h)
 end
 
+local function sortByTi(a,b) return a.ti < b.ti end
+
 
 local function collideBoxes(l1,t1,w1,h1, l2,t2,w2,h2, vx,vy)
   local ti
@@ -143,6 +145,8 @@ function World:check(item, vx, vy)
       end
     end
   end
+
+  table.sort(collisions, sortByTi)
 
   return collisions, len
 end

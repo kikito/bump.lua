@@ -90,6 +90,15 @@ describe('World', function()
       end)
 
       describe('when a displacement vector is passed', function()
+        it('still handles intersections as before', function()
+          local world, a, b = bump.newWorld(), {}, {}
+
+          world:add(a, 0,0, 2,2)
+          world:add(b, 1,1, 2,2)
+          assert.same(world:check(b, 1,1), {
+            { item = a, dx = 1, dy = 1, tunneling = false, ti = 0 }
+          })
+        end)
         it('detects and tags tunneling correctly', function()
           local world, a, b = bump.newWorld(), {}, {}
 
@@ -100,8 +109,18 @@ describe('World', function()
           })
         end)
 
-        it('returns a list of collisions sorted by t', function()
-          -- pending
+        it('returns a list of collisions sorted by ti', function()
+          local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
+
+          world:add(a, 1,0, 1,1)
+          world:add(b, 7,0, 1,1)
+          world:add(c, 5,0, 1,1)
+          world:add(d, 9,0, 1,1)
+          assert.same(world:check(a, -10, 0), {
+            { item = d, dx = 9, dy = 0, tunneling = true, ti = 0.1 },
+            { item = b, dx = 7, dy = 0, tunneling = true, ti = 0.3 },
+            { item = c, dx = 5, dy = 0, tunneling = true, ti = 0.5 }
+          })
         end)
       end)
     end)
