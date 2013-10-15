@@ -160,6 +160,20 @@ describe('World', function()
       world:remove(a)
       assert.same(world:check(b), {})
     end)
+    it('marks empty cells & rows for deallocation', function()
+      local world, a, b = bump.newWorld(), {}, {}
+      world:add(a, 0,0, 10, 10)
+      world:add(b, 200,200, 10,10)
+      assert.same(world:countCells(), 2)
+      world:remove(b)
+      assert.same(world:countCells(), 2)
+      collectgarbage('collect')
+      assert.same(world:countCells(), 1)
+    end)
+  end)
+
+  describe(':toCellBox', function()
+    --pending
   end)
 
 end)

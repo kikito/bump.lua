@@ -93,12 +93,28 @@ local function collideBoxes(l1,t1,w1,h1, l2,t2,w2,h2, vx,vy)
   end
 end
 
-local function addToCell(self, cx, cy, item)
-  self.rows[cy] = self.rows[cy] or {}
+local function addItemToCell(self, item, cx, cy)
+  self.rows[cy] = self.rows[cy] or setmetatable({}, {__mode = 'v'})
   local row = self.rows[cy]
-  row[cx] = row[cx] or {}
+  row[cx] = row[cx] or {itemCount = 0, items = setmetatable({}, {__mode = 'k'})}
   local cell = row[cx]
-  cell[item] = true
+  self.nonEmptyCells[cell] = true
+  if not cell.items[item] then
+    cell.items[item] = true
+    cell.itemCount = cell.itemCount + 1
+  end
+end
+
+local function removeItemFromCell(self, item, cx, cy)
+  local row = self.rows[cy]
+  if not row or not row[cx] or not row[cx].items[item] then return false end
+
+  local cell = row[cx]
+  cell.items[item] = nil
+  cell.itemCount = cell.itemCount - 1
+  if cell.itemCount == 0 then
+    self.nonEmptyCells[cell] = nil
+  end
 end
 
 function World:add(item, l,t,w,h)
@@ -109,7 +125,7 @@ function World:add(item, l,t,w,h)
   local cl,ct,cw,ch = self:toCellBox(l,t,w,h)
   for cy = ct, ct+ch do
     for cx = cl, cl+cw do
-      addToCell(self, cx, cy, item)
+      addItemToCell(self, item, cx, cy)
     end
   end
 
@@ -171,6 +187,12 @@ function World:remove(item)
     error('Item ' .. tostring(item) .. ' must be added to the world before being removed. Use world:add(item, l,t,w,h) to add it first.')
   end
   self.items[item] = nil
+  local cl,ct,cw,ch = self:toCellBox(box.l,box.t,box.w,box.h)
+  for cy = ct, ct+ch do
+    for cx = cl, cl+cw do
+      removeItemFromCell(self, item, cx, cy)
+    end
+  end
 end
 
 function World:countCells()
@@ -202,7 +224,8 @@ bump.newWorld = function(cellSize)
   return setmetatable(
     { cellSize = cellSize,
       items = {},
-      rows = {}
+      rows = {},
+      nonEmptyCells = {}
     },
     {__index = World }
   )
