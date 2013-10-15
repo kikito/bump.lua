@@ -23,7 +23,7 @@ end
 
 local World = {}
 
-local function liangBarsky(l,t,w,h, x1,y1,x2,y2, t0,t1)
+local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
   local dx, dy  = x2-x1, y2-y1
   local p, q, r
 
@@ -83,7 +83,7 @@ local function collideBoxes(l1,t1,w1,h1, l2,t2,w2,h2, vx,vy)
     local dx, dy = getNearestPointInPerimeter(l,t,w,h, 0,0)
     return dx-vx, dy-vy, 0, false
   else                                -- boxes are not tunneling
-    local t0,t1 = liangBarsky(l,t,w,h, 0,0,vx,vy, 0, 1)
+    local t0,t1 = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy, 0, 1)
     if     t0 and t0 > 0 and t0 < 1 then ti = t0
     elseif t1 and t1 > 0 and t1 < 1 then ti = t1
     end
@@ -231,9 +231,9 @@ bump.newWorld = function(cellSize)
   )
 end
 
-bump.aabb = {
+bump.geom = {
   getMinkowskyDiff = getMinkowskyDiff,
-  liangBarsky = liangBarsky
+  getLiangBarskyIndices = getLiangBarskyIndices
 }
 
 
