@@ -15,6 +15,24 @@ describe('World', function()
         local world = bump.newWorld()
         assert.same(world:add({}, 0,0,10,10), {})
       end)
+      it('creates as many cells as needed to hold the item', function()
+        local world = bump.newWorld()
+
+        world:add({}, 0,0,10,10) -- adss one cell
+        assert.equal(world:countCells(), 1)
+
+        world:add({}, 100,100,10,10) -- adds a separate single cell
+        assert.equal(world:countCells(), 2)
+
+        world:add({}, 0,0,100,10) -- occupies 2 cells, but just adds one (the other is already added)
+        assert.equal(world:countCells(), 3)
+
+        world:add({}, 0,0,100,10) -- occupies 2 cells, but just adds one (the other is already added)
+        assert.equal(world:countCells(), 3)
+
+        world:add({}, 300,300,64,64) -- adds 8 new cells
+        assert.equal(world:countCells(), 7)
+      end)
     end)
 
     describe('when the world is not empty', function()

@@ -1,6 +1,6 @@
 local bump = {}
 
-local abs = math.abs
+local abs, floor, ceil = math.abs, math.floor, math.ceil
 
 local function assertType(desiredType, value, name)
   if type(value) ~= desiredType then
@@ -83,7 +83,7 @@ local function collideBoxes(l1,t1,w1,h1, l2,t2,w2,h2, vx,vy)
     local dx, dy = getNearestPointInPerimeter(l,t,w,h, 0,0)
     return dx-vx, dy-vy, 0, false
   else                                -- boxes are not tunneling
-    local t0,t1 = liangBarsky(l,t,w,h, 0,0,vx,vy, -math.huge,math.huge)
+    local t0,t1 = liangBarsky(l,t,w,h, 0,0,vx,vy, 0, 1)
     if     t0 and t0 > 0 and t0 < 1 then ti = t0
     elseif t1 and t1 > 0 and t1 < 1 then ti = t1
     end
@@ -93,10 +93,25 @@ local function collideBoxes(l1,t1,w1,h1, l2,t2,w2,h2, vx,vy)
   end
 end
 
+local function addToCell(self, cx, cy, item)
+  self.rows[cy] = self.rows[cy] or {}
+  local row = self.rows[cy]
+  row[cx] = row[cx] or {}
+  local cell = row[cx]
+  cell[item] = true
+end
+
 function World:add(item, l,t,w,h)
   assertIsBox(l,t,w,h)
 
   self.items[item] = {l=l,t=t,w=w,h=h}
+
+  local cl,ct,cw,ch = self:toCellBox(l,t,w,h)
+  for cy = ct, ct+ch do
+    for cx = cl, cl+cw do
+      addToCell(self, cx, cy, item)
+    end
+  end
 
   return self:check(item)
 end
@@ -158,12 +173,36 @@ function World:remove(item)
   self.items[item] = nil
 end
 
+function World:countCells()
+  local count = 0
+  for _,row in pairs(self.rows) do
+    for _,_ in pairs(row) do
+      count = count + 1
+    end
+  end
+  return count
+end
+
+function World:toCell(x,y)
+  local cellSize = self.cellSize
+  return floor(x / cellSize) + 1, floor(y / cellSize) + 1
+end
+
+function World:toCellBox(l,t,w,h)
+  if not (l and t and w and h) then return nil end
+  local cl,ct = self:toCell(l, t)
+  local cellSize = self.cellSize
+  local cr,cb = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
+  return cl, ct, cr-cl, cb-ct
+end
+
 bump.newWorld = function(cellSize)
   cellSize = cellSize or 64
   assertIsPositiveNumber(cellSize, 'cellSize')
   return setmetatable(
     { cellSize = cellSize,
-      items = {}
+      items = {},
+      rows = {}
     },
     {__index = World }
   )
