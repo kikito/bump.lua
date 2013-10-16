@@ -115,6 +115,7 @@ local function removeItemFromCell(self, item, cx, cy)
   if cell.itemCount == 0 then
     self.nonEmptyCells[cell] = nil
   end
+  return true
 end
 
 function World:add(item, l,t,w,h)
@@ -135,18 +136,17 @@ end
 function World:move(item, l,t,w,h)
   assertIsBox(l,t,w,h)
 
-  local previousBox = self.items[item]
+  local box = self.items[item]
 
-  if not previousBox then
+  if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being moved. Use world:add(item, l,t,w,h) to add it first.')
   end
 
-  local pl, pt, pw, ph  = previousBox.l, previousBox.t, previousBox.w, previousBox.h
-  local pcx, pcy        = pl + pw/2, pt + ph/2
+  local pcx, pcy        = box.l + box.w/2, box.t + box.h/2
   local cx, cy          = l + w/2, t + h/2
   local vx, vy          = cx - pcx, cy - pcy
 
-  self.items[item] = {l=l,t=t,w=w,h=h}
+  box.l, box.t, box.w, box.h = l,t,w,h
 
   return self:check(item, vx, vy)
 end
