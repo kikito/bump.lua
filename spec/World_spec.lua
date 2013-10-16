@@ -127,17 +127,17 @@ describe('World', function()
           })
         end)
 
-        it('returns a list of collisions sorted by ti', function()
+        it('focus returns a list of collisions sorted by ti', function()
           local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
 
-          world:add(a, 1,0, 1,1)
-          world:add(b, 7,0, 1,1)
-          world:add(c, 5,0, 1,1)
-          world:add(d, 9,0, 1,1)
-          assert.same(world:check(a, -10, 0), {
-            { item = d, dx = 9, dy = 0, tunneling = true, ti = 0.1 },
-            { item = b, dx = 7, dy = 0, tunneling = true, ti = 0.3 },
-            { item = c, dx = 5, dy = 0, tunneling = true, ti = 0.5 }
+          world:add(a, 10,0, 10,10)
+          world:add(b, 70,0, 10,10)
+          world:add(c, 50,0, 10,10)
+          world:add(d, 90,0, 10,10)
+          assert.same(world:check(a, -100, 0), {
+            { item = d, dx = 90, dy = 0, tunneling = true, ti = 0.1 },
+            { item = b, dx = 70, dy = 0, tunneling = true, ti = 0.3 },
+            { item = c, dx = 50, dy = 0, tunneling = true, ti = 0.5 }
           })
         end)
       end)

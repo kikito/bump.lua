@@ -159,19 +159,47 @@ function World:check(item, vx, vy)
   end
   local l,t,w,h = box.l, box.t, box.w, box.h
   local collisions, len = {}, 0
+  local visited = {[item] = true}
 
-  for other, oBox in pairs(self.items) do
-    if other ~= item then
-      local dx, dy, ti, tunneling = collideBoxes(l,t,w,h, oBox.l, oBox.t, oBox.w, oBox.h, vx, vy)
-      if dx then
-        len = len + 1
-        collisions[len] = {
-          item       = other,
-          dx         = dx,
-          dy         = dy,
-          ti         = ti,
-          tunneling  = tunneling
-        }
+  -- FIXME this could probably be done with less cells using a polygon raster over the cells instead of a
+  -- bounding box of the whole movement
+  local tl,tt,tw,th --touched cells, taking vx and vy into account
+  if vx > 0 then
+    tl, tw = l - vx, w + vx
+  else
+    tl, tw = l, w - vx
+  end
+  if vy > 0 then
+    tt, th = t - vy, h + vy
+  else
+    tt, th = t, h - vy
+  end
+  local cl,ct,cw,ch = self:toCellBox(tl,tt,tw,th)
+
+  for cy=ct,ct+ch do
+    local row = self.rows[cy]
+    if row then
+      for cx=cl,cl+cw do
+        local cell = row[cx]
+        if cell and cell.itemCount > 0 then
+          for other,_ in pairs(cell.items) do
+            if not visited[other] then
+              visited[other] = true
+              local oBox = self.items[other]
+              local dx, dy, ti, tunneling = collideBoxes(l,t,w,h, oBox.l, oBox.t, oBox.w, oBox.h, vx, vy)
+              if dx then
+                len = len + 1
+                collisions[len] = {
+                  item       = other,
+                  dx         = dx,
+                  dy         = dy,
+                  ti         = ti,
+                  tunneling  = tunneling
+                }
+              end
+            end
+          end
+        end
       end
     end
   end
