@@ -93,11 +93,19 @@ local function collideBoxes(l1,t1,w1,h1, l2,t2,w2,h2, vx,vy)
   end
 end
 
-local function addItemToCell(self, item, cx, cy)
+local function getOrCreateRow(self, cy)
   self.rows[cy] = self.rows[cy] or setmetatable({}, {__mode = 'v'})
-  local row = self.rows[cy]
+  return self.rows[cy]
+end
+
+local function getOrCreateCell(row, cx)
   row[cx] = row[cx] or {itemCount = 0, items = setmetatable({}, {__mode = 'k'})}
-  local cell = row[cx]
+  return row[cx]
+end
+
+local function addItemToCell(self, item, cx, cy)
+  local row = getOrCreateRow(self, cy)
+  local cell = getOrCreateCell(row, cx)
   self.nonEmptyCells[cell] = true
   if not cell.items[item] then
     cell.items[item] = true
