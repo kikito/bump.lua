@@ -40,12 +40,12 @@ function love.draw()
   drawRect(B.l,B.t,B.w,B.h, 0, 255, 0)
   drawRect(B0.l,B0.t,B.w,B.h, 0, 100, 0)
 
-  local l,t,w,h = bump.aabb.getMinkowskyDiff(B0.l, B0.t, B.w, B.h, A.l, A.t, A.w, A.h)
+  local l,t,w,h = bump.geom.getMinkowskyDiff(B0.l, B0.t, B.w, B.h, A.l, A.t, A.w, A.h)
 
   drawRect(l,t,w,h, 0, 150, 150)
   love.graphics.line(0,0,d.x,d.y)
 
-  local t0, t1 = bump.aabb.liangBarsky(l,t,w,h, 0,0, d.x, d.y, -math.huge,math.huge)
+  local t0, t1 = bump.geom.getLiangBarskyIndices(l,t,w,h, 0,0, d.x, d.y, -math.huge,math.huge)
 
   if t0 then
     local x0,y0 = t0 * d.x, t0 * d.y
