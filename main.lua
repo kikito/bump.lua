@@ -1,10 +1,13 @@
 local bump       = require 'bump'
+local bump_debug = require 'bump_debug'
 
 local maxdt       = 0.1    -- if the window loses focus/etc, use this instead of dt
 local instructions = [[
   bump.lua simple demo
 
     arrows: move
+    tab: toggle debug info
+    delete: run garbage collector
 ]]
 
 -- helper function
@@ -36,7 +39,7 @@ local function updatePlayer(dt)
     player.l = player.l + speed * dt
   end
 
-  local collisions, length = world:add(player, player.l, player.t, player.w, player.h)
+  local collisions, length = world:move(player, player.l, player.t, player.w, player.h)
 
   for i=1, length do
     local col = collisions[i]
@@ -71,6 +74,8 @@ end
 
 function love.load()
 
+  world:add(player, player.l, player.t, player.w, player.h)
+
   addBlock(0,       0,     800, 32)
   addBlock(0,      32,      32, 600-32*2)
   addBlock(800-32, 32,      32, 600-32*2)
@@ -103,6 +108,7 @@ function love.draw()
   if drawDebug then
     local statistics = ("fps: %d, mem: %dKB"):format(love.timer.getFPS(), collectgarbage("count"))
     love.graphics.print(statistics, 630, 580 )
+    bump_debug.draw(world)
   end
 end
 
@@ -110,7 +116,5 @@ end
 function love.keypressed(k)
   if k=="escape" then love.event.quit() end
   if k=="tab"    then drawDebug = not drawDebug end
-  if k=="delete" then
-    collectgarbage("collect")
-  end
+  if k=="delete" then collectgarbage("collect") end
 end
