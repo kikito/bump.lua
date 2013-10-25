@@ -96,7 +96,7 @@ end
 local function addItemToCell(self, item, cx, cy)
   self.rows[cy] = self.rows[cy] or setmetatable({}, {__mode = 'v'})
   local row = self.rows[cy]
-  row[cx] = row[cx] or {itemCount = 0, items = setmetatable({}, {__mode = 'k'})}
+  row[cx] = row[cx] or {itemCount = 0, x = cx, y = cy, items = setmetatable({}, {__mode = 'k'})}
   local cell = row[cx]
   self.nonEmptyCells[cell] = true
   if not cell.items[item] then
@@ -141,12 +141,15 @@ function World:move(item, l,t,w,h)
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being moved. Use world:add(item, l,t,w,h) to add it first.')
   end
+  local vx, vy = 0,0
 
-  local pcx, pcy        = box.l + box.w/2, box.t + box.h/2
-  local cx, cy          = l + w/2, t + h/2
-  local vx, vy          = cx - pcx, cy - pcy
-
-  box.l, box.t, box.w, box.h = l,t,w,h
+  if box.l ~= l or box.t ~= t or box.w ~= w or box.h ~= h then
+    local pcx, pcy = box.l + box.w/2, box.t + box.h/2
+    local cx, cy   = l + w/2, t + h/2
+    vx, vy         = cx - pcx, cy - pcy
+    self:remove(item)
+    self:add(item, l,t,w,h)
+  end
 
   return self:check(item, vx, vy)
 end
@@ -231,6 +234,17 @@ function World:countCells()
     end
   end
   return count
+end
+
+function World:toWorld(cx, cy)
+  local cellSize = self.cellSize
+  return (cx - 1)*cellSize, (cy-1)*cellSize
+end
+
+function World:toWorldBox(cl, ct, cw, ch)
+  local cellSize = self.cellSize
+  local l,t = self:toWorld(cl, ct)
+  return l,t, cw * cellSize, ch * cellSize
 end
 
 function World:toCell(x,y)
