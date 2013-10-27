@@ -114,7 +114,7 @@ describe('World', function()
 
       end)
 
-      describe('when a displacement vector is passed', function()
+      describe('when previous l,t is passed', function()
         it('still handles intersections as before', function()
           local world, a, b = bump.newWorld(), {'a'}, {'b'}
 
@@ -129,7 +129,7 @@ describe('World', function()
 
           world:add(a, 1,0, 2,1)
           world:add(b, 5,0, 4,1)
-          assert.same(world:check(b, 10, 0), {
+          assert.same(world:check(b, -5, 0), {
             { item = a, dx = -8, dy = 0, tunneling = true, ti = 0.2 }
           })
         end)
@@ -141,7 +141,7 @@ describe('World', function()
           world:add(b, 70,0, 10,10)
           world:add(c, 50,0, 10,10)
           world:add(d, 90,0, 10,10)
-          assert.same(world:check(a, -100, 0), {
+          assert.same(world:check(a, 110, 0), {
             { item = d, dx = 90, dy = 0, tunneling = true, ti = 0.1 },
             { item = b, dx = 70, dy = 0, tunneling = true, ti = 0.3 },
             { item = c, dx = 50, dy = 0, tunneling = true, ti = 0.5 }

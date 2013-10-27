@@ -145,26 +145,30 @@ function World:move(item, l,t,w,h)
 
   assertIsBox(l,t,w,h)
 
-  local vx, vy = 0,0
+  local prev_l, prev_t = box.l, box.t
+
+  if box.w ~= w or box.h ~= h then
+    local prev_cx, prev_cy = box.l + box.w/2, box.t + box.h/2
+    prev_l, prev_t         = prev_cx - w/2, prev_cy - h/2
+  end
 
   if box.l ~= l or box.t ~= t or box.w ~= w or box.h ~= h then
-    local pcx, pcy = box.l + box.w/2, box.t + box.h/2
-    local cx, cy   = l + w/2, t + h/2
-    vx, vy         = cx - pcx, cy - pcy
     self:remove(item)
     self:add(item, l,t,w,h)
   end
 
-  return self:check(item, vx, vy)
+  return self:check(item, prev_l, prev_t)
 end
 
-function World:check(item, vx, vy)
-  vx, vy = vx or 0, vy or 0
+function World:check(item, prev_l, prev_t)
   local box = self.items[item]
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being checked for collisions. Use world:add(item, l,t,w,h) to add it first.')
   end
   local l,t,w,h = box.l, box.t, box.w, box.h
+  prev_l, prev_t = prev_l or l, prev_t or t
+
+  local vx, vy = l - prev_l, t - prev_t
   local collisions, len = {}, 0
   local visited = {[item] = true}
 
@@ -173,6 +177,7 @@ function World:check(item, vx, vy)
   local tl,tt,tw,th --touched cells, taking vx and vy into account
   if vx > 0 then
     tl, tw = l - vx, w + vx
+
   else
     tl, tw = l, w - vx
   end
