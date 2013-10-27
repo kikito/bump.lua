@@ -27,26 +27,25 @@ h1. Example
     local B = {name="B"}
 
     -- insert both rectangles into bump
-    world:add(rect1,   0, 0, 100, 100) -- l,t,w,h
-    world:add(rect2, 300, 0, 100, 100)
+    world:add(A,   0, 0, 100, 100) -- left, top, width, height
+    world:add(B, 300, 0, 100, 100)
 
-    -- see if rect1 is colliding with anything
-    local collisions = world:collide(rect1)
+    -- see if A is colliding with anything
+    local collisions = world:check(B)
     assert(#collisions == 0)
 
-    -- move rect2 so it collides with rect 1
-    world:update(rect2, 50, 0, 100, 100)
+    -- move B so it collides with A
+    local collisions = world:move(B, 50, 0, 100, 100)
 
     -- parse the collisions.
-    -- prints "Collision between A and B. dx: -50, dy: 0, t: 0"
-    local collisions = world:collide(rect1)
+    -- prints "Collision with A. dx: -50, dy: 0, t: 0"
     for _,col in ipairs(collision) do -- If more than one simultaneous collision, they are sorted out by proximity
-      print(("Collision between %s and %s. dx: %d, dy: %d, t: %d"):format(col.self.name, col.other.name, col.dx, col.dy, col.t)
+      print(("Collision with %s. dx: %d, dy: %d, t: %d"):format(col.item.name, col.dx, col.dy, col.ti)
     end
 
-    -- remove rect1 and rect2 from the world
-    world:remove(rect1)
-    world:remove(rect2)
+    -- remove A and B from the world
+    world:remove(A)
+    world:remove(B)
 
 
 Installation
