@@ -10,6 +10,13 @@ describe('World', function()
       assert.error(function() world:add() end)
     end)
 
+    it('throws an error if the object was already added', function()
+      local world = bump.newWorld()
+      local obj = {}
+      world:add(obj, 0,0,10,10)
+      assert.error(function() world:add(obj, 0,0,10,10) end)
+    end)
+
     describe('when the world is empty', function()
       it('returns an empty list of collisions', function()
         local world = bump.newWorld()

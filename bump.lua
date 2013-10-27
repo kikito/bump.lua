@@ -119,6 +119,10 @@ local function removeItemFromCell(self, item, cx, cy)
 end
 
 function World:add(item, l,t,w,h)
+  local box = self.items[item]
+  if box then
+    error('Item ' .. tostring(item) .. ' added to the world twice.')
+  end
   assertIsBox(l,t,w,h)
 
   self.items[item] = {l=l,t=t,w=w,h=h}
@@ -134,13 +138,13 @@ function World:add(item, l,t,w,h)
 end
 
 function World:move(item, l,t,w,h)
-  assertIsBox(l,t,w,h)
-
   local box = self.items[item]
-
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being moved. Use world:add(item, l,t,w,h) to add it first.')
   end
+
+  assertIsBox(l,t,w,h)
+
   local vx, vy = 0,0
 
   if box.l ~= l or box.t ~= t or box.w ~= w or box.h ~= h then
