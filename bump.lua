@@ -1,6 +1,6 @@
 local bump = {}
 
-local abs, floor, ceil, max = math.abs, math.floor, math.ceil, math.max
+local abs, floor, ceil = math.abs, math.floor, math.ceil
 
 local function assertType(desiredType, value, name)
   if type(value) ~= desiredType then
@@ -83,8 +83,8 @@ local function collideBoxes(l1,t1,w1,h1, l2,t2,w2,h2, vx,vy)
     return dx-vx, dy-vy, 0, false
   else                                -- boxes are not tunneling
     local t0,t1 = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy, 0, 1)
-    if     t0 and t0 > 0 and t0 < 1 then ti = t0
-    elseif t1 and t1 > 0 and t1 < 1 then ti = t1
+    if     t0 and t0 < 1 then ti = t0
+    elseif t1 and t1 < 1 then ti = t1
     end
     if ti then
       return vx*ti - vx, vy*ti - vy, ti, true

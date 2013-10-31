@@ -133,8 +133,19 @@ describe('World', function()
             { item = a, dx = -8, dy = 0, tunneling = true, ti = 0.2 }
           })
         end)
+        it('detects the case where an object was touching another without intersecting, and then penetrates', function()
+          local world, a, b = bump.newWorld(), {'a'}, {'b'}
 
-        it('focus returns a list of collisions sorted by ti', function()
+          world:add(a, 30,50,20,20)
+          world:add(b, 0,0,32,100)
+
+          assert.same(world:check(a, 32,50), {
+            { item = b, dx = 2, dy = 0, tunneling = true, ti = 0 }
+          })
+
+        end)
+
+        it('returns a list of collisions sorted by ti', function()
           local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
 
           world:add(a, 10,0, 10,10)
