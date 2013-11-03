@@ -1,6 +1,6 @@
 local bump = {}
 
-local abs, floor, ceil = math.abs, math.floor, math.ceil
+local abs, floor, ceil, min = math.abs, math.floor, math.ceil, math.min
 
 local function assertType(desiredType, value, name)
   if type(value) ~= desiredType then
@@ -201,7 +201,6 @@ function World:check(item, prev_l, prev_t)
   local tl,tt,tw,th --touched cells, taking vx and vy into account
   if vx > 0 then
     tl, tw = l - vx, w + vx
-
   else
     tl, tw = l, w - vx
   end
