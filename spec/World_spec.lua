@@ -220,4 +220,13 @@ describe('World', function()
     end)
   end)
 
+  describe(':toWorld', function()
+    it('returns the world left,top corner of the given cell', function()
+      local w = bump.newWorld()
+      assert.same({w:toWorld(1,1)}, {0,0})
+      assert.same({w:toWorld(2,2)}, {64,64})
+      assert.same({w:toWorld(-1,1)}, {-128,0})
+    end)
+  end)
+
 end)
