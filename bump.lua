@@ -76,7 +76,6 @@ local function sortByTi(a,b) return a.ti < b.ti end
 
 local function collideBoxes(l1,t1,w1,h1, l2,t2,w2,h2, vx,vy)
   local ti
-
   local l,t,w,h = getMinkowskyDiff(l1-vx,t1-vy,w1,h1, l2, t2, w2, h2)
 
   if containsPoint(l,t,w,h, 0,0) then -- boxes are tunneling
@@ -84,8 +83,8 @@ local function collideBoxes(l1,t1,w1,h1, l2,t2,w2,h2, vx,vy)
     return dx-vx, dy-vy, 0, false
   else                                -- boxes are not tunneling
     local t0,t1 = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy, 0, 1)
-    if     t0 and t0 > 0 and t0 < 1 then ti = t0
-    elseif t1 and t1 > 0 and t1 < 1 then ti = t1
+    if     t0 and t0 < 1 then ti = t0
+    elseif t1 and t1 < 1 then ti = t1
     end
     if ti then
       return vx*ti - vx, vy*ti - vy, ti, true
@@ -128,8 +127,8 @@ function World:add(item, l,t,w,h)
   self.items[item] = {l=l,t=t,w=w,h=h}
 
   local cl,ct,cw,ch = self:toCellBox(l,t,w,h)
-  for cy = ct, ct+ch do
-    for cx = cl, cl+cw do
+  for cy = ct, ct+ch-1 do
+    for cx = cl, cl+cw-1 do
       addItemToCell(self, item, cx, cy)
     end
   end
@@ -186,12 +185,13 @@ function World:check(item, prev_l, prev_t)
   else
     tt, th = t, h - vy
   end
+
   local cl,ct,cw,ch = self:toCellBox(tl,tt,tw,th)
 
-  for cy=ct,ct+ch do
+  for cy=ct,ct+ch-1 do
     local row = self.rows[cy]
     if row then
-      for cx=cl,cl+cw do
+      for cx=cl,cl+cw-1 do
         local cell = row[cx]
         if cell and cell.itemCount > 0 then
           for other,_ in pairs(cell.items) do
@@ -228,8 +228,8 @@ function World:remove(item)
   end
   self.items[item] = nil
   local cl,ct,cw,ch = self:toCellBox(box.l,box.t,box.w,box.h)
-  for cy = ct, ct+ch do
-    for cx = cl, cl+cw do
+  for cy = ct, ct+ch-1 do
+    for cx = cl, cl+cw-1 do
       removeItemFromCell(self, item, cx, cy)
     end
   end
@@ -266,7 +266,7 @@ function World:toCellBox(l,t,w,h)
   local cl,ct = self:toCell(l, t)
   local cellSize = self.cellSize
   local cr,cb = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
-  return cl, ct, cr-cl, cb-ct
+  return cl, ct, cr-cl+1, cb-ct+1
 end
 
 bump.newWorld = function(cellSize)
