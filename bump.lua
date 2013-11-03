@@ -86,6 +86,7 @@ end
 -----------------------------------------------
 
 local World = {}
+local World_mt = {__index = World}
 
 local function sortByTi(a,b) return a.ti < b.ti end
 
@@ -308,7 +309,7 @@ bump.newWorld = function(cellSize)
       rows           = {},
       nonEmptyCells  = {}
     },
-    {__index = World }
+    World_mt
   )
 end
 
