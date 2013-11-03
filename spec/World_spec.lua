@@ -140,7 +140,7 @@ describe('World', function()
           world:add(b, 0,0,32,100)
 
           assert.same(world:check(a, 32,50), {
-            { item = b, dx = 2, dy = 0, tunneling = true, ti = 0 }
+            { item = b, dx = 2, dy = 50, tunneling = false, ti = 1 }
           })
 
         end)

@@ -21,6 +21,15 @@ local function assertIsBox(l,t,w,h)
   assertType('number', h, 'h')
 end
 
+local Collision = {}
+local Collision_mt = {__index = Collision}
+
+function Collision:getMinimumDisplacement()
+  if self.tunneling              then return self.dx, self.dy end
+  if abs(self.dx) < abs(self.dy) then return self.dx, 0       end
+  return 0, self.dy
+end
+
 local World = {}
 
 local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
@@ -78,16 +87,22 @@ local function collideBoxes(l1,t1,w1,h1, l2,t2,w2,h2, vx,vy)
   local ti
   local l,t,w,h = getMinkowskyDiff(l1-vx,t1-vy,w1,h1, l2, t2, w2, h2)
 
-  if containsPoint(l,t,w,h, 0,0) then -- boxes are tunneling
+  if containsPoint(l,t,w,h, 0,0) then -- old a was intersecting with b
     local dx, dy = getNearestPointInPerimeter(l,t,w,h, 0,0)
     return dx-vx, dy-vy, 0, false
-  else                                -- boxes are not tunneling
-    local t0,t1 = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy, 0, 1)
-    if     t0 and t0 < 1 then ti = t0
-    elseif t1 and t1 < 1 then ti = t1
+  else                                -- old a was not intersecting with b
+    local ti0,ti1 = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy, 0, 1)
+    if     ti0 and 0 < ti0 and ti0 < 1 then ti = ti0
+    elseif ti1 and 0 < ti1 and ti1 < 1 then ti = ti1
     end
-    if ti then
+    if ti then                        -- a tunnels into B
       return vx*ti - vx, vy*ti - vy, ti, true
+    else                              -- a does not tunnel into b
+      l,t,w,h = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
+      if containsPoint(l,t,w,h, 0,0) then
+        local dx,dy = getNearestPointInPerimeter(l,t,w,h, 0,0)
+        return dx,dy, 1, false
+      end
     end
   end
 end
@@ -201,13 +216,13 @@ function World:check(item, prev_l, prev_t)
               local dx, dy, ti, tunneling = collideBoxes(l,t,w,h, oBox.l, oBox.t, oBox.w, oBox.h, vx, vy)
               if dx then
                 len = len + 1
-                collisions[len] = {
+                collisions[len] = setmetatable({
                   item       = other,
                   dx         = dx,
                   dy         = dy,
                   ti         = ti,
                   tunneling  = tunneling
-                }
+                }, Collision_mt)
               end
             end
           end
