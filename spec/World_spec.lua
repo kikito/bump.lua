@@ -84,6 +84,15 @@ describe('World', function()
 
       end)
     end)
+
+    describe('when no width or height is given', function()
+      it('takes width and height from its previous value', function()
+        local world, a = bump.newWorld(), {'a'}
+        world:add(a, 0,0, 10,10)
+        world:move(a, 5,5)
+        assert.same({5,5,10,10}, {world:getBox(a)})
+      end)
+    end)
   end)
 
   describe(':check', function()

@@ -157,6 +157,8 @@ function World:move(item, l,t,w,h)
     error('Item ' .. tostring(item) .. ' must be added to the world before being moved. Use world:add(item, l,t,w,h) to add it first.')
   end
 
+  w,h = w or box.w, h or box.h
+
   assertIsBox(l,t,w,h)
 
   local prev_l, prev_t = box.l, box.t
@@ -172,6 +174,14 @@ function World:move(item, l,t,w,h)
   end
 
   return self:check(item, prev_l, prev_t)
+end
+
+function World:getBox(item)
+  local box = self.items[item]
+  if not box then
+    error('Item ' .. tostring(item) .. ' must be added to the world before getting its box. Use world:add(item, l,t,w,h) to add it first.')
+  end
+  return box.l, box.t, box.w, box.h
 end
 
 function World:check(item, prev_l, prev_t)
