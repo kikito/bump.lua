@@ -200,7 +200,14 @@ describe('World', function()
   end)
 
   describe(':toCellBox', function()
-    --pending
+    it('returns the coordinates of the cells containing a given box', function()
+      local w = bump.newWorld()
+      assert.same({w:toCellBox(0,0,10,10)}, {1,1,1,1})
+      assert.same({w:toCellBox(0,0,64,64)}, {1,1,1,1})
+      assert.same({w:toCellBox(0,0,64.1,64.1)}, {1,1,2,2})
+      assert.same({w:toCellBox(60,0,10,10)}, {1,1,2,1})
+      assert.same({w:toCellBox(-100,40,64,10)}, {-1,1,2,1})
+    end)
   end)
 
 end)
