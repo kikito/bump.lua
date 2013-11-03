@@ -23,7 +23,7 @@ local world = bump.newWorld()
 
 
 -- Player functions
-local player = { l=50,t=50,w=20,h=20, speed = 80 }
+local player = { l=30.72,t=50,w=20,h=20, speed = 80 }
 
 local function updatePlayer(dt)
   local speed = player.speed
@@ -39,15 +39,19 @@ local function updatePlayer(dt)
     player.l = player.l + speed * dt
   end
 
-  local collisions, length = world:move(player, player.l, player.t, player.w, player.h)
+  local visited,    i   = {}, 1
+  local collisions, len = world:move(player, player.l, player.t, player.w, player.h)
 
-  for i=1, length do
-    local col = collisions[i]
-    if math.abs(col.dx) < math.abs(col.dy) then
-      player.l = player.l + col.dx
-    else
-      player.t = player.t + col.dy
-    end
+  while i <= len do
+   local col = collisions[i]
+   if not visited[col.item] then
+     visited[col.item] = true
+     local dx, dy       = col:getMinimumDisplacement()
+     player.l, player.t = player.l + dx, player.t + dy
+     collisions, len    = world:move(player, player.l, player.t, player.w, player.h)
+     i = 0
+   end
+   i = i + 1
   end
 end
 

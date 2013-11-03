@@ -21,6 +21,15 @@ local function assertIsBox(l,t,w,h)
   assertType('number', h, 'h')
 end
 
+local Collision = {}
+local Collision_mt = {__index = Collision}
+
+function Collision:getMinimumDisplacement()
+  if self.tunneling              then return self.dx, self.dy end
+  if abs(self.dx) < abs(self.dy) then return self.dx, 0       end
+  return 0, self.dy
+end
+
 local World = {}
 
 local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
@@ -201,13 +210,13 @@ function World:check(item, prev_l, prev_t)
               local dx, dy, ti, tunneling = collideBoxes(l,t,w,h, oBox.l, oBox.t, oBox.w, oBox.h, vx, vy)
               if dx then
                 len = len + 1
-                collisions[len] = {
+                collisions[len] = setmetatable({
                   item       = other,
                   dx         = dx,
                   dy         = dy,
                   ti         = ti,
                   tunneling  = tunneling
-                }
+                }, Collision_mt)
               end
             end
           end
