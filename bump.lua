@@ -21,16 +21,7 @@ local function assertIsBox(l,t,w,h)
   assertIsPositiveNumber(h, 'h')
 end
 
-local Collision = {}
-local Collision_mt = {__index = Collision}
-
-function Collision:getMinimumDisplacement()
-  if self.tunneling              then return self.dx, self.dy end
-  if abs(self.dx) < abs(self.dy) then return self.dx, 0       end
-  return 0, self.dy
-end
-
-local World = {}
+-----------------------------------------------
 
 local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
   local dx, dy  = x2-x1, y2-y1
@@ -80,6 +71,21 @@ end
 local function getNearestPointInPerimeter(l,t,w,h, x,y)
   return nearest(x, l, l+w), nearest(y, t, t+h)
 end
+
+-----------------------------------------------
+
+local Collision = {}
+local Collision_mt = {__index = Collision}
+
+function Collision:getMinimumDisplacement()
+  if self.tunneling              then return self.dx, self.dy end
+  if abs(self.dx) < abs(self.dy) then return self.dx, 0       end
+  return 0, self.dy
+end
+
+-----------------------------------------------
+
+local World = {}
 
 local function sortByTi(a,b) return a.ti < b.ti end
 
@@ -287,9 +293,9 @@ end
 
 function World:toCellBox(l,t,w,h)
   if not (l and t and w and h) then return nil end
-  local cl,ct = self:toCell(l, t)
   local cellSize = self.cellSize
-  local cr,cb = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
+  local cl,ct    = self:toCell(l, t)
+  local cr,cb    = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
   return cl, ct, cr-cl+1, cb-ct+1
 end
 
@@ -297,17 +303,17 @@ bump.newWorld = function(cellSize)
   cellSize = cellSize or 64
   assertIsPositiveNumber(cellSize, 'cellSize')
   return setmetatable(
-    { cellSize = cellSize,
-      items = {},
-      rows = {},
-      nonEmptyCells = {}
+    { cellSize       = cellSize,
+      items          = {},
+      rows           = {},
+      nonEmptyCells  = {}
     },
     {__index = World }
   )
 end
 
 bump.geom = {
-  getMinkowskyDiff = getMinkowskyDiff,
+  getMinkowskyDiff      = getMinkowskyDiff,
   getLiangBarskyIndices = getLiangBarskyIndices
 }
 
