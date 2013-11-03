@@ -17,8 +17,8 @@ end
 local function assertIsBox(l,t,w,h)
   assertType('number', l, 'l')
   assertType('number', t, 'w')
-  assertType('number', w, 'w')
-  assertType('number', h, 'h')
+  assertIsPositiveNumber(w, 'w')
+  assertIsPositiveNumber(h, 'h')
 end
 
 local Collision = {}
