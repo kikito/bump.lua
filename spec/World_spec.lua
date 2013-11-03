@@ -229,4 +229,13 @@ describe('World', function()
     end)
   end)
 
+  describe(':toWorldBox', function()
+    it('returns the world left,top,width and height for the given cell box', function()
+      local w = bump.newWorld()
+      assert.same({w:toWorldBox(1,1,1,1)}, {0,0,64,64})
+      assert.same({w:toWorldBox(2,2,2,2)}, {64,64,128,128})
+      assert.same({w:toWorldBox(-1,1,10,5)}, {-128,0,640,320})
+    end)
+  end)
+
 end)
