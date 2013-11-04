@@ -11,3 +11,8 @@ install:
   - sudo luarocks install busted
 
 script: "busted spec"
+
+branches:
+  only:
+    - master
+    - 2.0
