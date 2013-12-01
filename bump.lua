@@ -93,7 +93,9 @@ local World_mt = {__index = World}
 
 local function sortByTi(a,b) return a.ti < b.ti end
 
-local function collideBoxes(l1,t1,w1,h1, l2,t2,w2,h2, vx,vy)
+local function collideBoxes(b1, b2, vx,vy)
+  local l1,t1,w1,h1 = b1.l, b1.t, b1.w, b1.h
+  local l2,t2,w2,h2 = b2.l, b2.t, b2.w, b2.h
   local l,t,w,h = getMinkowskyDiff(l1-vx,t1-vy,w1,h1, l2, t2, w2, h2)
 
   if containsPoint(l,t,w,h, 0,0) then -- old a was intersecting with b
@@ -246,7 +248,7 @@ function World:check(item, options)
               visited[other] = true
               if not (hasFilterFunction and filter(other)) then
                 local oBox = self.items[other]
-                local dx, dy, ti, tunneling = collideBoxes(l,t,w,h, oBox.l, oBox.t, oBox.w, oBox.h, vx, vy)
+                local dx, dy, ti, tunneling = collideBoxes(box, oBox, vx, vy)
                 if dx then
                   len = len + 1
                   collisions[len] = setmetatable({
