@@ -158,7 +158,7 @@ function World:add(item, l,t,w,h)
   return self:check(item)
 end
 
-function World:move(item, l,t,w,h)
+function World:move(item, l,t,w,h, options)
   local box = self.items[item]
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being moved. Use world:add(item, l,t,w,h) to add it first.')
@@ -168,19 +168,19 @@ function World:move(item, l,t,w,h)
 
   assertIsBox(l,t,w,h)
 
-  local prev_l, prev_t = box.l, box.t
-
-  if box.w ~= w or box.h ~= h then
-    local prev_cx, prev_cy = box.l + box.w/2, box.t + box.h/2
-    prev_l, prev_t         = prev_cx - w/2, prev_cy - h/2
-  end
-
   if box.l ~= l or box.t ~= t or box.w ~= w or box.h ~= h then
     self:remove(item)
-    self:add(item, l,t,w,h)
+    self:add(item, l,t,w,h, options)
+    options = options or {}
+    if box.w ~= w or box.h ~= h then
+      local prev_cx, prev_cy = box.l + box.w/2, box.t + box.h/2
+      options.prev_l, options.prev_t = prev_cx - w/2, prev_cy - h/2
+    else
+      options.prev_l, options.prev_t = box.l, box.t
+    end
   end
 
-  return self:check(item, {prev_l = prev_l, prev_t = prev_t})
+  return self:check(item, options)
 end
 
 function World:getBox(item)
