@@ -199,21 +199,25 @@ function World:check(item, options)
   if options then
     prev_l, prev_t, filter = options.prev_l, options.prev_t, options.filter
   end
-  if filter == true then return {} end
   local box = self.items[item]
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being checked for collisions. Use world:add(item, l,t,w,h) to add it first.')
+  end
+
+  if filter == true then return {} end
+  local visited = {[item] = true}
+  local hasFilterFunction = false
+  if type(filter) == 'table' then
+    for _,v in pairs(filter) do visited[v] = true end
+  elseif type(filter) == 'function' then
+    hasFilterFunction = true
   end
   local l,t,w,h = box.l, box.t, box.w, box.h
   prev_l, prev_t = prev_l or l, prev_t or t
 
   local vx, vy = l - prev_l, t - prev_t
   local collisions, len = {}, 0
-  local visited = {[item] = true}
 
-  if type(filter) == 'table' then
-    for _,v in pairs(filter) do visited[v] = true end
-  end
 
   -- FIXME this could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding box of the whole movement
@@ -238,7 +242,9 @@ function World:check(item, options)
         local cell = row[cx]
         if cell and cell.itemCount > 0 then
           for other,_ in pairs(cell.items) do
-            if not visited[other] then
+            if not visited[other] and
+               not (hasFilterFunction and filter(other))
+            then
               visited[other] = true
               local oBox = self.items[other]
               local dx, dy, ti, tunneling = collideBoxes(l,t,w,h, oBox.l, oBox.t, oBox.w, oBox.h, vx, vy)

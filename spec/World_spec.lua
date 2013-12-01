@@ -191,6 +191,22 @@ describe('World', function()
           })
 
         end)
+
+        it('deactivates collisions when it is a function', function()
+          local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
+
+          world:add(a, 10,0, 10,10)
+          world:add(b, 70,0, 10,10)
+          world:add(c, 50,0, 10,10)
+          world:add(d, 90,0, 10,10)
+          assert.same(world:check(a, {prev_l = 110, prev_t = 0, filter = function(obj)
+            return obj == d
+          end}), {
+            { item = b, dx = 70, dy = 0, tunneling = true, ti = 0.3 },
+            { item = c, dx = 50, dy = 0, tunneling = true, ti = 0.5 }
+          })
+
+        end)
       end)
     end) -- when the world is not empty
   end) -- :check
