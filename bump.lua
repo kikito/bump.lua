@@ -21,6 +21,9 @@ local function assertIsBox(l,t,w,h)
   assertIsPositiveNumber(h, 'h')
 end
 
+local function isArray(tbl)
+end
+
 -----------------------------------------------
 
 local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
@@ -207,6 +210,10 @@ function World:check(item, options)
   local vx, vy = l - prev_l, t - prev_t
   local collisions, len = {}, 0
   local visited = {[item] = true}
+
+  if type(filter) == 'table' then
+    for _,v in pairs(filter) do visited[v] = true end
+  end
 
   -- FIXME this could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding box of the whole movement

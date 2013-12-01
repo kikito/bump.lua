@@ -178,6 +178,19 @@ describe('World', function()
           world:add(d, 90,0, 10,10)
           assert.same(world:check(a, {prev_l = 110, prev_t = 0, filter = true}), {})
         end)
+
+        it('deactivates collisions when it is an array', function()
+          local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
+
+          world:add(a, 10,0, 10,10)
+          world:add(b, 70,0, 10,10)
+          world:add(c, 50,0, 10,10)
+          world:add(d, 90,0, 10,10)
+          assert.same(world:check(a, {prev_l = 110, prev_t = 0, filter = {b,c}}), {
+            { item = d, dx = 90, dy = 0, tunneling = true, ti = 0.1 }
+          })
+
+        end)
       end)
     end) -- when the world is not empty
   end) -- :check
