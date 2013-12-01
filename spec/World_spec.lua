@@ -167,9 +167,20 @@ describe('World', function()
             { item = c, dx = 50, dy = 0, tunneling = true, ti = 0.5 }
           })
         end)
+      end) -- when previous l,t are passed
+      describe('when filter is passed', function()
+        it('deactivates collisions when true', function()
+          local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
+
+          world:add(a, 10,0, 10,10)
+          world:add(b, 70,0, 10,10)
+          world:add(c, 50,0, 10,10)
+          world:add(d, 90,0, 10,10)
+          assert.same(world:check(a, {prev_l = 110, prev_t = 0, filter = true}), {})
+        end)
       end)
-    end)
-  end)
+    end) -- when the world is not empty
+  end) -- :check
 
   describe(':remove', function()
     it('throws an error if the item does not exist', function()

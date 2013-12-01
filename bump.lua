@@ -192,10 +192,11 @@ function World:getBox(item)
 end
 
 function World:check(item, options)
-  local prev_l, prev_t
+  local prev_l, prev_t, filter
   if options then
-    prev_l, prev_t = options.prev_l, options.prev_t
+    prev_l, prev_t, filter = options.prev_l, options.prev_t, options.filter
   end
+  if filter == true then return {} end
   local box = self.items[item]
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being checked for collisions. Use world:add(item, l,t,w,h) to add it first.')
