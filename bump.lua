@@ -240,7 +240,7 @@ function World:check(item, options)
     if row then
       for cx=cl,cl+cw-1 do
         local cell = row[cx]
-        if cell and cell.itemCount > 0 then
+        if cell and cell.itemCount > 0 then -- no cell.itemCount > 1 because tunneling
           for other,_ in pairs(cell.items) do
             if not visited[other] then
               visited[other] = true
