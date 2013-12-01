@@ -242,21 +242,21 @@ function World:check(item, options)
         local cell = row[cx]
         if cell and cell.itemCount > 0 then
           for other,_ in pairs(cell.items) do
-            if not visited[other] and
-               not (hasFilterFunction and filter(other))
-            then
+            if not visited[other] then
               visited[other] = true
-              local oBox = self.items[other]
-              local dx, dy, ti, tunneling = collideBoxes(l,t,w,h, oBox.l, oBox.t, oBox.w, oBox.h, vx, vy)
-              if dx then
-                len = len + 1
-                collisions[len] = setmetatable({
-                  item       = other,
-                  dx         = dx,
-                  dy         = dy,
-                  ti         = ti,
-                  tunneling  = tunneling
-                }, Collision_mt)
+              if not (hasFilterFunction and filter(other)) then
+                local oBox = self.items[other]
+                local dx, dy, ti, tunneling = collideBoxes(l,t,w,h, oBox.l, oBox.t, oBox.w, oBox.h, vx, vy)
+                if dx then
+                  len = len + 1
+                  collisions[len] = setmetatable({
+                    item       = other,
+                    dx         = dx,
+                    dy         = dy,
+                    ti         = ti,
+                    tunneling  = tunneling
+                  }, Collision_mt)
+                end
               end
             end
           end
