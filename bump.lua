@@ -139,7 +139,7 @@ local function removeItemFromCell(self, item, cx, cy)
   return true
 end
 
-function World:add(item, l,t,w,h)
+function World:add(item, l,t,w,h, options)
   local box = self.items[item]
   if box then
     error('Item ' .. tostring(item) .. ' added to the world twice.')
@@ -155,7 +155,7 @@ function World:add(item, l,t,w,h)
     end
   end
 
-  return self:check(item)
+  return self:check(item, options)
 end
 
 function World:move(item, l,t,w,h, options)
