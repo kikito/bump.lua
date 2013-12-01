@@ -180,7 +180,7 @@ function World:move(item, l,t,w,h)
     self:add(item, l,t,w,h)
   end
 
-  return self:check(item, prev_l, prev_t)
+  return self:check(item, {prev_l = prev_l, prev_t = prev_t})
 end
 
 function World:getBox(item)
@@ -191,7 +191,11 @@ function World:getBox(item)
   return box.l, box.t, box.w, box.h
 end
 
-function World:check(item, prev_l, prev_t)
+function World:check(item, options)
+  local prev_l, prev_t
+  if options then
+    prev_l, prev_t = options.prev_l, options.prev_t
+  end
   local box = self.items[item]
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being checked for collisions. Use world:add(item, l,t,w,h) to add it first.')
