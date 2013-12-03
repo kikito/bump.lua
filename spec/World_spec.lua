@@ -81,7 +81,6 @@ describe('World', function()
         assert.same(world:add(b, 4,6,10,10), {
           { item = a, dx = 6, dy = 4, kind = 'intersection', ti = 0 }
         })
-
       end)
     end)
 
@@ -113,12 +112,14 @@ describe('World', function()
 
     describe('when the world is not empty', function()
       it('returns a list of collisions', function()
-        local world, a, b = bump.newWorld(), {'a'}, {'b'}
+        local world, a, b, c = bump.newWorld(), {'a'}, {'b'}, {'c'}
 
         world:add(a, 0,0,10,10)
         world:add(b, 4,6,10,10)
+        world:add(c, 14,16,10,10)
         assert.same(world:check(b), {
-          { item = a, dx = 6, dy = 4, kind = 'intersection', ti = 0 }
+          { item = a, dx = 6, dy = 4, kind = 'intersection', ti = 0 },
+          { item = c, dx = 0, dy = 0, kind = 'touch', ti = math.huge }
         })
 
       end)
@@ -149,9 +150,18 @@ describe('World', function()
           world:add(b, 0,0,32,100)
 
           assert.same(world:check(a, {prev_l = 32, prev_t = 50}), {
-            { item = b, dx = 2, dy = 50, kind = 'intersection', ti = 1 }
+            { item = b, dx = 2, dy = 50, kind = 'intersection', ti = 0 }
           })
+        end)
+        it('detects the case where an object will end touching another without intersecting', function()
+          local world, a, b = bump.newWorld(), {'a'}, {'b'}
 
+          world:add(a, 10,10,10,10)
+          world:add(b,  0, 0,10,10)
+
+          assert.same(world:check(a, {prev_l = 32, prev_t = 50}), {
+            { item = b, dx = 0, dy = 0, kind = 'touch', ti = math.huge }
+          })
         end)
 
         it('returns a list of collisions sorted by ti', function()

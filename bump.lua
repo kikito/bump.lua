@@ -64,7 +64,7 @@ local function getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
 end
 
 local function containsPoint(l,t,w,h, x,y)
-  return x > l and y > t and x < l + w and y < t + h
+  return x >= l and y >= t and x <= l + w and y <= t + h
 end
 
 local function nearest(x, a, b)
@@ -89,21 +89,19 @@ local function collideBoxes(b1, b2, vx,vy)
 
   if containsPoint(l,t,w,h, 0,0) then -- old a was intersecting with b
     local dx, dy = getNearestPointInPerimeter(l,t,w,h, 0,0)
-    return dx-vx, dy-vy, 0, 'intersection'
+    dx, dy = dx - vx, dy - vy
+    if dx == 0 and dy == 0 then return 0, 0, math.huge, 'touch' end
+    return dx, dy, 0, 'intersection'
   else                                -- old a was not intersecting with b
     local ti
     local ti0,ti1 = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy, 0, 1)
     if     ti0 and 0 < ti0 and ti0 < 1 then ti = ti0
     elseif ti1 and 0 < ti1 and ti1 < 1 then ti = ti1
+    elseif ti0 == 1 or ti1 == 1 then ti = 1
     end
     if ti then                        -- a tunnels into B
+      if ti == 1 then return 0, 0, math.huge, 'touch' end
       return vx*ti - vx, vy*ti - vy, ti, 'tunnel'
-    else                              -- a does not tunnel into b
-      l,t,w,h = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
-      if containsPoint(l,t,w,h, 0,0) then
-        local dx,dy = getNearestPointInPerimeter(l,t,w,h, 0,0)
-        return dx,dy, 1, 'intersection'
-      end
     end
   end
 end
