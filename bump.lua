@@ -77,17 +77,6 @@ end
 
 -----------------------------------------------
 
-local Collision = {}
-local Collision_mt = {__index = Collision}
-
-function Collision:getMinimumDisplacement()
-  if self.kind == 'tunnel'       then return self.dx, self.dy end
-  if abs(self.dx) < abs(self.dy) then return self.dx, 0       end
-  return 0, self.dy
-end
-
------------------------------------------------
-
 local World = {}
 local World_mt = {__index = World}
 
@@ -251,13 +240,13 @@ function World:check(item, options)
                 local dx, dy, ti, kind = collideBoxes(box, oBox, vx, vy)
                 if dx then
                   len = len + 1
-                  collisions[len] = setmetatable({
+                  collisions[len] = {
                     item = other,
                     dx   = dx,
                     dy   = dy,
                     ti   = ti,
                     kind = kind
-                  }, Collision_mt)
+                  }
                 end
               end
             end
