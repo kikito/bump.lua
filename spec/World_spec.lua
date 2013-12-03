@@ -50,7 +50,7 @@ describe('World', function()
         local cols = world:add(b, 4,6,10,10)
 
         assert.same(cols, {
-          { item = a, dx = 6, dy = 4, tunneling = false, ti = 0 }
+          { item = a, dx = 6, dy = 4, kind = 'intersection', ti = 0 }
         })
 
       end)
@@ -79,7 +79,7 @@ describe('World', function()
 
         world:add(a, 0,0,10,10)
         assert.same(world:add(b, 4,6,10,10), {
-          { item = a, dx = 6, dy = 4, tunneling = false, ti = 0 }
+          { item = a, dx = 6, dy = 4, kind = 'intersection', ti = 0 }
         })
 
       end)
@@ -118,7 +118,7 @@ describe('World', function()
         world:add(a, 0,0,10,10)
         world:add(b, 4,6,10,10)
         assert.same(world:check(b), {
-          { item = a, dx = 6, dy = 4, tunneling = false, ti = 0 }
+          { item = a, dx = 6, dy = 4, kind = 'intersection', ti = 0 }
         })
 
       end)
@@ -130,7 +130,7 @@ describe('World', function()
           world:add(a, 0,0, 2,2)
           world:add(b, 1,1, 2,2)
           assert.same(world:check(b, {prev_l = 1, prev_t = 1}), {
-            { item = a, dx = 1, dy = 1, tunneling = false, ti = 0 }
+            { item = a, dx = 1, dy = 1, kind = 'intersection', ti = 0 }
           })
         end)
         it('detects and tags tunneling correctly', function()
@@ -139,7 +139,7 @@ describe('World', function()
           world:add(a, 1,0, 2,1)
           world:add(b, 5,0, 4,1)
           assert.same(world:check(b, {prev_l = -5, prev_t = 0}), {
-            { item = a, dx = -8, dy = 0, tunneling = true, ti = 0.2 }
+            { item = a, dx = -8, dy = 0, kind = 'tunnel', ti = 0.2 }
           })
         end)
         it('detects the case where an object was touching another without intersecting, and then penetrates', function()
@@ -149,7 +149,7 @@ describe('World', function()
           world:add(b, 0,0,32,100)
 
           assert.same(world:check(a, {prev_l = 32, prev_t = 50}), {
-            { item = b, dx = 2, dy = 50, tunneling = false, ti = 1 }
+            { item = b, dx = 2, dy = 50, kind = 'intersection', ti = 1 }
           })
 
         end)
@@ -162,9 +162,9 @@ describe('World', function()
           world:add(c, 50,0, 10,10)
           world:add(d, 90,0, 10,10)
           assert.same(world:check(a, {prev_l = 110, prev_t = 0}), {
-            { item = d, dx = 90, dy = 0, tunneling = true, ti = 0.1 },
-            { item = b, dx = 70, dy = 0, tunneling = true, ti = 0.3 },
-            { item = c, dx = 50, dy = 0, tunneling = true, ti = 0.5 }
+            { item = d, dx = 90, dy = 0, kind = 'tunnel', ti = 0.1 },
+            { item = b, dx = 70, dy = 0, kind = 'tunnel', ti = 0.3 },
+            { item = c, dx = 50, dy = 0, kind = 'tunnel', ti = 0.5 }
           })
         end)
       end) -- when previous l,t are passed
@@ -187,7 +187,7 @@ describe('World', function()
           world:add(c, 50,0, 10,10)
           world:add(d, 90,0, 10,10)
           assert.same(world:check(a, {prev_l = 110, prev_t = 0, filter = {b,c}}), {
-            { item = d, dx = 90, dy = 0, tunneling = true, ti = 0.1 }
+            { item = d, dx = 90, dy = 0, kind = 'tunnel', ti = 0.1 }
           })
 
         end)
@@ -202,8 +202,8 @@ describe('World', function()
           assert.same(world:check(a, {prev_l = 110, prev_t = 0, filter = function(obj)
             return obj == d
           end}), {
-            { item = b, dx = 70, dy = 0, tunneling = true, ti = 0.3 },
-            { item = c, dx = 50, dy = 0, tunneling = true, ti = 0.5 }
+            { item = b, dx = 70, dy = 0, kind = 'tunnel', ti = 0.3 },
+            { item = c, dx = 50, dy = 0, kind = 'tunnel', ti = 0.5 }
           })
 
         end)
@@ -222,7 +222,7 @@ describe('World', function()
       world:add(a, 0,0, 10,10)
       world:add(b, 5,0, 1,1)
       assert.same(world:check(b), {
-        { item = a, dx = 5, dy = -1, tunneling = false, ti = 0 }
+        { item = a, dx = 5, dy = -1, kind = 'intersection', ti = 0 }
       })
       world:remove(a)
       assert.same(world:check(b), {})

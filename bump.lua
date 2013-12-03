@@ -81,7 +81,7 @@ local Collision = {}
 local Collision_mt = {__index = Collision}
 
 function Collision:getMinimumDisplacement()
-  if self.tunneling              then return self.dx, self.dy end
+  if self.kind == 'tunnel'       then return self.dx, self.dy end
   if abs(self.dx) < abs(self.dy) then return self.dx, 0       end
   return 0, self.dy
 end
@@ -100,7 +100,7 @@ local function collideBoxes(b1, b2, vx,vy)
 
   if containsPoint(l,t,w,h, 0,0) then -- old a was intersecting with b
     local dx, dy = getNearestPointInPerimeter(l,t,w,h, 0,0)
-    return dx-vx, dy-vy, 0, false
+    return dx-vx, dy-vy, 0, 'intersection'
   else                                -- old a was not intersecting with b
     local ti
     local ti0,ti1 = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy, 0, 1)
@@ -108,12 +108,12 @@ local function collideBoxes(b1, b2, vx,vy)
     elseif ti1 and 0 < ti1 and ti1 < 1 then ti = ti1
     end
     if ti then                        -- a tunnels into B
-      return vx*ti - vx, vy*ti - vy, ti, true
+      return vx*ti - vx, vy*ti - vy, ti, 'tunnel'
     else                              -- a does not tunnel into b
       l,t,w,h = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
       if containsPoint(l,t,w,h, 0,0) then
         local dx,dy = getNearestPointInPerimeter(l,t,w,h, 0,0)
-        return dx,dy, 1, false
+        return dx,dy, 1, 'intersection'
       end
     end
   end
@@ -248,15 +248,15 @@ function World:check(item, options)
               visited[other] = true
               if not (hasFilterFunction and filter(other)) then
                 local oBox = self.items[other]
-                local dx, dy, ti, tunneling = collideBoxes(box, oBox, vx, vy)
+                local dx, dy, ti, kind = collideBoxes(box, oBox, vx, vy)
                 if dx then
                   len = len + 1
                   collisions[len] = setmetatable({
-                    item       = other,
-                    dx         = dx,
-                    dy         = dy,
-                    ti         = ti,
-                    tunneling  = tunneling
+                    item = other,
+                    dx   = dx,
+                    dy   = dy,
+                    ti   = ti,
+                    kind = kind
                   }, Collision_mt)
                 end
               end
