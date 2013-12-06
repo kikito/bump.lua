@@ -1,6 +1,6 @@
 local bump = {}
 
-local abs, floor, ceil, min = math.abs, math.floor, math.ceil, math.min
+local abs, floor, ceil, min, max = math.abs, math.floor, math.ceil, math.min, math.max
 
 local function assertType(desiredType, value, name)
   if type(value) ~= desiredType then
@@ -19,9 +19,6 @@ local function assertIsBox(l,t,w,h)
   assertType('number', t, 'w')
   assertIsPositiveNumber(w, 'w')
   assertIsPositiveNumber(h, 'h')
-end
-
-local function isArray(tbl)
 end
 
 -----------------------------------------------
@@ -82,10 +79,12 @@ local World_mt = {__index = World}
 
 local function sortByTi(a,b) return a.ti < b.ti end
 
-local function collideBoxes(b1, b2, vx,vy)
+local function collideBoxes(b1, b2, prev_l, prev_t)
   local l1,t1,w1,h1 = b1.l, b1.t, b1.w, b1.h
   local l2,t2,w2,h2 = b2.l, b2.t, b2.w, b2.h
-  local l,t,w,h = getMinkowskyDiff(l1-vx,t1-vy,w1,h1, l2, t2, w2, h2)
+  local vx, vy      = l1 - prev_l, t1 - prev_t
+
+  local l,t,w,h = getMinkowskyDiff(prev_l,prev_t,w1,h1, l2, t2, w2, h2)
 
   if containsPoint(l,t,w,h, 0,0) then -- old a was intersecting with b
     local dx, dy = getNearestPointInPerimeter(l,t,w,h, 0,0)
@@ -203,23 +202,14 @@ function World:check(item, options)
   local l,t,w,h = box.l, box.t, box.w, box.h
   prev_l, prev_t = prev_l or l, prev_t or t
 
-  local vx, vy = l - prev_l, t - prev_t
   local collisions, len = {}, 0
 
 
   -- FIXME this could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding box of the whole movement
-  local tl,tt,tw,th --touched cells, taking vx and vy into account
-  if vx > 0 then
-    tl, tw = l - vx, w + vx
-  else
-    tl, tw = l, w - vx
-  end
-  if vy > 0 then
-    tt, th = t - vy, h + vy
-  else
-    tt, th = t, h - vy
-  end
+  local tl, tt = min(prev_l, l),       min(prev_t, t)
+  local tr, tb = max(prev_l + w, l+w), max(prev_t + h, t+h)
+  local tw, th = tr-tl, tb-tt
 
   local cl,ct,cw,ch = self:toCellBox(tl,tt,tw,th)
 
@@ -234,7 +224,7 @@ function World:check(item, options)
               visited[other] = true
               if not (filter and filter(other)) then
                 local oBox = self.items[other]
-                local dx, dy, ti, kind = collideBoxes(box, oBox, vx, vy)
+                local dx, dy, ti, kind = collideBoxes(box, oBox, prev_l, prev_t)
                 if dx then
                   len = len + 1
                   collisions[len] = {
