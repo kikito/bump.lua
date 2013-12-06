@@ -184,22 +184,21 @@ function World:getBox(item)
 end
 
 function World:check(item, options)
-  local prev_l, prev_t, filter
+  local prev_l, prev_t, filter, skip_collisions, opt_visited
   if options then
-    prev_l, prev_t, filter = options.prev_l, options.prev_t, options.filter
+    prev_l, prev_t, filter, skip_collisions, opt_visited =
+      options.prev_l, options.prev_t, options.filter, options.skip_collisions, options.visited
   end
   local box = self.items[item]
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being checked for collisions. Use world:add(item, l,t,w,h) to add it first.')
   end
 
-  if filter == true then return {} end
+  if skip_collisions then return {} end
+
   local visited = {[item] = true}
-  local hasFilterFunction = false
-  if type(filter) == 'table' then
-    for _,v in pairs(filter) do visited[v] = true end
-  elseif type(filter) == 'function' then
-    hasFilterFunction = true
+  if type(opt_visited) == 'table' then
+    for _,v in pairs(opt_visited) do visited[v] = true end
   end
   local l,t,w,h = box.l, box.t, box.w, box.h
   prev_l, prev_t = prev_l or l, prev_t or t
@@ -233,7 +232,7 @@ function World:check(item, options)
           for other,_ in pairs(cell.items) do
             if not visited[other] then
               visited[other] = true
-              if not (hasFilterFunction and filter(other)) then
+              if not (filter and filter(other)) then
                 local oBox = self.items[other]
                 local dx, dy, ti, kind = collideBoxes(box, oBox, vx, vy)
                 if dx then
