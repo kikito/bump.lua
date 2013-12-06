@@ -119,7 +119,7 @@ describe('World', function()
         world:add(c, 14,16,10,10)
         assert.same(world:check(b), {
           { item = a, dx = 6, dy = 4, kind = 'intersection', ti = 0 },
-          { item = c, dx = 0, dy = 0, kind = 'touch', ti = math.huge }
+          { item = c, dx = 0, dy = 0, kind = 'touch', ti = 1 }
         })
 
       end)
@@ -160,7 +160,7 @@ describe('World', function()
           world:add(b,  0, 0,10,10)
 
           assert.same(world:check(a, {prev_l = 32, prev_t = 50}), {
-            { item = b, dx = 0, dy = 0, kind = 'touch', ti = math.huge }
+            { item = b, dx = 0, dy = 0, kind = 'touch', ti = 1 }
           })
         end)
 

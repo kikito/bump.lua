@@ -89,7 +89,7 @@ local function collideBoxes(b1, b2, prev_l, prev_t)
   if containsPoint(l,t,w,h, 0,0) then -- old a was intersecting with b
     local dx, dy = getNearestPointInPerimeter(l,t,w,h, 0,0)
     dx, dy = dx - vx, dy - vy
-    if dx == 0 and dy == 0 then return 0, 0, math.huge, 'touch' end
+    if dx == 0 and dy == 0 then return 0, 0, 1, 'touch' end
     return dx, dy, 0, 'intersection'
   else                                -- old a was not intersecting with b
     local ti
@@ -99,7 +99,7 @@ local function collideBoxes(b1, b2, prev_l, prev_t)
     elseif ti0 == 1 or ti1 == 1 then ti = 1
     end
     if ti then                        -- a tunnels into B
-      if ti == 1 then return 0, 0, math.huge, 'touch' end
+      if ti == 1 then return 0, 0, 1, 'touch' end
       return vx*ti - vx, vy*ti - vy, ti, 'tunnel'
     end
   end
