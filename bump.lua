@@ -79,7 +79,7 @@ local World_mt = {__index = World}
 
 local function sortByTi(a,b) return a.ti < b.ti end
 
-local function collideBoxes(b1, b2, prev_l, prev_t)
+local function collideBoxes(b1, b2, prev_l, prev_t, axis)
   local l1,t1,w1,h1 = b1.l, b1.t, b1.w, b1.h
   local l2,t2,w2,h2 = b2.l, b2.t, b2.w, b2.h
   local vx, vy      = l1 - prev_l, t1 - prev_t
@@ -87,8 +87,10 @@ local function collideBoxes(b1, b2, prev_l, prev_t)
   local l,t,w,h = getMinkowskyDiff(prev_l,prev_t,w1,h1, l2, t2, w2, h2)
 
   if containsPoint(l,t,w,h, 0,0) then -- old a was intersecting with b
-    local dx, dy = getNearestPointInPerimeter(l,t,w,h, 0,0)
+    local dx, dy = getNearestPointInPerimeter(l,t,w,h, 0,0, axis)
     dx, dy = dx - vx, dy - vy
+    dx = axis == 'y' and 0 or dx
+    dy = axis == 'x' and 0 or dy
     if dx == 0 and dy == 0 then return 0, 0, 1, 'touch' end
     return dx, dy, 0, 'intersection'
   else                                -- old a was not intersecting with b
@@ -183,10 +185,10 @@ function World:getBox(item)
 end
 
 function World:check(item, options)
-  local prev_l, prev_t, filter, skip_collisions, opt_visited
+  local prev_l, prev_t, filter, skip_collisions, opt_visited, axis
   if options then
-    prev_l, prev_t, filter, skip_collisions, opt_visited =
-      options.prev_l, options.prev_t, options.filter, options.skip_collisions, options.visited
+    prev_l, prev_t, filter, skip_collisions, opt_visited, axis =
+      options.prev_l, options.prev_t, options.filter, options.skip_collisions, options.visited, options.axis
   end
   local box = self.items[item]
   if not box then
@@ -224,7 +226,7 @@ function World:check(item, options)
               visited[other] = true
               if not (filter and filter(other)) then
                 local oBox = self.items[other]
-                local dx, dy, ti, kind = collideBoxes(box, oBox, prev_l, prev_t)
+                local dx, dy, ti, kind = collideBoxes(box, oBox, prev_l, prev_t, axis)
                 if dx then
                   len = len + 1
                   collisions[len] = {

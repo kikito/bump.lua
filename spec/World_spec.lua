@@ -179,47 +179,63 @@ describe('World', function()
         end)
       end) -- when previous l,t are passed
 
-      describe('when skip_collisions is passed', function()
-        it('deactivates collisions when true', function()
-          local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
+      describe('options', function()
+        local world, a, b, c, d
 
+        before_each(function()
+          world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
           world:add(a, 10,0, 10,10)
           world:add(b, 70,0, 10,10)
           world:add(c, 50,0, 10,10)
           world:add(d, 90,0, 10,10)
-          assert.same(world:check(a, {prev_l = 110, prev_t = 0, skip_collisions = true}), {})
         end)
-      end)
 
-      describe('when visited is passed', function()
-        it('deactivates collisions with the items in the visited array', function()
-          local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
-
-          world:add(a, 10,0, 10,10)
-          world:add(b, 70,0, 10,10)
-          world:add(c, 50,0, 10,10)
-          world:add(d, 90,0, 10,10)
-          assert.same(world:check(a, {prev_l = 110, prev_t = 0, visited = {b,c}}), {
-            { item = d, dx = 90, dy = 0, kind = 'tunnel', ti = 0.1 }
-          })
+        describe('the skip_collisions option', function()
+          it('deactivates collisions when true', function()
+            assert.same(world:check(a, {prev_l = 110, prev_t = 0, skip_collisions = true}), {})
+          end)
         end)
-      end)
 
-      describe('when filter is passed', function()
-        it('deactivates collisions when filter returns true', function()
-          local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
+        describe('the visited option', function()
+          it('deactivates collisions with the items in the visited array', function()
+            assert.same(world:check(a, {prev_l = 110, prev_t = 0, visited = {b,c}}), {
+              { item = d, dx = 90, dy = 0, kind = 'tunnel', ti = 0.1 }
+            })
+          end)
+        end)
 
-          world:add(a, 10,0, 10,10)
-          world:add(b, 70,0, 10,10)
-          world:add(c, 50,0, 10,10)
-          world:add(d, 90,0, 10,10)
-          assert.same(world:check(a, {prev_l = 110, prev_t = 0, filter = function(obj)
-            return obj == d
-          end}), {
-            { item = b, dx = 70, dy = 0, kind = 'tunnel', ti = 0.3 },
-            { item = c, dx = 50, dy = 0, kind = 'tunnel', ti = 0.5 }
-          })
+        describe('the filter option', function()
+          it('deactivates collisions when filter returns true', function()
+            assert.same(world:check(a, {prev_l = 110, prev_t = 0, filter = function(obj)
+              return obj == d
+            end}), {
+              { item = b, dx = 70, dy = 0, kind = 'tunnel', ti = 0.3 },
+              { item = c, dx = 50, dy = 0, kind = 'tunnel', ti = 0.5 }
+            })
+          end)
+        end)
 
+        describe('the axis option', function()
+          it('zeroes the other axis on intersections', function()
+            local m = {'m'}
+            world:add(m, 6,6, 10, 10)
+            assert.same(world:check(a), {
+              { item = m, dx = 6, dy = -4, kind = 'intersection', ti = 0 },
+            })
+            assert.same(world:check(a, {axis = 'x'}), {
+              { item = m, dx = 6, dy = 0, kind = 'intersection', ti = 0 },
+            })
+            assert.same(world:check(a, {axis = 'y'}), {
+              { item = m, dx = 0, dy = -4, kind = 'intersection', ti = 0 },
+            })
+          end)
+          it('does not affect tunnels', function()
+            assert.same(world:check(a, {prev_l = 110, prev_t = 0, axis='x'}), {
+              { item = d, dx = 90, dy = 0, kind = 'tunnel', ti = 0.1 },
+              { item = b, dx = 70, dy = 0, kind = 'tunnel', ti = 0.3 },
+              { item = c, dx = 50, dy = 0, kind = 'tunnel', ti = 0.5 }
+            })
+          end)
         end)
       end)
     end) -- when the world is not empty
