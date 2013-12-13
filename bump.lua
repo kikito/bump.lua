@@ -92,18 +92,17 @@ end
 local function collideBoxes(b1, b2, prev_l, prev_t, axis)
   local l1,t1,w1,h1  = b1.l, b1.t, b1.w, b1.h
   local l2,t2,w2,h2  = b2.l, b2.t, b2.w, b2.h
-  local vx, vy       = l1 - prev_l, t1 - prev_t
   local l,t,w,h      = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
-  local dx, dy
 
   if containsPoint(l,t,w,h, 0,0) then
-    dx,dy = nearest(0,l,l+w), nearest(0,t,t+h)
+    local dx,dy = nearest(0,l,l+w), nearest(0,t,t+h)
     dx,dy = getMinimalDisplacement(dx, dy, axis)
     return dx, dy, 0, 'intersection'
   else
+    local vx, vy  = l1 - prev_l, t1 - prev_t
     l,t,w,h = getMinkowskyDiff(prev_l,prev_t,w1,h1, l2,t2,w2,h2)
     if containsPoint(l,t,w,h, 0,0) then
-      dx,dy = nearest(0,l,l+w) - vx, nearest(0,t,t+h) - vy
+      local dx,dy = nearest(0,l,l+w) - vx, nearest(0,t,t+h) - vy
       dx,dy = getMinimalDisplacement(dx, dy, axis)
       return dx, dy, 0, 'intersection'
     else
