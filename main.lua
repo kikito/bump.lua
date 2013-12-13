@@ -46,7 +46,7 @@ local function updatePlayer(dt)
    local col = collisions[i]
    if not visited[col.item] then
      visited[col.item] = true
-     local dx, dy       = col:getMinimumDisplacement()
+     local dx, dy       = col.dx, col.dy
      player.l, player.t = player.l + dx, player.t + dy
      collisions, len    = world:move(player, player.l, player.t, player.w, player.h)
      i = 0

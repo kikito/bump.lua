@@ -1,6 +1,6 @@
 local bump = {}
 
-local abs, floor, ceil = math.abs, math.floor, math.ceil
+local abs, floor, ceil, min, max = math.abs, math.floor, math.ceil, math.min, math.max
 
 local function assertType(desiredType, value, name)
   if type(value) ~= desiredType then
@@ -17,20 +17,11 @@ end
 local function assertIsBox(l,t,w,h)
   assertType('number', l, 'l')
   assertType('number', t, 'w')
-  assertType('number', w, 'w')
-  assertType('number', h, 'h')
+  assertIsPositiveNumber(w, 'w')
+  assertIsPositiveNumber(h, 'h')
 end
 
-local Collision = {}
-local Collision_mt = {__index = Collision}
-
-function Collision:getMinimumDisplacement()
-  if self.tunneling              then return self.dx, self.dy end
-  if abs(self.dx) < abs(self.dy) then return self.dx, 0       end
-  return 0, self.dy
-end
-
-local World = {}
+-----------------------------------------------
 
 local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
   local dx, dy  = x2-x1, y2-y1
@@ -62,6 +53,13 @@ local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
   return t0, t1
 end
 
+local function getLiangBarskyIndex(l,t,w,h, x1,y1,x2,y2)
+  local ti0,ti1 = getLiangBarskyIndices(l,t,w,h, x1,y1, x2,y2, 0,1)
+  if not ti0 then return end
+  if 0 < ti0 and ti0 < 1  then return ti0 end
+  if 0 < ti1 and ti1 < 1  then return ti1 end
+end
+
 local function getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
   return l2 - l1 - w1,
          t2 - t1 - h1,
@@ -77,32 +75,41 @@ local function nearest(x, a, b)
   return abs(a - x) < abs(b - x) and a or b
 end
 
-local function getNearestPointInPerimeter(l,t,w,h, x,y)
-  return nearest(x, l, l+w), nearest(y, t, t+h)
-end
+-----------------------------------------------
+
+local World = {}
+local World_mt = {__index = World}
 
 local function sortByTi(a,b) return a.ti < b.ti end
 
-local function collideBoxes(l1,t1,w1,h1, l2,t2,w2,h2, vx,vy)
-  local ti
-  local l,t,w,h = getMinkowskyDiff(l1-vx,t1-vy,w1,h1, l2, t2, w2, h2)
+local function getMinimalDisplacement(dx,dy,axis)
+  if axis == 'x' then return dx,0 end
+  if axis == 'y' then return 0,dy end
+  if abs(dx) < abs(dy) then return dx,0 end
+  return 0,dy
+end
 
-  if containsPoint(l,t,w,h, 0,0) then -- old a was intersecting with b
-    local dx, dy = getNearestPointInPerimeter(l,t,w,h, 0,0)
-    return dx-vx, dy-vy, 0, false
-  else                                -- old a was not intersecting with b
-    local ti0,ti1 = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy, 0, 1)
-    if     ti0 and 0 < ti0 and ti0 < 1 then ti = ti0
-    elseif ti1 and 0 < ti1 and ti1 < 1 then ti = ti1
-    end
-    if ti then                        -- a tunnels into B
-      return vx*ti - vx, vy*ti - vy, ti, true
-    else                              -- a does not tunnel into b
-      l,t,w,h = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
-      if containsPoint(l,t,w,h, 0,0) then
-        local dx,dy = getNearestPointInPerimeter(l,t,w,h, 0,0)
-        return dx,dy, 1, false
-      end
+local function collideBoxes(b1, b2, prev_l, prev_t, axis)
+  local l1,t1,w1,h1  = b1.l, b1.t, b1.w, b1.h
+  local l2,t2,w2,h2  = b2.l, b2.t, b2.w, b2.h
+  local vx, vy       = l1 - prev_l, t1 - prev_t
+  local l,t,w,h      = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
+  local dx, dy
+
+  if containsPoint(l,t,w,h, 0,0) then
+    dx,dy = nearest(0,l,l+w), nearest(0,t,t+h)
+    dx,dy = getMinimalDisplacement(dx, dy, axis)
+    return dx, dy, 0, 'intersection'
+  else
+    l,t,w,h = getMinkowskyDiff(prev_l,prev_t,w1,h1, l2,t2,w2,h2)
+    if containsPoint(l,t,w,h, 0,0) then
+      dx,dy = nearest(0,l,l+w) - vx, nearest(0,t,t+h) - vy
+      dx,dy = getMinimalDisplacement(dx, dy, axis)
+      return dx, dy, 0, 'intersection'
+    else
+      local ti = getLiangBarskyIndex(l,t,w,h, 0,0,vx,vy)
+      -- b1 tunnels into b2 while it travels
+      if ti then return vx*ti-vx, vy*ti-vy, ti, 'tunnel' end
     end
   end
 end
@@ -132,7 +139,7 @@ local function removeItemFromCell(self, item, cx, cy)
   return true
 end
 
-function World:add(item, l,t,w,h)
+function World:add(item, l,t,w,h, options)
   local box = self.items[item]
   if box then
     error('Item ' .. tostring(item) .. ' added to the world twice.')
@@ -148,58 +155,70 @@ function World:add(item, l,t,w,h)
     end
   end
 
-  return self:check(item)
+  return self:check(item, options)
 end
 
-function World:move(item, l,t,w,h)
+function World:move(item, l,t,w,h, options)
   local box = self.items[item]
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being moved. Use world:add(item, l,t,w,h) to add it first.')
   end
 
+  w,h = w or box.w, h or box.h
+
   assertIsBox(l,t,w,h)
-
-  local prev_l, prev_t = box.l, box.t
-
-  if box.w ~= w or box.h ~= h then
-    local prev_cx, prev_cy = box.l + box.w/2, box.t + box.h/2
-    prev_l, prev_t         = prev_cx - w/2, prev_cy - h/2
-  end
 
   if box.l ~= l or box.t ~= t or box.w ~= w or box.h ~= h then
     self:remove(item)
-    self:add(item, l,t,w,h)
+    self:add(item, l,t,w,h, options)
+    options = options or {}
+    if box.w ~= w or box.h ~= h then
+      local prev_cx, prev_cy = box.l + box.w/2, box.t + box.h/2
+      options.prev_l, options.prev_t = prev_cx - w/2, prev_cy - h/2
+    else
+      options.prev_l, options.prev_t = box.l, box.t
+    end
   end
 
-  return self:check(item, prev_l, prev_t)
+  return self:check(item, options)
 end
 
-function World:check(item, prev_l, prev_t)
+function World:getBox(item)
+  local box = self.items[item]
+  if not box then
+    error('Item ' .. tostring(item) .. ' must be added to the world before getting its box. Use world:add(item, l,t,w,h) to add it first.')
+  end
+  return box.l, box.t, box.w, box.h
+end
+
+function World:check(item, options)
+  local prev_l, prev_t, filter, skip_collisions, opt_visited, axis
+  if options then
+    prev_l, prev_t, filter, skip_collisions, opt_visited, axis =
+      options.prev_l, options.prev_t, options.filter, options.skip_collisions, options.visited, options.axis
+  end
   local box = self.items[item]
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being checked for collisions. Use world:add(item, l,t,w,h) to add it first.')
   end
+
+  if skip_collisions then return {} end
+
+  local visited = {[item] = true}
+  if type(opt_visited) == 'table' then
+    for _,v in pairs(opt_visited) do visited[v] = true end
+  end
   local l,t,w,h = box.l, box.t, box.w, box.h
   prev_l, prev_t = prev_l or l, prev_t or t
 
-  local vx, vy = l - prev_l, t - prev_t
   local collisions, len = {}, 0
-  local visited = {[item] = true}
+
 
   -- FIXME this could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding box of the whole movement
-  local tl,tt,tw,th --touched cells, taking vx and vy into account
-  if vx > 0 then
-    tl, tw = l - vx, w + vx
-
-  else
-    tl, tw = l, w - vx
-  end
-  if vy > 0 then
-    tt, th = t - vy, h + vy
-  else
-    tt, th = t, h - vy
-  end
+  local tl, tt = min(prev_l, l),       min(prev_t, t)
+  local tr, tb = max(prev_l + w, l+w), max(prev_t + h, t+h)
+  local tw, th = tr-tl, tb-tt
 
   local cl,ct,cw,ch = self:toCellBox(tl,tt,tw,th)
 
@@ -208,21 +227,23 @@ function World:check(item, prev_l, prev_t)
     if row then
       for cx=cl,cl+cw-1 do
         local cell = row[cx]
-        if cell and cell.itemCount > 0 then
+        if cell and cell.itemCount > 0 then -- no cell.itemCount > 1 because tunneling
           for other,_ in pairs(cell.items) do
             if not visited[other] then
               visited[other] = true
-              local oBox = self.items[other]
-              local dx, dy, ti, tunneling = collideBoxes(l,t,w,h, oBox.l, oBox.t, oBox.w, oBox.h, vx, vy)
-              if dx then
-                len = len + 1
-                collisions[len] = setmetatable({
-                  item       = other,
-                  dx         = dx,
-                  dy         = dy,
-                  ti         = ti,
-                  tunneling  = tunneling
-                }, Collision_mt)
+              if not (filter and filter(other)) then
+                local oBox = self.items[other]
+                local dx, dy, ti, kind = collideBoxes(box, oBox, prev_l, prev_t, axis)
+                if dx then
+                  len = len + 1
+                  collisions[len] = {
+                    item = other,
+                    dx   = dx,
+                    dy   = dy,
+                    ti   = ti,
+                    kind = kind
+                  }
+                end
               end
             end
           end
@@ -278,9 +299,9 @@ end
 
 function World:toCellBox(l,t,w,h)
   if not (l and t and w and h) then return nil end
-  local cl,ct = self:toCell(l, t)
   local cellSize = self.cellSize
-  local cr,cb = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
+  local cl,ct    = self:toCell(l, t)
+  local cr,cb    = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
   return cl, ct, cr-cl+1, cb-ct+1
 end
 
@@ -288,17 +309,17 @@ bump.newWorld = function(cellSize)
   cellSize = cellSize or 64
   assertIsPositiveNumber(cellSize, 'cellSize')
   return setmetatable(
-    { cellSize = cellSize,
-      items = {},
-      rows = {},
-      nonEmptyCells = {}
+    { cellSize       = cellSize,
+      items          = {},
+      rows           = {},
+      nonEmptyCells  = {}
     },
-    {__index = World }
+    World_mt
   )
 end
 
 bump.geom = {
-  getMinkowskyDiff = getMinkowskyDiff,
+  getMinkowskyDiff      = getMinkowskyDiff,
   getLiangBarskyIndices = getLiangBarskyIndices
 }
 
