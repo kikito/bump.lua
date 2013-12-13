@@ -53,6 +53,13 @@ local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
   return t0, t1
 end
 
+local function getLiangBarskyIndex(l,t,w,h, x1,y1,x2,y2)
+  local ti0,ti1 = getLiangBarskyIndices(l,t,w,h, x1,y1, x2,y2, 0,1)
+  if not ti0 then return end
+  if 0 < ti0 and ti0 < 1  then return ti0 end
+  if 0 < ti1 and ti1 < 1  then return ti1 end
+end
+
 local function getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
   return l2 - l1 - w1,
          t2 - t1 - h1,
@@ -80,29 +87,36 @@ local function collideBoxes(b1, b2, prev_l, prev_t, axis)
   local l2,t2,w2,h2  = b2.l, b2.t, b2.w, b2.h
   local vx, vy       = l1 - prev_l, t1 - prev_t
   local dx, dy       = 0,0
-  local l,t,w,h      = getMinkowskyDiff(prev_l,prev_t,w1,h1, l2, t2, w2, h2)
-  local intersecting = containsPoint(l,t,w,h, 0,0)
+  local l,t,w,h      = getMinkowskyDiff(l1,t1,w1,h1, l2, t2, w2, h2)
 
-  if vx == 0 and vy == 0 then
-    if intersecting then
+  if containsPoint(l,t,w,h, 0,0) then
+
+    local r,b = l+w, t+h
+    if     axis == 'x' then dx = nearest(0,l,r)
+    elseif axis == 'y' then dy = nearest(0,t,b)
+    else
+      dx,dy = nearest(0,l,r), nearest(0,t,b)
+      if abs(dx) < abs(dy) then dy = 0 else dx = 0 end
+    end
+    return dx, dy, 0, 'intersection'
+
+  else
+    l,t,w,h      = getMinkowskyDiff(prev_l,prev_t,w1,h1, l2, t2, w2, h2)
+    if containsPoint(l,t,w,h, 0,0) then
       local r,b = l+w, t+h
-      if     axis == 'x' then dx = nearest(0,l,r)
-      elseif axis == 'y' then dy = nearest(0,t,b)
+      if     axis == 'x' then dx = nearest(0,l,r) - vx
+      elseif axis == 'y' then dy = nearest(0,t,b) - vy
       else
-        dx,dy = nearest(0,l,r), nearest(0,t,b)
+        dx,dy = nearest(0,l,r) - vx, nearest(0,t,b) - vy
         if abs(dx) < abs(dy) then dy = 0 else dx = 0 end
       end
       return dx, dy, 0, 'intersection'
-    end
-  else
-    local ti
-    local ti0,ti1 = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy, 0, 1)
-    if ti0 then
-      if     0 < ti0 and ti0 < 1  then ti = ti0
-      elseif 0 < ti1 and ti1 < 1  then ti = ti1
-      end
-      if ti then                         -- b1 tunnels into b2
-        return vx*ti - vx, vy*ti - vy, ti, 'tunnel'
+    else
+      local ti = getLiangBarskyIndex(l,t,w,h, 0,0,vx,vy)
+      -- b1 tunnels into b2 while it travels
+      if ti then return vx*ti-vx, vy*ti-vy, ti, 'tunnel'
+      else
+
       end
     end
   end

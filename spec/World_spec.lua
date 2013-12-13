@@ -149,7 +149,7 @@ describe('World', function()
           world:add(b, 0,0,32,100)
 
           assert.same(world:check(a, {prev_l = 32, prev_t = 50}), {
-            { item = b, dx = 2, dy = 50, kind = 'tunnel', ti = 0 }
+            { item = b, dx = 2, dy = 0, kind = 'intersection', ti = 0 }
           })
         end)
 
