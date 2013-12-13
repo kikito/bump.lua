@@ -61,15 +61,11 @@ local function getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
 end
 
 local function containsPoint(l,t,w,h, x,y)
-  return x >= l and y >= t and x <= l + w and y <= t + h
+  return x > l and y > t and x < l + w and y < t + h
 end
 
 local function nearest(x, a, b)
   return abs(a - x) < abs(b - x) and a or b
-end
-
-local function getNearestPointInPerimeter(l,t,w,h, x,y)
-  return nearest(x, l, l+w), nearest(y, t, t+h)
 end
 
 -----------------------------------------------
@@ -80,29 +76,34 @@ local World_mt = {__index = World}
 local function sortByTi(a,b) return a.ti < b.ti end
 
 local function collideBoxes(b1, b2, prev_l, prev_t, axis)
-  local l1,t1,w1,h1 = b1.l, b1.t, b1.w, b1.h
-  local l2,t2,w2,h2 = b2.l, b2.t, b2.w, b2.h
-  local vx, vy      = l1 - prev_l, t1 - prev_t
+  local l1,t1,w1,h1  = b1.l, b1.t, b1.w, b1.h
+  local l2,t2,w2,h2  = b2.l, b2.t, b2.w, b2.h
+  local vx, vy       = l1 - prev_l, t1 - prev_t
+  local dx, dy       = 0,0
+  local l,t,w,h      = getMinkowskyDiff(prev_l,prev_t,w1,h1, l2, t2, w2, h2)
+  local intersecting = containsPoint(l,t,w,h, 0,0)
 
-  local l,t,w,h = getMinkowskyDiff(prev_l,prev_t,w1,h1, l2, t2, w2, h2)
-
-  if containsPoint(l,t,w,h, 0,0) then -- old a was intersecting with b
-    local dx, dy = getNearestPointInPerimeter(l,t,w,h, 0,0, axis)
-    dx, dy = dx - vx, dy - vy
-    dx = axis == 'y' and 0 or dx
-    dy = axis == 'x' and 0 or dy
-    if dx == 0 and dy == 0 then return 0, 0, 1, 'touch' end
-    return dx, dy, 0, 'intersection'
-  else                                -- old a was not intersecting with b
+  if vx == 0 and vy == 0 then
+    if intersecting then
+      local r,b = l+w, t+h
+      if     axis == 'x' then dx = nearest(0,l,r)
+      elseif axis == 'y' then dy = nearest(0,t,b)
+      else
+        dx,dy = nearest(0,l,r), nearest(0,t,b)
+        if abs(dx) < abs(dy) then dy = 0 else dx = 0 end
+      end
+      return dx, dy, 0, 'intersection'
+    end
+  else
     local ti
     local ti0,ti1 = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy, 0, 1)
-    if     ti0 and 0 < ti0 and ti0 < 1 then ti = ti0
-    elseif ti1 and 0 < ti1 and ti1 < 1 then ti = ti1
-    elseif ti0 == 1 or ti1 == 1 then ti = 1
-    end
-    if ti then                        -- a tunnels into B
-      if ti == 1 then return 0, 0, 1, 'touch' end
-      return vx*ti - vx, vy*ti - vy, ti, 'tunnel'
+    if ti0 then
+      if     0 < ti0 and ti0 < 1  then ti = ti0
+      elseif 0 < ti1 and ti1 < 1  then ti = ti1
+      end
+      if ti then                         -- b1 tunnels into b2
+        return vx*ti - vx, vy*ti - vy, ti, 'tunnel'
+      end
     end
   end
 end
