@@ -75,6 +75,13 @@ local function nearest(x, a, b)
   return abs(a - x) < abs(b - x) and a or b
 end
 
+local function getIntersectionDisplacement(l,t,w,h,axis)
+  if axis == 'x' then return nearest(0,l,l+w),0 end
+  if axis == 'y' then return 0,nearest(0,t,t+h) end
+  local dx, dy = nearest(0,l,l+w), nearest(0,t,t+h)
+  if abs(dx) < abs(dy) then return dx,0 end
+  return 0,dy
+end
 -----------------------------------------------
 
 local World = {}
@@ -82,35 +89,20 @@ local World_mt = {__index = World}
 
 local function sortByTi(a,b) return a.ti < b.ti end
 
-local function getMinimalDisplacement(dx,dy,axis)
-  if axis == 'x' then return dx,0 end
-  if axis == 'y' then return 0,dy end
-  if abs(dx) < abs(dy) then return dx,0 end
-  return 0,dy
-end
-
 local function collideBoxes(b1, b2, prev_l, prev_t, axis)
   local l1,t1,w1,h1  = b1.l, b1.t, b1.w, b1.h
   local l2,t2,w2,h2  = b2.l, b2.t, b2.w, b2.h
-  local vx, vy       = l1 - prev_l, t1 - prev_t
   local l,t,w,h      = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
-  local dx, dy
 
-  if containsPoint(l,t,w,h, 0,0) then
-    dx,dy = nearest(0,l,l+w), nearest(0,t,t+h)
-    dx,dy = getMinimalDisplacement(dx, dy, axis)
+  if containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
+    local dx, dy = getIntersectionDisplacement(l,t,w,h, axis)
     return dx, dy, 0, 'intersection'
   else
+    local vx, vy  = l1 - prev_l, t1 - prev_t
     l,t,w,h = getMinkowskyDiff(prev_l,prev_t,w1,h1, l2,t2,w2,h2)
-    if containsPoint(l,t,w,h, 0,0) then
-      dx,dy = nearest(0,l,l+w) - vx, nearest(0,t,t+h) - vy
-      dx,dy = getMinimalDisplacement(dx, dy, axis)
-      return dx, dy, 0, 'intersection'
-    else
-      local ti = getLiangBarskyIndex(l,t,w,h, 0,0,vx,vy)
-      -- b1 tunnels into b2 while it travels
-      if ti then return vx*ti-vx, vy*ti-vy, ti, 'tunnel' end
-    end
+    local ti = getLiangBarskyIndex(l,t,w,h, 0,0,vx,vy)
+    -- b1 tunnels into b2 while it travels
+    if ti then return vx*ti-vx, vy*ti-vy, ti, 'tunnel' end
   end
 end
 
