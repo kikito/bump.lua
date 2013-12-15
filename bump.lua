@@ -82,6 +82,11 @@ local function getIntersectionDisplacement(l,t,w,h,axis)
   if abs(dx) < abs(dy) then return dx,0 end
   return 0,dy
 end
+
+local function areColliding(l1,t1,w1,h1, l2,t2,w2,h2)
+  return l1 < l2+w2 and l2 < l1+w1 and
+         t1 < t2+h2 and t2 < t1+h1
+end
 -----------------------------------------------
 
 local World = {}
@@ -295,6 +300,39 @@ function World:toCellBox(l,t,w,h)
   local cl,ct    = self:toCell(l, t)
   local cr,cb    = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
   return cl, ct, cr-cl+1, cb-ct+1
+end
+
+function World:queryBox(l,t,w,h)
+
+  local cl,ct,cw,ch = self:toCellBox(l,t,w,h)
+
+  local visited, items_dict = {}, {}
+  for cy=ct,ct+ch-1 do
+    local row = self.rows[cy]
+    if row then
+      for cx=cl,cl+cw-1 do
+        local cell = row[cx]
+        if cell and cell.itemCount > 0 then -- no cell.itemCount > 1 because tunneling
+          for item,box in pairs(cell.items) do
+            if not visited[item] then
+              visited[item] = true
+              local box = self.items[item]
+              if areColliding(l,t,w,h, box.l, box.t, box.w, box.h) then
+                items_dict[item] = true
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
+  local items, len = {}, 0
+  for item in pairs(items_dict) do
+    len = len + 1
+    items[len] = item
+  end
+  return items
 end
 
 bump.newWorld = function(cellSize)
