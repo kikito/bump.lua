@@ -136,6 +136,25 @@ local function removeItemFromCell(self, item, cx, cy)
   return true
 end
 
+local function getDictItemsInCellBox(self, cl,ct,cw,ch)
+  local items_dict = {}
+  for cy=ct,ct+ch-1 do
+    local row = self.rows[cy]
+    if row then
+      for cx=cl,cl+cw-1 do
+        local cell = row[cx]
+        if cell and cell.itemCount > 0 then -- no cell.itemCount > 1 because tunneling
+          for item,_ in pairs(cell.items) do
+            items_dict[item] = true
+          end
+        end
+      end
+    end
+  end
+
+  return items_dict
+end
+
 function World:add(item, l,t,w,h, options)
   local box = self.items[item]
   if box then
@@ -210,7 +229,6 @@ function World:check(item, options)
 
   local collisions, len = {}, 0
 
-
   -- FIXME this could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding box of the whole movement
   local tl, tt = min(prev_l, l),       min(prev_t, t)
@@ -219,31 +237,23 @@ function World:check(item, options)
 
   local cl,ct,cw,ch = self:toCellBox(tl,tt,tw,th)
 
-  for cy=ct,ct+ch-1 do
-    local row = self.rows[cy]
-    if row then
-      for cx=cl,cl+cw-1 do
-        local cell = row[cx]
-        if cell and cell.itemCount > 0 then -- no cell.itemCount > 1 because tunneling
-          for other,_ in pairs(cell.items) do
-            if not visited[other] then
-              visited[other] = true
-              if not (filter and filter(other)) then
-                local oBox = self.items[other]
-                local dx, dy, ti, kind = collideBoxes(box, oBox, prev_l, prev_t, axis)
-                if dx then
-                  len = len + 1
-                  collisions[len] = {
-                    item = other,
-                    dx   = dx,
-                    dy   = dy,
-                    ti   = ti,
-                    kind = kind
-                  }
-                end
-              end
-            end
-          end
+  local dictItemsInCellBox = getDictItemsInCellBox(self, cl,ct,cw,ch)
+
+  for other,_ in pairs(dictItemsInCellBox) do
+    if not visited[other] then
+      visited[other] = true
+      if not (filter and filter(other)) then
+        local oBox = self.items[other]
+        local dx, dy, ti, kind = collideBoxes(box, oBox, prev_l, prev_t, axis)
+        if dx then
+          len = len + 1
+          collisions[len] = {
+            item = other,
+            dx   = dx,
+            dy   = dy,
+            ti   = ti,
+            kind = kind
+          }
         end
       end
     end
@@ -305,33 +315,18 @@ end
 function World:queryBox(l,t,w,h)
 
   local cl,ct,cw,ch = self:toCellBox(l,t,w,h)
+  local dictItemsInCellBox = getDictItemsInCellBox(self, cl,ct,cw,ch)
 
-  local visited, items_dict = {}, {}
-  for cy=ct,ct+ch-1 do
-    local row = self.rows[cy]
-    if row then
-      for cx=cl,cl+cw-1 do
-        local cell = row[cx]
-        if cell and cell.itemCount > 0 then -- no cell.itemCount > 1 because tunneling
-          for item,box in pairs(cell.items) do
-            if not visited[item] then
-              visited[item] = true
-              local box = self.items[item]
-              if areColliding(l,t,w,h, box.l, box.t, box.w, box.h) then
-                items_dict[item] = true
-              end
-            end
-          end
-        end
-      end
+  local items, len = {}, 0
+
+  for item,_ in pairs(dictItemsInCellBox) do
+    local box = self.items[item]
+    if areColliding(l,t,w,h, box.l, box.t, box.w, box.h) then
+      len = len + 1
+      items[len] = item
     end
   end
 
-  local items, len = {}, 0
-  for item in pairs(items_dict) do
-    len = len + 1
-    items[len] = item
-  end
   return items
 end
 
