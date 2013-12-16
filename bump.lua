@@ -71,16 +71,8 @@ local function containsPoint(l,t,w,h, x,y)
   return x > l and y > t and x < l + w and y < t + h
 end
 
-local function nearest(x, a, b)
-  return abs(a - x) < abs(b - x) and a or b
-end
-
-local function getIntersectionDisplacement(l,t,w,h,axis)
-  if axis == 'x' then return nearest(0,l,l+w),0 end
-  if axis == 'y' then return 0,nearest(0,t,t+h) end
-  local dx, dy = nearest(0,l,l+w), nearest(0,t,t+h)
-  if abs(dx) < abs(dy) then return dx,0 end
-  return 0,dy
+local function minAbs(a,b)
+  if abs(a) < abs(b) then return a else return b end
 end
 
 local function areColliding(l1,t1,w1,h1, l2,t2,w2,h2)
@@ -100,7 +92,13 @@ local function collideBoxes(b1, b2, prev_l, prev_t, axis)
   local l,t,w,h      = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
 
   if containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
-    local dx, dy = getIntersectionDisplacement(l,t,w,h, axis)
+    local dx,dy = 0,0
+    if     axis == 'x' then dx = minAbs(l,l+w)
+    elseif axis == 'y' then dy = minAbs(t,t+h)
+    else
+      dx, dy = minAbs(l,l+w), minAbs(t,t+h)
+      if abs(dx) < abs(dy) then dy=0 else dx=0 end
+    end
     return dx, dy, 0, 'intersection'
   else
     local vx, vy  = l1 - prev_l, t1 - prev_t
