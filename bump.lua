@@ -23,8 +23,9 @@ end
 
 -----------------------------------------------
 
-local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
-  local dx, dy  = x2-x1, y2-y1
+local function getLiangBarskyIndex(l,t,w,h, x1,y1,x2,y2)
+  local dx, dy = x2-x1, y2-y1
+  local t0, t1 = 0,1
   local p, q, r
 
   for side = 1,4 do
@@ -50,14 +51,8 @@ local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
     end
   end
 
-  return t0, t1
-end
-
-local function getLiangBarskyIndex(l,t,w,h, x1,y1,x2,y2)
-  local ti0,ti1 = getLiangBarskyIndices(l,t,w,h, x1,y1, x2,y2, 0,1)
-  if not ti0 then return end
-  if 0 < ti0 and ti0 < 1  then return ti0 end
-  if 0 < ti1 and ti1 < 1  then return ti1 end
+  if 0 < t0 and t0 < 1  then return t0 end
+  if 0 < t1 and t1 < 1  then return t1 end
 end
 
 local function getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
@@ -152,6 +147,8 @@ local function getDictItemsInCellBox(self, cl,ct,cw,ch)
 
   return items_dict
 end
+
+------------------------------------------------------------
 
 function World:add(item, l,t,w,h, options)
   local box = self.items[item]
