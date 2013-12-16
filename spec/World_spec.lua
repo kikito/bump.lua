@@ -318,4 +318,28 @@ describe('World', function()
     end)
   end)
 
+  describe(':queryPoint', function()
+    it('returns nothing when the world is empty', function()
+      assert.same(bump.newWorld():queryPoint(0,0), {})
+    end)
+    it('returns the items inside/partially inside the given box', function()
+      local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
+      world:add(a, 10,0, 10,10)
+      world:add(b, 15,0, 10,10)
+      world:add(c, 20,0, 10,10)
+
+      local sorted = function(tbl)
+        table.sort(tbl, function(a,b) return a[1] < b[1] end)
+        return tbl
+      end
+
+      assert.same(sorted(world:queryPoint( 4,5)), {})
+      assert.same(sorted(world:queryPoint(14,5)), {a})
+      assert.same(sorted(world:queryPoint(16,5)), {a,b})
+      assert.same(sorted(world:queryPoint(21,5)), {b,c})
+      assert.same(sorted(world:queryPoint(26,5)), {c})
+      assert.same(sorted(world:queryPoint(31,5)), {})
+    end)
+  end)
+
 end)

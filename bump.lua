@@ -328,6 +328,23 @@ function World:queryBox(l,t,w,h)
   return items
 end
 
+function World:queryPoint(x,y)
+  local cx,cy = self:toCell(x,y)
+  local dictItemsInCellBox = getDictItemsInCellBox(self, cx,cy,1,1)
+
+  local items, len = {}, 0
+
+  for item,_ in pairs(dictItemsInCellBox) do
+    local box = self.items[item]
+    if containsPoint(box.l, box.t, box.w, box.h, x, y) then
+      len = len + 1
+      items[len] = item
+    end
+  end
+
+  return items
+end
+
 bump.newWorld = function(cellSize)
   cellSize = cellSize or 64
   assertIsPositiveNumber(cellSize, 'cellSize')
