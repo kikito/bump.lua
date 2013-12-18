@@ -342,4 +342,38 @@ describe('World', function()
     end)
   end)
 
+  describe(':querySegment', function()
+    it('returns nothing when the world is empty', function()
+      assert.same(bump.newWorld():querySegment(0,0,1,1), {})
+    end)
+
+    it('returns the items touched by the segment, sorted by touch order', function()
+      local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
+      world:add(a, 10,0, 5,5)
+      world:add(b, 15,0, 5,5)
+      world:add(c, 20,0, 5,5)
+
+      assert.same(world:querySegment(0,5, 11,5),  {a})
+      assert.same(world:querySegment(0,5, 17,5),  {a,b})
+      assert.same(world:querySegment(0,5, 22,5),  {a,b,c})
+      assert.same(world:querySegment(17,5, 26,5), {b,c})
+      assert.same(world:querySegment(22,5, 26,5), {c})
+
+      assert.same(world:querySegment(11,5, 0,5),  {a})
+      assert.same(world:querySegment(17,5, 0,5),  {b,a})
+      assert.same(world:querySegment(22,5, 0,5),  {c,b,a})
+      assert.same(world:querySegment(26,5, 17,5), {c,b})
+      assert.same(world:querySegment(26,5, 22,5), {c})
+    end)
+
+    it('does not touch borders', function()
+      local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
+      world:add(a, 10,0, 5,5)
+      world:add(c, 20,0, 5,5)
+
+      assert.same(world:querySegment(0,5,  10,0),  {})
+      assert.same(world:querySegment(15,5, 20,0),  {})
+      assert.same(world:querySegment(26,5, 25,0),  {})
+    end)
+  end)
 end)

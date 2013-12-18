@@ -23,9 +23,9 @@ end
 
 -----------------------------------------------
 
-local function getLiangBarskyIndex(l,t,w,h, x1,y1,x2,y2)
+local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
+  t0, t1 = t0 or 0, t1 or 1
   local dx, dy = x2-x1, y2-y1
-  local t0, t1 = 0,1
   local p, q, r
 
   for side = 1,4 do
@@ -50,9 +50,15 @@ local function getLiangBarskyIndex(l,t,w,h, x1,y1,x2,y2)
       end
     end
   end
+  return t0, t1
+end
 
-  if 0 < t0 and t0 < 1  then return t0 end
-  if 0 < t1 and t1 < 1  then return t1 end
+local function getLiangBarskyIndex(l,t,w,h, x1,y1,x2,y2, t0,t1)
+  local t0,t1 = getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
+  if t0 then
+    if 0 < t0 and t0 < 1  then return t0 end
+    if 0 < t1 and t1 < 1  then return t1 end
+  end
 end
 
 local function getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
@@ -146,6 +152,70 @@ local function getDictItemsInCellBox(self, cl,ct,cw,ch)
   end
 
   return items_dict
+end
+
+local function getSegmentStep(cellSize, ct, t1, t2)
+  local v = t2 - t1
+  if     v > 0 then
+    return  1,  cellSize / v, ((ct + v) * cellSize - t1) / v
+  elseif v < 0 then
+    return -1, -cellSize / v, ((ct + v - 1) * cellSize - t1) / v
+  else
+    return 0, math.huge, math.huge
+  end
+end
+
+local function getCellsTouchedBySegment(self, x1,y1,x2,y2)
+
+  local cx1,cy1        = self:toCell(x1,y1)
+  local cx2,cy2        = self:toCell(x2,y2)
+  local stepX, dx, tx  = getSegmentStep(self.cellSize, cx1, x1, x2)
+  local stepY, dy, ty  = getSegmentStep(self.cellSize, cy1, y1, y2)
+  local maxLen         = 2*(abs(cx2-cx1) + abs(cy2-cy1))
+  local cx,cy          = cx1,cy1
+  local coords, len = {{cx=cx,cy=cy}}, 1
+
+  -- maxLen is a safety guard. In some cases this algorithm loops inf on the last step without it
+  while len <= maxLen and (cx~=cx2 or y~=cy2) do
+    if tx < ty then
+      tx, cx, len = tx + dx, cx + stepX, len + 1
+      coords[len] = {cx=cx,cy=cy}
+    elseif ty < tx then
+      ty, cy, len = ty + dy, cy + stepY, len + 1
+      coords[len] = {cx=cx,cy=cy}
+    else -- tx == ty
+      local ntx,nty = tx+dx, dy+dy
+      local ncx,ncy = cx+stepX, cy+stepY
+
+      len = len + 1
+      coords[len] = {cx=ncx,cy=cy}
+      len = len + 1
+      coords[len] = {cx=cx,cy=ncy}
+
+      tx,ty = ntx,nty
+      cx,cy = ncx,ncy
+    end
+  end
+
+  local coord, row, cell
+  local visited = {}
+  local cells, cellsLen = {}, 0
+  for i=1,len do
+    coord = coords[i]
+    row   = self.rows[coord.cy]
+    if row then
+      cell = row[coord.cx]
+      if cell then
+        if not visited[cell] then
+          visited[cell] = true
+          cellsLen = cellsLen + 1
+          cells[cellsLen] = cell
+        end
+      end
+    end
+  end
+
+  return cells, cellsLen
 end
 
 ------------------------------------------------------------
@@ -342,6 +412,34 @@ function World:queryPoint(x,y)
   return items
 end
 
+function World:querySegment(x1,y1,x2,y2)
+  local cells, len = getCellsTouchedBySegment(self, x1,y1,x2,y2)
+  local cell, box, l,t,w,h, t0, t1
+  local visited, items, itemsLen = {},{},0
+  for i=1,len do
+    cell = cells[i]
+    for item in pairs(cell.items) do
+      if not visited[item] then
+        visited[item] = true
+        box = self.items[item]
+        l,t,w,h = box.l,box.t,box.w,box.h
+
+        if getLiangBarskyIndex(l,t,w,h, x1,y1, x2,y2, 0, 1) then
+          -- the sorting is according to the t of an infinite line, not the segment
+          t0,t1 = getLiangBarskyIndices(l,t,w,h, x1,y1, x2,y2, -math.huge, math.huge)
+          itemsLen = itemsLen + 1
+          items[itemsLen] = {item=item, ti=min(t0,t1)}
+        end
+      end
+    end
+  end
+  table.sort(items, sortByTi)
+  for i=1,itemsLen do
+    items[i] = items[i].item
+  end
+  return items, itemsLen
+end
+
 bump.newWorld = function(cellSize)
   cellSize = cellSize or 64
   assertIsPositiveNumber(cellSize, 'cellSize')
@@ -354,11 +452,5 @@ bump.newWorld = function(cellSize)
     World_mt
   )
 end
-
-bump.geom = {
-  getMinkowskyDiff      = getMinkowskyDiff,
-  getLiangBarskyIndices = getLiangBarskyIndices
-}
-
 
 return bump
