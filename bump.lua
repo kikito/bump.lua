@@ -392,7 +392,7 @@ function World:queryBox(l,t,w,h)
     end
   end
 
-  return items
+  return items, len
 end
 
 function World:queryPoint(x,y)
@@ -409,7 +409,7 @@ function World:queryPoint(x,y)
     end
   end
 
-  return items
+  return items, len
 end
 
 function World:querySegment(x1,y1,x2,y2)
