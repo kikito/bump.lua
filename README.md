@@ -246,4 +246,14 @@ If you copied bump.lua to a file not accesible from the root folder (for example
 
 Please make sure that you read the license, too (for your convenience it's now included at the beginning of the bump.lua file.
 
+License
+=======
+
+bump.lua is licensed under the MIT license.
+
+Specs
+=====
+
+Specs for this project can be run using [busted](http://olivinelabs.com/busted).
+
 
