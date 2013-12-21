@@ -80,6 +80,14 @@ local function areColliding(l1,t1,w1,h1, l2,t2,w2,h2)
   return l1 < l2+w2 and l2 < l1+w1 and
          t1 < t2+h2 and t2 < t1+h1
 end
+
+function toCellBox(world, l,t,w,h)
+  if not (l and t and w and h) then return nil end
+  local cellSize = world.cellSize
+  local cl,ct    = world:toCell(l, t)
+  local cr,cb    = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
+  return cl, ct, cr-cl+1, cb-ct+1
+end
 -----------------------------------------------
 
 local World = {}
@@ -218,6 +226,7 @@ local function getCellsTouchedBySegment(self, x1,y1,x2,y2)
   return cells, cellsLen
 end
 
+
 ------------------------------------------------------------
 
 function World:add(item, l,t,w,h, options)
@@ -229,7 +238,7 @@ function World:add(item, l,t,w,h, options)
 
   self.boxes[item] = {l=l,t=t,w=w,h=h}
 
-  local cl,ct,cw,ch = self:toCellBox(l,t,w,h)
+  local cl,ct,cw,ch = toCellBox(self, l,t,w,h)
   for cy = ct, ct+ch-1 do
     for cx = cl, cl+cw-1 do
       addItemToCell(self, item, cx, cy)
@@ -304,7 +313,7 @@ function World:check(item, options)
   local tr, tb = max(next_l + w, l+w), max(next_t + h, t+h)
   local tw, th = tr-tl, tb-tt
 
-  local cl,ct,cw,ch = self:toCellBox(tl,tt,tw,th)
+  local cl,ct,cw,ch = toCellBox(self, tl,tt,tw,th)
 
   local dictItemsInCellBox = getDictItemsInCellBox(self, cl,ct,cw,ch)
 
@@ -339,7 +348,7 @@ function World:remove(item)
     error('Item ' .. tostring(item) .. ' must be added to the world before being removed. Use world:add(item, l,t,w,h) to add it first.')
   end
   self.boxes[item] = nil
-  local cl,ct,cw,ch = self:toCellBox(box.l,box.t,box.w,box.h)
+  local cl,ct,cw,ch = toCellBox(self, box.l,box.t,box.w,box.h)
   for cy = ct, ct+ch-1 do
     for cx = cl, cl+cw-1 do
       removeItemFromCell(self, item, cx, cy)
@@ -362,28 +371,14 @@ function World:toWorld(cx, cy)
   return (cx - 1)*cellSize, (cy-1)*cellSize
 end
 
-function World:toWorldBox(cl, ct, cw, ch)
-  local cellSize = self.cellSize
-  local l,t = self:toWorld(cl, ct)
-  return l,t, cw * cellSize, ch * cellSize
-end
-
 function World:toCell(x,y)
   local cellSize = self.cellSize
   return floor(x / cellSize) + 1, floor(y / cellSize) + 1
 end
 
-function World:toCellBox(l,t,w,h)
-  if not (l and t and w and h) then return nil end
-  local cellSize = self.cellSize
-  local cl,ct    = self:toCell(l, t)
-  local cr,cb    = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
-  return cl, ct, cr-cl+1, cb-ct+1
-end
-
 function World:queryBox(l,t,w,h)
 
-  local cl,ct,cw,ch = self:toCellBox(l,t,w,h)
+  local cl,ct,cw,ch = toCellBox(self, l,t,w,h)
   local dictItemsInCellBox = getDictItemsInCellBox(self, cl,ct,cw,ch)
 
   local items, len = {}, 0
