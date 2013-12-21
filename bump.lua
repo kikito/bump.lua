@@ -21,8 +21,6 @@ local function assertIsBox(l,t,w,h)
   assertIsPositiveNumber(h, 'h')
 end
 
------------------------------------------------
-
 local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
   t0, t1 = t0 or 0, t1 or 1
   local dx, dy = x2-x1, y2-y1
@@ -82,16 +80,11 @@ local function areColliding(l1,t1,w1,h1, l2,t2,w2,h2)
 end
 
 function toCellBox(world, l,t,w,h)
-  if not (l and t and w and h) then return nil end
   local cellSize = world.cellSize
   local cl,ct    = world:toCell(l, t)
   local cr,cb    = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
   return cl, ct, cr-cl+1, cb-ct+1
 end
------------------------------------------------
-
-local World = {}
-local World_mt = {__index = World}
 
 local function sortByTi(a,b) return a.ti < b.ti end
 
@@ -226,8 +219,10 @@ local function getCellsTouchedBySegment(self, x1,y1,x2,y2)
   return cells, cellsLen
 end
 
-
 ------------------------------------------------------------
+
+local World = {}
+local World_mt = {__index = World}
 
 function World:add(item, l,t,w,h, options)
   local box = self.boxes[item]
@@ -299,7 +294,7 @@ function World:check(item, options)
   if skip_collisions then return {} end
 
   local visited = {[item] = true}
-  if type(opt_visited) == 'table' then
+  if opt_visited then
     for _,v in pairs(opt_visited) do visited[v] = true end
   end
   local l,t,w,h = box.l, box.t, box.w, box.h
@@ -307,8 +302,8 @@ function World:check(item, options)
 
   local collisions, len = {}, 0
 
-  -- FIXME this could probably be done with less cells using a polygon raster over the cells instead of a
-  -- bounding box of the whole movement
+  -- TODO this could probably be done with less cells using a polygon raster over the cells instead of a
+  -- bounding box of the whole movement. Conditional to building a queryPolygon method
   local tl, tt = min(next_l, l),       min(next_t, t)
   local tr, tb = max(next_l + w, l+w), max(next_t + h, t+h)
   local tw, th = tr-tl, tb-tt
@@ -383,8 +378,9 @@ function World:queryBox(l,t,w,h)
 
   local items, len = {}, 0
 
+  local box
   for item,_ in pairs(dictItemsInCellBox) do
-    local box = self.boxes[item]
+    box = self.boxes[item]
     if areColliding(l,t,w,h, box.l, box.t, box.w, box.h) then
       len = len + 1
       items[len] = item
@@ -400,8 +396,9 @@ function World:queryPoint(x,y)
 
   local items, len = {}, 0
 
+  local box
   for item,_ in pairs(dictItemsInCellBox) do
-    local box = self.boxes[item]
+    box = self.boxes[item]
     if containsPoint(box.l, box.t, box.w, box.h, x, y) then
       len = len + 1
       items[len] = item
