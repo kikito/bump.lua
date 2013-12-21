@@ -90,7 +90,7 @@ local function sortByTi(a,b) return a.ti < b.ti end
 local function collideBoxes(b1, b2, next_l, next_t, axis)
   local l1,t1,w1,h1  = b1.l, b1.t, b1.w, b1.h
   local l2,t2,w2,h2  = b2.l, b2.t, b2.w, b2.h
-  local l,t,w,h      = getMinkowskyDiff(next_l,next_t,w1,h1, l2,t2,w2,h2)
+  local l,t,w,h      = getMinkowskyDiff(next_l,t1,w1,h1, l2,t2,w2,h2)
 
   if containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
     local dx,dy = 0,0
@@ -221,13 +221,13 @@ end
 ------------------------------------------------------------
 
 function World:add(item, l,t,w,h, options)
-  local box = self.items[item]
+  local box = self.boxes[item]
   if box then
     error('Item ' .. tostring(item) .. ' added to the world twice.')
   end
   assertIsBox(l,t,w,h)
 
-  self.items[item] = {l=l,t=t,w=w,h=h}
+  self.boxes[item] = {l=l,t=t,w=w,h=h}
 
   local cl,ct,cw,ch = self:toCellBox(l,t,w,h)
   for cy = ct, ct+ch-1 do
@@ -240,7 +240,7 @@ function World:add(item, l,t,w,h, options)
 end
 
 function World:move(item, l,t,w,h, options)
-  local box = self.items[item]
+  local box = self.boxes[item]
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being moved. Use world:add(item, l,t,w,h) to add it first.')
   end
@@ -269,7 +269,7 @@ function World:move(item, l,t,w,h, options)
 end
 
 function World:getBox(item)
-  local box = self.items[item]
+  local box = self.boxes[item]
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before getting its box. Use world:add(item, l,t,w,h) to add it first.')
   end
@@ -282,7 +282,7 @@ function World:check(item, options)
     next_l, next_t, filter, skip_collisions, opt_visited, axis =
       options.next_l, options.next_t, options.filter, options.skip_collisions, options.visited, options.axis
   end
-  local box = self.items[item]
+  local box = self.boxes[item]
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being checked for collisions. Use world:add(item, l,t,w,h) to add it first.')
   end
@@ -312,7 +312,7 @@ function World:check(item, options)
     if not visited[other] then
       visited[other] = true
       if not (filter and filter(other)) then
-        local oBox = self.items[other]
+        local oBox = self.boxes[other]
         local dx, dy, ti, kind = collideBoxes(box, oBox, next_l, next_t, axis)
         if dx then
           len = len + 1
@@ -334,11 +334,11 @@ function World:check(item, options)
 end
 
 function World:remove(item)
-  local box = self.items[item]
+  local box = self.boxes[item]
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being removed. Use world:add(item, l,t,w,h) to add it first.')
   end
-  self.items[item] = nil
+  self.boxes[item] = nil
   local cl,ct,cw,ch = self:toCellBox(box.l,box.t,box.w,box.h)
   for cy = ct, ct+ch-1 do
     for cx = cl, cl+cw-1 do
@@ -389,7 +389,7 @@ function World:queryBox(l,t,w,h)
   local items, len = {}, 0
 
   for item,_ in pairs(dictItemsInCellBox) do
-    local box = self.items[item]
+    local box = self.boxes[item]
     if areColliding(l,t,w,h, box.l, box.t, box.w, box.h) then
       len = len + 1
       items[len] = item
@@ -406,7 +406,7 @@ function World:queryPoint(x,y)
   local items, len = {}, 0
 
   for item,_ in pairs(dictItemsInCellBox) do
-    local box = self.items[item]
+    local box = self.boxes[item]
     if containsPoint(box.l, box.t, box.w, box.h, x, y) then
       len = len + 1
       items[len] = item
@@ -425,7 +425,7 @@ function World:querySegment(x1,y1,x2,y2)
     for item in pairs(cell.items) do
       if not visited[item] then
         visited[item] = true
-        box = self.items[item]
+        box = self.boxes[item]
         l,t,w,h = box.l,box.t,box.w,box.h
 
         if getLiangBarskyIndex(l,t,w,h, x1,y1, x2,y2, 0, 1) then
@@ -449,7 +449,7 @@ bump.newWorld = function(cellSize)
   assertIsPositiveNumber(cellSize, 'cellSize')
   return setmetatable(
     { cellSize       = cellSize,
-      items          = {},
+      boxes          = {},
       rows           = {},
       nonEmptyCells  = {}
     },
