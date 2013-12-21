@@ -112,7 +112,8 @@ collisions = world:move(item, l,t,w,h, options)
 * `item` is the object being moved. You must have added it (with `world:add(item, ...)`) before attempting to move it, or you
   will receive an error.
 * `l,t,w,h` are the new coordinates of the item's AABB. Notice that only `l` and `t` are mandatory. If unspecified, the previous
-  `w` and `h` from the object will be taken from the internal database.
+  `w` and `h` from the object will be taken from the internal database. If `w` and `h` are provided and different from the ones
+   existing in the world, then the item will first "re-size", and then move.
 * `options` works exactly like in `world:move`.
 
 The `collisions` table has 0 or more items with this format:
@@ -161,8 +162,8 @@ This method checks an existing item for collisions, without moving it.
 * `collisions` works like in `world:move`.
 * `item` is an element that must exist in the world (must have been added with `world:add(item, ...)`)
 * `options` works like in `world:move` and `world:add`, but has two extra options:
-  * `options.prev_l` is the previous value of the left coordinate of the box. Useful for calculating tunelling etc.
-  * `options.prev_t` is the the same as `prev_l`, but for the "top" coordinate.
+  * `options.next_l` is the future value of the left coordinate of the box. Useful for calculating tunelling collisions.
+  * `options.next_t` is the the same as `next_l`, but for the "top" coordinate.
 
 items = world:queryPoint(x,y)
 -----------------------------
