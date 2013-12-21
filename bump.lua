@@ -87,10 +87,10 @@ local World_mt = {__index = World}
 
 local function sortByTi(a,b) return a.ti < b.ti end
 
-local function collideBoxes(b1, b2, prev_l, prev_t, axis)
+local function collideBoxes(b1, b2, next_l, next_t, axis)
   local l1,t1,w1,h1  = b1.l, b1.t, b1.w, b1.h
   local l2,t2,w2,h2  = b2.l, b2.t, b2.w, b2.h
-  local l,t,w,h      = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
+  local l,t,w,h      = getMinkowskyDiff(next_l,next_t,w1,h1, l2,t2,w2,h2)
 
   if containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
     local dx,dy = 0,0
@@ -102,8 +102,8 @@ local function collideBoxes(b1, b2, prev_l, prev_t, axis)
     end
     return dx, dy, 0, 'intersection'
   else
-    local vx, vy  = l1 - prev_l, t1 - prev_t
-    l,t,w,h = getMinkowskyDiff(prev_l,prev_t,w1,h1, l2,t2,w2,h2)
+    local vx, vy  = next_l - l1, next_t - t1
+    l,t,w,h = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
     local ti = getLiangBarskyIndex(l,t,w,h, 0,0,vx,vy)
     -- b1 tunnels into b2 while it travels
     if ti then return vx*ti-vx, vy*ti-vy, ti, 'tunnel' end
@@ -249,19 +249,23 @@ function World:move(item, l,t,w,h, options)
 
   assertIsBox(l,t,w,h)
 
-  if box.l ~= l or box.t ~= t or box.w ~= w or box.h ~= h then
+  options        = options or {}
+  options.next_l = l
+  options.next_t = t
+
+  if box.w ~= w or box.h ~= h then
     self:remove(item)
-    self:add(item, l,t,w,h, options)
-    options = options or {}
-    if box.w ~= w or box.h ~= h then
-      local prev_cx, prev_cy = box.l + box.w/2, box.t + box.h/2
-      options.prev_l, options.prev_t = prev_cx - w/2, prev_cy - h/2
-    else
-      options.prev_l, options.prev_t = box.l, box.t
-    end
+    self:add(item, box.l, box.t, w,h, {skip_collisions = true})
   end
 
-  return self:check(item, options)
+  local collisions = self:check(item, options)
+
+  if box.l ~= l or box.t ~= t then
+    self:remove(item)
+    self:add(item, l,t,w,h, {skip_collisions = true})
+  end
+
+  return collisions
 end
 
 function World:getBox(item)
@@ -273,10 +277,10 @@ function World:getBox(item)
 end
 
 function World:check(item, options)
-  local prev_l, prev_t, filter, skip_collisions, opt_visited, axis
+  local next_l, next_t, filter, skip_collisions, opt_visited, axis
   if options then
-    prev_l, prev_t, filter, skip_collisions, opt_visited, axis =
-      options.prev_l, options.prev_t, options.filter, options.skip_collisions, options.visited, options.axis
+    next_l, next_t, filter, skip_collisions, opt_visited, axis =
+      options.next_l, options.next_t, options.filter, options.skip_collisions, options.visited, options.axis
   end
   local box = self.items[item]
   if not box then
@@ -290,14 +294,14 @@ function World:check(item, options)
     for _,v in pairs(opt_visited) do visited[v] = true end
   end
   local l,t,w,h = box.l, box.t, box.w, box.h
-  prev_l, prev_t = prev_l or l, prev_t or t
+  next_l, next_t = next_l or l, next_t or t
 
   local collisions, len = {}, 0
 
   -- FIXME this could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding box of the whole movement
-  local tl, tt = min(prev_l, l),       min(prev_t, t)
-  local tr, tb = max(prev_l + w, l+w), max(prev_t + h, t+h)
+  local tl, tt = min(next_l, l),       min(next_t, t)
+  local tr, tb = max(next_l + w, l+w), max(next_t + h, t+h)
   local tw, th = tr-tl, tb-tt
 
   local cl,ct,cw,ch = self:toCellBox(tl,tt,tw,th)
@@ -309,7 +313,7 @@ function World:check(item, options)
       visited[other] = true
       if not (filter and filter(other)) then
         local oBox = self.items[other]
-        local dx, dy, ti, kind = collideBoxes(box, oBox, prev_l, prev_t, axis)
+        local dx, dy, ti, kind = collideBoxes(box, oBox, next_l, next_t, axis)
         if dx then
           len = len + 1
           collisions[len] = {
