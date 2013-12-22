@@ -318,48 +318,49 @@ function World:check(item, options)
     error('Item ' .. tostring(item) .. ' must be added to the world before being checked for collisions. Use world:add(item, l,t,w,h) to add it first.')
   end
 
-  if skip_collisions then return {} end
-
-  local visited = {[item] = true}
-  if opt_visited then
-    for _,v in pairs(opt_visited) do visited[v] = true end
-  end
-  local l,t,w,h = box.l, box.t, box.w, box.h
-  next_l, next_t = next_l or l, next_t or t
-
   local collisions, len = {}, 0
 
-  -- TODO this could probably be done with less cells using a polygon raster over the cells instead of a
-  -- bounding box of the whole movement. Conditional to building a queryPolygon method
-  local tl, tt = min(next_l, l),       min(next_t, t)
-  local tr, tb = max(next_l + w, l+w), max(next_t + h, t+h)
-  local tw, th = tr-tl, tb-tt
+  if not skip_collisions then
+    local visited = {[item] = true}
+    if opt_visited then
+      for _,v in pairs(opt_visited) do visited[v] = true end
+    end
+    local l,t,w,h = box.l, box.t, box.w, box.h
+    next_l, next_t = next_l or l, next_t or t
 
-  local cl,ct,cw,ch = toCellBox(self, tl,tt,tw,th)
 
-  local dictItemsInCellBox = getDictItemsInCellBox(self, cl,ct,cw,ch)
+    -- TODO this could probably be done with less cells using a polygon raster over the cells instead of a
+    -- bounding box of the whole movement. Conditional to building a queryPolygon method
+    local tl, tt = min(next_l, l),       min(next_t, t)
+    local tr, tb = max(next_l + w, l+w), max(next_t + h, t+h)
+    local tw, th = tr-tl, tb-tt
 
-  for other,_ in pairs(dictItemsInCellBox) do
-    if not visited[other] then
-      visited[other] = true
-      if not (filter and filter(other)) then
-        local oBox = self.boxes[other]
-        local dx, dy, ti, kind = collideBoxes(box, oBox, next_l, next_t, axis)
-        if dx then
-          len = len + 1
-          collisions[len] = {
-            item = other,
-            dx   = dx,
-            dy   = dy,
-            ti   = ti,
-            kind = kind
-          }
+    local cl,ct,cw,ch = toCellBox(self, tl,tt,tw,th)
+
+    local dictItemsInCellBox = getDictItemsInCellBox(self, cl,ct,cw,ch)
+
+    for other,_ in pairs(dictItemsInCellBox) do
+      if not visited[other] then
+        visited[other] = true
+        if not (filter and filter(other)) then
+          local oBox = self.boxes[other]
+          local dx, dy, ti, kind = collideBoxes(box, oBox, next_l, next_t, axis)
+          if dx then
+            len = len + 1
+            collisions[len] = {
+              item = other,
+              dx   = dx,
+              dy   = dy,
+              ti   = ti,
+              kind = kind
+            }
+          end
         end
       end
     end
-  end
 
-  table.sort(collisions, sortByTi)
+    table.sort(collisions, sortByTi)
+  end
 
   return collisions, len
 end
