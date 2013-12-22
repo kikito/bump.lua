@@ -23,7 +23,7 @@ local world = bump.newWorld()
 
 
 -- Player functions
-local player = { l=30.72,t=50,w=20,h=20, speed = 80 }
+local player = { l=50,t=50,w=20,h=20, speed = 80 }
 
 local function updatePlayer(dt)
   local speed = player.speed
