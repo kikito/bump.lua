@@ -276,7 +276,6 @@ function World:move(item, l,t,w,h, options)
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being moved. Use world:add(item, l,t,w,h) to add it first.')
   end
-
   w,h = w or box.w, h or box.h
 
   assertIsBox(l,t,w,h)
@@ -290,14 +289,14 @@ function World:move(item, l,t,w,h, options)
     self:add(item, box.l, box.t, w,h, {skip_collisions = true})
   end
 
-  local collisions = self:check(item, options)
+  local collisions, len = self:check(item, options)
 
   if box.l ~= l or box.t ~= t then
     self:remove(item)
     self:add(item, l,t,w,h, {skip_collisions = true})
   end
 
-  return collisions
+  return collisions, len
 end
 
 function World:getBox(item)
