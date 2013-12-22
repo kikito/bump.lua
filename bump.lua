@@ -119,7 +119,7 @@ local function sortByTi(a,b) return a.ti < b.ti end
 local function collideBoxes(b1, b2, next_l, next_t, axis)
   local l1,t1,w1,h1  = b1.l, b1.t, b1.w, b1.h
   local l2,t2,w2,h2  = b2.l, b2.t, b2.w, b2.h
-  local l,t,w,h      = getMinkowskyDiff(next_l,t1,w1,h1, l2,t2,w2,h2)
+  local l,t,w,h      = getMinkowskyDiff(next_l,next_t,w1,h1, l2,t2,w2,h2)
 
   if containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
     local dx,dy = 0,0
