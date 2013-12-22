@@ -1,7 +1,6 @@
 local bump       = require 'bump'
 local bump_debug = require 'bump_debug'
 
-local maxdt       = 0.1    -- if the window loses focus/etc, use this instead of dt
 local instructions = [[
   bump.lua simple demo
 
@@ -75,9 +74,23 @@ local function drawBlocks()
   end
 end
 
+-- Message/debug functions
+local function drawMessage()
+  local msg = instructions:format(tostring(shouldDrawDebug))
+  love.graphics.setColor(255, 255, 255)
+  love.graphics.print(msg, 550, 10)
+end
+
+local function drawDebug()
+  bump_debug.draw(world)
+
+  local statistics = ("fps: %d, mem: %dKB"):format(love.timer.getFPS(), collectgarbage("count"))
+  love.graphics.setColor(255, 255, 255)
+  love.graphics.print(statistics, 630, 580 )
+end
+
 
 function love.load()
-
   world:add(player, player.l, player.t, player.w, player.h)
 
   addBlock(0,       0,     800, 32)
@@ -95,30 +108,19 @@ function love.load()
 end
 
 function love.update(dt)
-  dt = math.min(dt, maxdt)
   updatePlayer(dt)
 end
 
 function love.draw()
-
   drawBlocks()
   drawPlayer()
-
-  love.graphics.setColor(255, 255, 255)
-
-  local msg = instructions:format(tostring(drawDebug))
-  love.graphics.print(msg, 550, 10)
-
-  if drawDebug then
-    local statistics = ("fps: %d, mem: %dKB"):format(love.timer.getFPS(), collectgarbage("count"))
-    love.graphics.print(statistics, 630, 580 )
-    bump_debug.draw(world)
-  end
+  if shouldDrawDebug then drawDebug() end
+  drawMessage()
 end
 
 -- Non-player keypresses
 function love.keypressed(k)
   if k=="escape" then love.event.quit() end
-  if k=="tab"    then drawDebug = not drawDebug end
+  if k=="tab"    then shouldDrawDebug = not shouldDrawDebug end
   if k=="delete" then collectgarbage("collect") end
 end
