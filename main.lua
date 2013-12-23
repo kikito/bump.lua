@@ -1,13 +1,13 @@
 require 'lib.middleclass'
 local bump       = require 'lib.bump'
 local bump_debug = require 'lib.bump_debug'
-local camera     = require 'lib.camera'
+local gamera     = require 'lib.gamera'
 
 local map        = require 'map'
 local Entity     = require 'entities.Entity'
 local Player     = require 'entities.Player'
+local Coin       = require 'entities.Coin'
 
-local maxdt       = 0.1    -- if the window loses focus/etc, use this instead of dt
 local drawDebug   = false  -- draw bump's debug info, fps and memory
 local player               -- a reference to the player (so the camera can follow him)
 local instructions = [[
@@ -21,63 +21,40 @@ local instructions = [[
     right shift: toggle fly (%s)
 ]]
 
--- bump.lua configuration
-
-function bump.collision(obj1, obj2, dx, dy)
-  obj1:collision(obj2,  dx,  dy)
-  obj2:collision(obj1, -dx, -dy)
-end
-
-function bump.endCollision(obj1, obj2)
-  obj1:endCollision(obj2)
-  obj2:endCollision(obj1)
-end
-
-function bump.shouldCollide(obj1, obj2)
-  return obj1:shouldCollide(obj2) or
-         obj2:shouldCollide(obj1)
-end
-
-function bump.getBBox(obj)
-  return obj:getBBox()
-end
-
--- loading/resetting the map
+local camera, world
 
 local function reset()
-  map.reset()
-  player = Player:new(60, 60)
+  world  = bump.newWorld()
+  map.reset(world)
+  player = Player:new(world, 60, 60)
+  camera = gamera.new(0,0,map.width,map.height)
 end
 
 function love.load()
-  camera.setBoundary(0,0,map.width,map.height)
   reset()
 end
 
 -- Updating
 -- Note that we only update elements that are visible to the camera. This is optional
 function love.update(dt)
-  dt = math.min(dt, maxdt)
-
-  camera.lookAt(player:getCenter())
-  local l,t,w,h = camera.getViewport()
-
-  local updateEntity = function(entity) entity:update(dt, maxdt) end
-
-  bump.each(updateEntity, l,t,w,h)
-  bump.collide(l,t,w,h)
+  player:update(dt)
+  camera:setPosition(player:getCenter())
+  local visibleEntities, len = world:queryBox(camera:getVisible())
+  for i=1, len do
+    local entity = visibleEntities[i]
+    if entity:isInstanceOf(Coin) then entity:update(dt) end
+  end
 end
 
 -- Drawing
-
-local function drawEntity(entity) entity:draw() end
-local function drawCameraStuff(l,t,w,h)
-  if drawDebug then bump_debug.draw(l,t,w,h) end
-  bump.each(drawEntity, l,t,w,h)
-end
-
 function love.draw()
-  camera.draw(drawCameraStuff)
+  camera:draw(function(l,t,w,h)
+    if drawDebug then bump_debug.draw(l,t,w,h) end
+    local visibleEntities, len = world:queryBox(camera:getVisible())
+    for i=1, len do
+      visibleEntities[i]:draw()
+    end
+  end)
 
   love.graphics.setColor(255, 255, 255)
 
