@@ -40,7 +40,7 @@ function Entity:getCenter()
 end
 
 function Entity:__tostring()
-  return ("%d -> [%d, %d, %d, %d]"):format(self.id, self:getBBox())
+  return ("[%d, %d, %d, %d]"):format(self:getBBox())
 end
 
 function Entity.static:destroyAll()
