@@ -68,7 +68,6 @@ function Player:update(dt)
         local dx, dy    = col.dx, col.dy
         if dx ~= 0 and sign(self.vx) ~= sign(dx) then self.vx = 0 end
         if dy ~= 0 and sign(self.vy) ~= sign(dy) then
-          print(require('inspect')({self=self, col=col}, {filter={self.world, getmetatable(self), self.class, col.item.class, getmetatable(col.item)}}))
           self.vy = 0
         end
 
