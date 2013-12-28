@@ -49,7 +49,7 @@ end
 -- Drawing
 function love.draw()
   camera:draw(function(l,t,w,h)
-    if drawDebug then bump_debug.draw(l,t,w,h) end
+    if drawDebug then bump_debug.draw(world) end
     local visibleEntities, len = world:queryBox(camera:getVisible())
     for i=1, len do
       visibleEntities[i]:draw()
