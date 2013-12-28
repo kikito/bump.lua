@@ -79,11 +79,6 @@ local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
   return t0, t1
 end
 
-local function getLiangBarskyIndex(l,t,w,h, x1,y1,x2,y2, t0,t1)
-  local t0,_ = getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
-  if t0 and t0 > 0 then return t0 end
-end
-
 local function getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
   return l2 - l1 - w1,
          t2 - t1 - h1,
@@ -130,9 +125,9 @@ local function collideBoxes(b1, b2, next_l, next_t, axis)
   else
     local vx, vy  = next_l - l1, next_t - t1
     l,t,w,h = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
-    local ti = getLiangBarskyIndex(l,t,w,h, 0,0,vx,vy)
+    local ti,_ = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy)
     -- b1 tunnels into b2 while it travels
-    if ti then
+    if ti and ti > 0 then
       local dx, dy = vx*ti-vx, vy*ti-vy
       if     axis == 'x' then dy = 0
       elseif axis == 'y' then dx = 0
