@@ -27,36 +27,26 @@ local player = { l=50,t=50,w=20,h=20, speed = 80 }
 local function updatePlayer(dt)
   local speed = player.speed
 
-  local dx = 0
+  local dx, dy = 0, 0
   if love.keyboard.isDown('right') then
     dx = speed * dt
   elseif love.keyboard.isDown('left') then
     dx = -speed * dt
   end
-  if dx ~= 0 then
-    player.l = player.l + dx
-    local collisions, len = world:move(player, player.l, player.t, player.w, player.h, {axis = 'x'})
-    print(require('inspect')(collisions))
-    if len > 0 then
-      player.l = player.l + collisions[1].dx
-      world:move(player, player.l, player.t, player.w, player.h, {skip_collisions = true})
-    end
-  end
-
-  local dy = 0
   if love.keyboard.isDown('down') then
     dy = speed * dt
   elseif love.keyboard.isDown('up') then
     dy = -speed * dt
   end
-  if dy ~= 0 then
-    player.t = player.t + dy
-    local collisions, len = world:move(player, player.l, player.t, player.w, player.h, {axis = 'y'})
-    print(require('inspect')(collisions))
-    if len > 0 then
-      player.t = player.t + collisions[1].dy
-      world:move(player, player.l, player.t, player.w, player.h, {skip_collisions = true})
+
+  if dx ~= 0 or dy ~= 0 then
+    player.l, player.t = player.l + dx, player.t + dy
+    local collisions, len = world:move(player, player.l, player.t, player.w, player.h)
+    for i=1,len do
+      player.l = player.l + collisions[i].dx
+      player.t = player.t + collisions[i].dy
     end
+    world:move(player, player.l, player.t, player.w, player.h, {skip_collisions = true})
   end
 end
 
