@@ -80,11 +80,8 @@ local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
 end
 
 local function getLiangBarskyIndex(l,t,w,h, x1,y1,x2,y2, t0,t1)
-  local t0,t1 = getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
-  if t0 then
-    if 0 < t0 and t0 < 1  then return t0 end
-    if 0 < t1 and t1 < 1  then return t1 end
-  end
+  local t0,_ = getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
+  if t0 and t0 > 0 then return t0 end
 end
 
 local function getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
@@ -135,7 +132,13 @@ local function collideBoxes(b1, b2, next_l, next_t, axis)
     l,t,w,h = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
     local ti = getLiangBarskyIndex(l,t,w,h, 0,0,vx,vy)
     -- b1 tunnels into b2 while it travels
-    if ti then return vx*ti-vx, vy*ti-vy, ti, 'tunnel' end
+    if ti then
+      local dx, dy = vx*ti-vx, vy*ti-vy
+      if     axis == 'x' then dy = 0
+      elseif axis == 'y' then dx = 0
+      end
+      return dx, dy, ti, 'tunnel'
+    end
   end
 end
 
@@ -448,7 +451,8 @@ function World:querySegment(x1,y1,x2,y2)
         box = self.boxes[item]
         l,t,w,h = box.l,box.t,box.w,box.h
 
-        if getLiangBarskyIndex(l,t,w,h, x1,y1, x2,y2, 0, 1) then
+        t0,t1 = getLiangBarskyIndices(l,t,w,h, x1,y1, x2,y2, 0, 1)
+        if t0 and ((0 < t0 and t0 < 1) or (0 < t1 and t1 < 1)) then
           -- the sorting is according to the t of an infinite line, not the segment
           t0,t1 = getLiangBarskyIndices(l,t,w,h, x1,y1, x2,y2, -math.huge, math.huge)
           itemsLen = itemsLen + 1
