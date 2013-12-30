@@ -3,7 +3,7 @@ local bump       = require 'lib.bump'
 local bump_debug = require 'lib.bump_debug'
 local gamera     = require 'lib.gamera'
 
-local map        = require 'map'
+local Map        = require 'Map'
 local Entity     = require 'entities.Entity'
 local Player     = require 'entities.Player'
 local Coin       = require 'entities.Coin'
@@ -21,11 +21,12 @@ local instructions = [[
     right shift: toggle fly (%s)
 ]]
 
-local camera, world
+local camera, world, map
 
 local function reset()
   world  = bump.newWorld()
-  map.reset(world)
+  if map then map:destroy() end
+  map = Map:new(world)
   player = Player:new(world, 60, 60)
   camera = gamera.new(0,0,map.width,map.height)
 end
@@ -50,7 +51,7 @@ end
 function love.draw()
   camera:draw(function(l,t,w,h)
     if drawDebug then bump_debug.draw(world) end
-    local visibleEntities, len = world:queryBox(camera:getVisible())
+    local visibleEntities, len = world:queryBox(l,t,w,h)
     for i=1, len do
       visibleEntities[i]:draw()
     end
