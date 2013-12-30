@@ -7,18 +7,11 @@ local random = math.random
 local Map = class('Map')
 
 function newBlock(self, l,t,w,h)
-  local block = Block:new(self.world, l,t,w,h)
-  self.blocks[block] = true
+  Block:new(self.world, l,t,w,h)
 end
 
 function newCoin(self, l,t)
-  local coin = Coin:new(self.world, l,t)
-  self.coins[coin] = true
-end
-
-function Map:destroy()
-  for coin in pairs(self.coins) do coin:destroy() end
-  for block in pairs(self.blocks) do block:destroy() end
+  Coin:new(self.world, l,t)
 end
 
 Map.static.WIDTH  = 4000
@@ -28,8 +21,6 @@ function Map:initialize(world)
   self.world  = world
   self.width  = Map.WIDTH
   self.height = Map.HEIGHT
-  self.blocks = {}
-  self.coins  = {}
 
   local width, height = self.width, self.height
 

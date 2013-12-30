@@ -24,9 +24,9 @@ local instructions = [[
 local camera, world, map
 
 local function reset()
+  Entity:destroyAll()
   world  = bump.newWorld()
-  if map then map:destroy() end
-  map = Map:new(world)
+  map    = Map:new(world)
   player = Player:new(world, 60, 60)
   camera = gamera.new(0,0,map.width,map.height)
 end
