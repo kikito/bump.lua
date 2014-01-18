@@ -121,7 +121,7 @@ local function collideBoxes(item, b1, b2, next_l, next_t)
     l,t,w,h = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
     local ti,_ = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy)
     -- b1 tunnels into b2 while it travels
-    if ti and ti > 0 then
+    if ti and ti < 1 then
       local dx, dy = vx*ti-vx, vy*ti-vy
       return {item = item, dx = dx, dy = dy, ti = ti, kind = 'tunnel'}
     end
