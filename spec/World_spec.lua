@@ -203,29 +203,6 @@ describe('World', function()
             })
           end)
         end)
-
-        describe('the axis option', function()
-          it('zeroes the other axis on intersections', function()
-            local m = {'m'}
-            world:add(m, 106,6, 10, 10)
-            assert.same(world:check(a), {
-              { item = m, dx = 0, dy = -4, kind = 'intersection', ti = 0 },
-            })
-            assert.same(world:check(a, {axis = 'x'}), {
-              { item = m, dx = 6, dy = 0, kind = 'intersection', ti = 0 },
-            })
-            assert.same(world:check(a, {axis = 'y'}), {
-              { item = m, dx = 0, dy = -4, kind = 'intersection', ti = 0 },
-            })
-          end)
-          it('does not affect tunnels', function()
-            assert.same(world:check(a, {next_l = 10, next_t = 0, axis='x'}), {
-              { item = d, dx = 90, dy = 0, kind = 'tunnel', ti = 0.1 },
-              { item = b, dx = 70, dy = 0, kind = 'tunnel', ti = 0.3 },
-              { item = c, dx = 50, dy = 0, kind = 'tunnel', ti = 0.5 }
-            })
-          end)
-        end)
       end)
     end) -- when the world is not empty
   end) -- :check

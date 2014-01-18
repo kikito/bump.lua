@@ -108,19 +108,14 @@ end
 
 local function sortByTi(a,b) return a.ti < b.ti end
 
-local function collideBoxes(item, b1, b2, next_l, next_t, axis)
+local function collideBoxes(item, b1, b2, next_l, next_t)
   local l1,t1,w1,h1  = b1.l, b1.t, b1.w, b1.h
   local l2,t2,w2,h2  = b2.l, b2.t, b2.w, b2.h
   local l,t,w,h      = getMinkowskyDiff(next_l,next_t,w1,h1, l2,t2,w2,h2)
 
   if containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
-    local dx,dy = 0,0
-    if     axis == 'x' then dx = minAbs(l,l+w)
-    elseif axis == 'y' then dy = minAbs(t,t+h)
-    else
-      dx, dy = minAbs(l,l+w), minAbs(t,t+h)
-      if abs(dx) < abs(dy) then dy=0 else dx=0 end
-    end
+    local dx,dy = minAbs(l,l+w), minAbs(t,t+h)
+    if abs(dx) < abs(dy) then dy=0 else dx=0 end
     return {item = item, dx = dx, dy = dy, ti = 0, kind = 'intersection'}
   else
     local vx, vy  = next_l - l1, next_t - t1
@@ -129,9 +124,6 @@ local function collideBoxes(item, b1, b2, next_l, next_t, axis)
     -- b1 tunnels into b2 while it travels
     if ti and ti > 0 then
       local dx, dy = vx*ti-vx, vy*ti-vy
-      if     axis == 'x' then dy = 0
-      elseif axis == 'y' then dx = 0
-      end
       return {item = item, dx = dx, dy = dy, ti = ti, kind = 'tunnel'}
     end
   end
@@ -306,10 +298,10 @@ function World:getBox(item)
 end
 
 function World:check(item, options)
-  local next_l, next_t, filter, skip_collisions, opt_visited, axis
+  local next_l, next_t, filter, skip_collisions, opt_visited
   if options then
-    next_l, next_t, filter, skip_collisions, opt_visited, axis =
-      options.next_l, options.next_t, options.filter, options.skip_collisions, options.visited, options.axis
+    next_l, next_t, filter, skip_collisions, opt_visited =
+      options.next_l, options.next_t, options.filter, options.skip_collisions, options.visited
   end
   local box = self.boxes[item]
   if not box then
