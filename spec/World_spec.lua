@@ -50,7 +50,7 @@ describe('World', function()
         local cols = world:add(b, 4,6,10,10)
 
         assert.same(cols, {
-          { item = a, dx = 0, dy = 4, kind = 'intersection', ti = 0 }
+          { item = a, dx = 0, dy = 0, kind = 'intersection', ti = 0 }
         })
 
       end)
@@ -79,7 +79,7 @@ describe('World', function()
 
         world:add(a, 0,0,10,10)
         assert.same(world:add(b, 4,6,10,10), {
-          { item = a, dx = 0, dy = 4, kind = 'intersection', ti = 0 }
+          { item = a, dx = 0, dy = 0, kind = 'intersection', ti = 0 }
         })
       end)
     end)
@@ -118,7 +118,7 @@ describe('World', function()
         world:add(b, 4,6,10,10)
         world:add(c, 14,16,10,10)
         assert.same(world:check(b), {
-          { item = a, dx = 0, dy = 4, kind = 'intersection', ti = 0 },
+          { item = a, dx = 0, dy = 0, kind = 'intersection', ti = 0 },
         })
 
       end)
@@ -130,7 +130,7 @@ describe('World', function()
           world:add(a, 0,0, 2,2)
           world:add(b, 1,1, 2,2)
           assert.same(world:check(b, {next_l = 1, next_t = 1}), {
-            { item = a, dx = 0, dy = 1, kind = 'intersection', ti = 0 }
+            { item = a, dx = 0, dy = 0, kind = 'intersection', ti = 0 }
           })
         end)
         it('detects and tags tunneling correctly', function()
@@ -218,7 +218,7 @@ describe('World', function()
       world:add(a, 0,0, 10,10)
       world:add(b, 5,0, 1,1)
       assert.same(world:check(b), {
-        { item = a, dx = 0, dy = -1, kind = 'intersection', ti = 0 }
+        { item = a, dx = 0, dy = 0, kind = 'intersection', ti = 0 }
       })
       world:remove(a)
       assert.same(world:check(b), {})
@@ -304,21 +304,21 @@ describe('World', function()
       assert.same(bump.newWorld():querySegment(0,0,1,1), {})
     end)
 
-    it('returns the items touched by the segment, sorted by touch order', function()
+    it('#focus returns the items touched by the segment, sorted by touch order', function()
       local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
-      world:add(a, 10,0, 5,5)
-      world:add(b, 15,0, 5,5)
-      world:add(c, 20,0, 5,5)
+      world:add(a,  5,0, 5,10)
+      world:add(b, 15,0, 5,10)
+      world:add(c, 25,0, 5,10)
 
       assert.same(world:querySegment(0,5, 11,5),  {a})
       assert.same(world:querySegment(0,5, 17,5),  {a,b})
-      assert.same(world:querySegment(0,5, 22,5),  {a,b,c})
+      assert.same(world:querySegment(0,5, 30,5),  {a,b,c})
       assert.same(world:querySegment(17,5, 26,5), {b,c})
       assert.same(world:querySegment(22,5, 26,5), {c})
 
       assert.same(world:querySegment(11,5, 0,5),  {a})
       assert.same(world:querySegment(17,5, 0,5),  {b,a})
-      assert.same(world:querySegment(22,5, 0,5),  {c,b,a})
+      assert.same(world:querySegment(30,5, 0,5),  {c,b,a})
       assert.same(world:querySegment(26,5, 17,5), {c,b})
       assert.same(world:querySegment(26,5, 22,5), {c})
     end)

@@ -62,7 +62,7 @@ local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
     end
 
     if p == 0 then
-      if q < 0 then return nil end
+      if q <= 0 then return nil end
     else
       r = q / p
       if p < 0 then
@@ -76,6 +76,7 @@ local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
       end
     end
   end
+
   return t0, t1
 end
 
@@ -113,12 +114,10 @@ local function collideBoxes(item, b1, b2, next_l, next_t)
   local l2,t2,w2,h2  = b2.l, b2.t, b2.w, b2.h
   local l,t,w,h      = getMinkowskyDiff(next_l,next_t,w1,h1, l2,t2,w2,h2)
 
+  local vx, vy  = next_l - l1, next_t - t1
   if containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
-    local dx,dy = minAbs(l,l+w), minAbs(t,t+h)
-    if abs(dx) < abs(dy) then dy=0 else dx=0 end
-    return {item = item, dx = dx, dy = dy, ti = 0, kind = 'intersection'}
+    return {item = item, dx = -vx, dy = -vy, ti = 0, kind = 'intersection'}
   else
-    local vx, vy  = next_l - l1, next_t - t1
     l,t,w,h = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
     local ti,_ = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy)
     -- b1 tunnels into b2 while it travels
