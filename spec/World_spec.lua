@@ -304,7 +304,7 @@ describe('World', function()
       assert.same(bump.newWorld():querySegment(0,0,1,1), {})
     end)
 
-    it('#focus returns the items touched by the segment, sorted by touch order', function()
+    it('returns the items touched by the segment, sorted by touch order', function()
       local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
       world:add(a,  5,0, 5,10)
       world:add(b, 15,0, 5,10)
