@@ -237,6 +237,36 @@ local function getCellsTouchedBySegment(self, x1,y1,x2,y2)
 end
 
 ------------------------------------------------------------
+local Collision = {}
+local Collision_mt = {__index = Collision}
+
+function Collision:resolve()
+  local b1, b2          = self.itemBox, self.otherBox
+  local vx, vy          = self.vx, self.vy
+  local l1,t1,w1,h1     = b1.l, b1.t, b1.w, b1.h
+  local l2,t2,w2,h2     = b2.l, b2.t, b2.w, b2.h
+  local l,t,w,h         = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
+
+  if containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
+    self.kind = 'intersection'
+    local px, py = minAbs(l, l+w), minAbs(t, t+h)     -- nearest point to 0,0
+    local wi, hi = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
+    self.ti = -wi * hi -- ti is the negative area of intersection
+    return self.kind
+  else
+    local ti = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy)
+    -- b1 tunnels into b2 while it travels
+    if ti and ti < 1 then
+      -- local dx, dy = vx*ti-vx, vy*ti-vy
+      self.kind = 'tunnel'
+      self.ti   = ti
+      return self.kind
+    end
+  end
+  return nil
+end
+
+------------------------------------------------------------
 
 local World = {}
 local World_mt = {__index = World}
@@ -459,6 +489,17 @@ bump.newWorld = function(cellSize)
     },
     World_mt
   )
+end
+
+bump.newCollision = function(item, other, itemBox, otherBox, next_l, next_t)
+  return setmetatable({
+    item      = item,
+    other     = other,
+    itemBox   = itemBox,
+    otherBox  = otherBox,
+    vx        = next_l - itemBox.l,
+    vy        = next_t - itemBox.t
+  }, Collision_mt)
 end
 
 return bump
