@@ -52,13 +52,15 @@ end
 local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
   t0, t1 = t0 or 0, t1 or 1
   local dx, dy = x2-x1, y2-y1
+  local nx, ny
+  local nx0, ny0, nx1, ny1 = -1,0,-1,0
   local p, q, r
 
   for side = 1,4 do
-    if     side == 1 then p,q = -dx, x1 - l
-    elseif side == 2 then p,q =  dx, l + w - x1
-    elseif side == 3 then p,q = -dy, y1 - t
-    else                  p,q =  dy, t + h - y1
+    if     side == 1 then nx,ny,p,q = -1,  0, -dx, x1 - l     -- left
+    elseif side == 2 then nx,ny,p,q =  1,  0,  dx, l + w - x1 -- right
+    elseif side == 3 then nx,ny,p,q =  0, -1, -dy, y1 - t     -- top
+    else                  nx,ny,p,q =  0,  1,  dy, t + h - y1 -- bottom
     end
 
     if p == 0 then
@@ -67,17 +69,17 @@ local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
       r = q / p
       if p < 0 then
         if     r > t1 then return nil
-        elseif r > t0 then t0 = r
+        elseif r > t0 then t0,nx0,ny0 = r,nx,ny
         end
       else -- p > 0
         if     r < t0 then return nil
-        elseif r < t1 then t1 = r
+        elseif r < t1 then t1,nx1,ny1 = r,nx,ny
         end
       end
     end
   end
 
-  return t0, t1
+  return t0,t1, nx0,ny0, nx1,ny1
 end
 
 local function getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
@@ -119,7 +121,7 @@ local function collideBoxes(item, b1, b2, next_l, next_t)
     return {item = item, dx = -vx, dy = -vy, ti = 0, kind = 'intersection'}
   else
     l,t,w,h = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
-    local ti,_ = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy)
+    local ti = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy)
     -- b1 tunnels into b2 while it travels
     if ti and ti < 1 then
       local dx, dy = vx*ti-vx, vy*ti-vy
@@ -254,12 +256,14 @@ function Collision:resolve()
     self.ti = -wi * hi -- ti is the negative area of intersection
     return self.kind
   else
-    local ti = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy)
+    local ti,_,nx,ny = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy)
     -- b1 tunnels into b2 while it travels
     if ti and ti < 1 then
       -- local dx, dy = vx*ti-vx, vy*ti-vy
       self.kind = 'tunnel'
       self.ti   = ti
+      self.normal_x = nx
+      self.normal_y = ny
       return self.kind
     end
   end
