@@ -254,6 +254,8 @@ function Collision:resolve()
     local px, py = minAbs(l, l+w), minAbs(t, t+h)     -- nearest point to 0,0
     local wi, hi = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
     self.ti = -wi * hi -- ti is the negative area of intersection
+    self.normal_x = 0
+    self.normal_y = 0
     return true
   else
     local ti,_,nx,ny = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy)
