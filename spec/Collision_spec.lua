@@ -81,4 +81,22 @@ describe('World', function()
       end)
     end)
   end)
+
+  describe(':getTouch', function()
+    describe('on intersections', function()
+      it('#focus returns the left,top coordinates of the minimum displacement on static items', function()
+        local other = box(0,0,6,6)
+        local c = bump.newCollision({},{}, box(-1,4,2,2), other, -1,4)
+        c:resolve()
+        assert.same({c:getTouch()}, {-2,4})
+      end)
+      describe('when the item is moving', function()
+        it('returns the left,top coordinates of the intersection with the movement line, opposite direction', function()
+
+        end)
+      end)
+
+    end)
+
+  end)
 end)

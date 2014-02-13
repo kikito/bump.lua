@@ -30,6 +30,20 @@ local bump = {
 
 local abs, floor, ceil, min, max = math.abs, math.floor, math.ceil, math.min, math.max
 
+local function clamp(x, lower, upper)
+  return max(lower, min(upper, x))
+end
+
+local function minAbs(a,b)
+  if abs(a) < abs(b) then return a else return b end
+end
+
+local function nearest(x, a, b)
+  if abs(a - x) < abs(b - x) then return a else return b end
+end
+
+------------------------------------------
+
 local function assertType(desiredType, value, name)
   if type(value) ~= desiredType then
     error(name .. ' must be a ' .. desiredType .. ', but was ' .. tostring(value) .. '(a ' .. type(value) .. ')')
@@ -47,6 +61,12 @@ local function assertIsBox(l,t,w,h)
   assertType('number', t, 'w')
   assertIsPositiveNumber(w, 'w')
   assertIsPositiveNumber(h, 'h')
+end
+
+------------------------------------------
+
+local function getNearestCorner(l,t,w,h, x, y)
+  return nearest(x, l, l+w), nearest(y, t, t+h)
 end
 
 local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
@@ -93,9 +113,7 @@ local function containsPoint(l,t,w,h, x,y)
   return x > l and y > t and x < l + w and y < t + h
 end
 
-local function minAbs(a,b)
-  if abs(a) < abs(b) then return a else return b end
-end
+
 
 local function areColliding(l1,t1,w1,h1, l2,t2,w2,h2)
   return l1 < l2+w2 and l2 < l1+w1 and
@@ -251,22 +269,36 @@ function Collision:resolve()
 
   if containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
     self.kind = 'intersection'
-    local px, py = minAbs(l, l+w), minAbs(t, t+h)     -- nearest point to 0,0
-    local wi, hi = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
-    self.ti = -wi * hi -- ti is the negative area of intersection
-    self.normal_x = 0
-    self.normal_y = 0
+    local px, py  = minAbs(l, l+w), minAbs(t, t+h)     -- nearest corner to 0,0
+    local wi, hi  = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
+    self.ti       = -wi * hi -- ti is the negative area of intersection
+    self.normal_x, self.normal_y = 0,0
+    self.ml, self.mt, self.mw, self.mh = l,t,w,h
     return true
   else
     local ti,_,nx,ny = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy)
     -- b1 tunnels into b2 while it travels
     if ti and ti < 1 then
       -- local dx, dy = vx*ti-vx, vy*ti-vy
-      self.kind = 'tunnel'
-      self.ti   = ti
-      self.normal_x = nx
-      self.normal_y = ny
+      self.kind      = 'tunnel'
+      self.ti        = ti
+      self.normal_x  = nx
+      self.normal_y  = ny
+      self.ml, self.mt, self.mw, self.mh = l,t,w,h
       return true
+    end
+  end
+end
+
+function Collision:getTouch()
+  if self.kind == 'intersection' then
+    if self.vx ~= 0 or self.vy ~= 0 then
+      -- intersecting and moving - move in the opposite direction
+
+    else -- intersecting and not moving - use minimum displacement vector
+      local nx,ny = getNearestCorner(self.ml, self.mt, self.mw, self.mh, 0,0)
+      if nx < ny then ny = 0 else nx = 0 end
+      return self.itemBox.l + nx, self.itemBox.t + ny
     end
   end
 end
