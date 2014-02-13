@@ -148,7 +148,7 @@ function Collision:resolve()
     self.ti       = -wi * hi -- ti is the negative area of intersection
     self.normal_x, self.normal_y = 0,0
     self.ml, self.mt, self.mw, self.mh = l,t,w,h
-    return true
+    return self
   else
     local ti,_,nx,ny = aabb_getSegmentIntersectionIndices(l,t,w,h, 0,0,vx,vy)
     -- b1 tunnels into b2 while it travels
@@ -159,7 +159,7 @@ function Collision:resolve()
       self.normal_x  = nx
       self.normal_y  = ny
       self.ml, self.mt, self.mw, self.mh = l,t,w,h
-      return true
+      return self
     end
   end
 end
