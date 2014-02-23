@@ -171,7 +171,7 @@ function Collision:getTouch()
 
     else -- intersecting and not moving - use minimum displacement vector
       local nx,ny = aabb_getNearestCorner(self.ml, self.mt, self.mw, self.mh, 0,0)
-      if nx < ny then ny = 0 else nx = 0 end
+      if abs(nx) < abs(ny) then ny = 0 else nx = 0 end
       return self.itemBox.l + nx, self.itemBox.t + ny
     end
   end
