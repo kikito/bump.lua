@@ -143,9 +143,9 @@ function Collision:resolve()
 
   if aabb_containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
     self.kind = 'intersection'
-    local px, py  = minAbs(l, l+w), minAbs(t, t+h)     -- nearest corner to 0,0
-    local wi, hi  = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
-    self.ti       = -wi * hi -- ti is the negative area of intersection
+    local px, py = aabb_getNearestCorner(l,t,w,h, 0, 0)
+    local wi, hi = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
+    self.ti      = -wi * hi -- ti is the negative area of intersection
     self.normal_x, self.normal_y = 0,0
     self.ml, self.mt, self.mw, self.mh = l,t,w,h
     return self
