@@ -108,22 +108,27 @@ describe('World', function()
 
         local other = box(0,0,8,8)
 
-        assert.same({resolve(box(-1,-1,2,2), other):getTouch()}, {-1,-2}) -- 1
-        assert.same({resolve(box( 3,-1,2,2), other):getTouch()}, { 3,-2}) -- 2
-        assert.same({resolve(box( 7,-1,2,2), other):getTouch()}, { 7,-2}) -- 3
+        assert.same({resolve(box(-1,-1,2,2), other):getTouch()}, {-1,-2, 0, -1}) -- 1
+        assert.same({resolve(box( 3,-1,2,2), other):getTouch()}, { 3,-2, 0, -1}) -- 2
+        assert.same({resolve(box( 7,-1,2,2), other):getTouch()}, { 7,-2, 0, -1}) -- 3
 
-        assert.same({resolve(box(-1, 3,2,2), other):getTouch()}, {-2, 3}) -- 4
-        assert.same({resolve(box( 3, 3,2,2), other):getTouch()}, { 3, 8}) -- 5
-        assert.same({resolve(box( 7, 3,2,2), other):getTouch()}, { 8, 3}) -- 6
+        assert.same({resolve(box(-1, 3,2,2), other):getTouch()}, {-2, 3, -1, 0}) -- 4
+        assert.same({resolve(box( 3, 3,2,2), other):getTouch()}, { 3, 8,  0, 1}) -- 5
+        assert.same({resolve(box( 7, 3,2,2), other):getTouch()}, { 8, 3,  1, 0}) -- 6
 
-        assert.same({resolve(box(-1, 7,2,2), other):getTouch()}, {-1, 8}) -- 1
-        assert.same({resolve(box( 3, 7,2,2), other):getTouch()}, { 3, 8}) -- 2
-        assert.same({resolve(box( 7, 7,2,2), other):getTouch()}, { 7, 8}) -- 3
+        assert.same({resolve(box(-1, 7,2,2), other):getTouch()}, {-1, 8,  0, 1}) -- 1
+        assert.same({resolve(box( 3, 7,2,2), other):getTouch()}, { 3, 8,  0, 1}) -- 2
+        assert.same({resolve(box( 7, 7,2,2), other):getTouch()}, { 7, 8,  0, 1}) -- 3
 
       end)
       describe('when the item is moving', function()
         it('returns the left,top coordinates of the intersection with the movement line, opposite direction', function()
+          local other = box(0,0,8,8)
 
+          assert.same({resolve(box( 3, 3,2,2), other, 4, 3):getTouch()}, { -2,  3, -1,  0})
+          assert.same({resolve(box( 3, 3,2,2), other, 2, 3):getTouch()}, {  8,  3,  1,  0})
+          assert.same({resolve(box( 3, 3,2,2), other, 3, 4):getTouch()}, {  3, -2,  0, -1})
+          assert.same({resolve(box( 3, 3,2,2), other, 3, 2):getTouch()}, {  3,  8,  0,  1})
         end)
       end)
 

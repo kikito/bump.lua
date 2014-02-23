@@ -38,8 +38,10 @@ local function clamp(x, lower, upper)
   return max(lower, min(upper, x))
 end
 
-local function minAbs(a,b)
-  if abs(a) < abs(b) then return a else return b end
+local function sign(x)
+  if x > 0 then return 1 end
+  if x == 0 then return 0 end
+  return -1
 end
 
 local function nearest(x, a, b)
@@ -166,14 +168,28 @@ end
 
 function Collision:getTouch()
   if self.kind == 'intersection' then
-    if self.vx ~= 0 or self.vy ~= 0 then
-      -- intersecting and moving - move in the opposite direction
 
-    else -- intersecting and not moving - use minimum displacement vector
-      local nx,ny = aabb_getNearestCorner(self.ml, self.mt, self.mw, self.mh, 0,0)
-      if abs(nx) < abs(ny) then ny = 0 else nx = 0 end
-      return self.itemBox.l + nx, self.itemBox.t + ny
+    local vx,vy = self.vx, self.vy
+    if vx == 0 and vy == 0 then
+      -- intersecting and not moving - use minimum displacement vector
+      local px,py = aabb_getNearestCorner(self.ml, self.mt, self.mw, self.mh, 0,0)
+      if abs(px) < abs(py) then py = 0 else px = 0 end
+      return self.itemBox.l + px, self.itemBox.t + py, sign(px), sign(py)
+    else
+      -- intersecting and moving - move in the opposite direction
+      local ti,_,nx,ny = aabb_getSegmentIntersectionIndices(self.ml,self.mt,self.mw,self.mh, 0,0,vx,vy, -math.huge, 1)
+
+      return self.itemBox.l + self.vx * ti,
+             self.itemBox.t + self.vy * ti,
+             nx, ny
     end
+
+  elseif self.kind == 'tunneling' then
+
+    -- TODO
+
+  else
+    error('unknown collision kind. Have you called :resolve()?')
   end
 end
 
