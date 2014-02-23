@@ -148,7 +148,7 @@ function Collision:resolve()
     local px, py = aabb_getNearestCorner(l,t,w,h, 0, 0)
     local wi, hi = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
     self.ti      = -wi * hi -- ti is the negative area of intersection
-    self.normal_x, self.normal_y = 0,0
+    self.nx, self.ny = 0,0
     self.ml, self.mt, self.mw, self.mh = l,t,w,h
     return self
   else
@@ -156,10 +156,10 @@ function Collision:resolve()
     -- b1 tunnels into b2 while it travels
     if ti and ti < 1 then
       -- local dx, dy = vx*ti-vx, vy*ti-vy
-      self.kind      = 'tunnel'
-      self.ti        = ti
-      self.normal_x  = nx
-      self.normal_y  = ny
+      self.kind = 'tunnel'
+      self.ti   = ti
+      self.nx   = nx
+      self.ny   = ny
       self.ml, self.mt, self.mw, self.mh = l,t,w,h
       return self
     end
@@ -167,26 +167,31 @@ function Collision:resolve()
 end
 
 function Collision:getTouch()
+  local vx,vy = self.vx, self.vy
+  local itemBox = self.itemBox
+
   if self.kind == 'intersection' then
 
-    local vx,vy = self.vx, self.vy
     if vx == 0 and vy == 0 then
       -- intersecting and not moving - use minimum displacement vector
       local px,py = aabb_getNearestCorner(self.ml, self.mt, self.mw, self.mh, 0,0)
       if abs(px) < abs(py) then py = 0 else px = 0 end
-      return self.itemBox.l + px, self.itemBox.t + py, sign(px), sign(py)
+      return itemBox.l + px, itemBox.t + py, sign(px), sign(py)
     else
       -- intersecting and moving - move in the opposite direction
       local ti,_,nx,ny = aabb_getSegmentIntersectionIndices(self.ml,self.mt,self.mw,self.mh, 0,0,vx,vy, -math.huge, 1)
 
-      return self.itemBox.l + self.vx * ti,
-             self.itemBox.t + self.vy * ti,
+      return itemBox.l + vx * ti,
+             itemBox.t + vy * ti,
              nx, ny
     end
 
-  elseif self.kind == 'tunneling' then
+  elseif self.kind == 'tunnel' then
 
-    -- TODO
+    return itemBox.l + vx * self.ti,
+           itemBox.t + vy * self.ti,
+           self.nx, self.ny
+
 
   else
     error('unknown collision kind. Have you called :resolve()?')
