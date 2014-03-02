@@ -165,6 +165,9 @@ describe('World', function()
       it('slides over tunnels', function()
         assert.same({resolve(box(10,10,2,2), other, 1, 4):getSlide()}, { 7, 8, 0, 1, 1, 8, -6, 0})
         assert.same({resolve(box(10,10,2,2), other, 4, 1):getSlide()}, { 8, 7, 1, 0, 8, 1, 0, -6})
+
+        -- perfect corner case:
+        assert.same({resolve(box(10,10,2,2), other, 1, 1):getSlide()}, { 8, 8, 1, 0, 8, 1, 0, -7})
       end)
     end)
   end)
@@ -189,10 +192,11 @@ describe('World', function()
       it('bounces over tunnels', function()
         assert.same({resolve(box(10,10,2,2), other, 1, 4):getBounce()}, { 7, 8, 0, 1, 1, 12, -6, 4})
         assert.same({resolve(box(10,10,2,2), other, 4, 1):getBounce()}, { 8, 7, 1, 0, 12, 1, 4, -6})
+
+        -- perfect corner case:
+        assert.same({resolve(box(10,10,2,2), other, 1, 1):getBounce()}, { 8, 8, 1, 0, 15, 1, 7, -7})
       end)
     end)
   end)
-
-
 
 end)
