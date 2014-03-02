@@ -194,12 +194,10 @@ function Collision:getTouch()
 end
 
 function Collision:getSlide()
-  local vx,vy           = self.vx, self.vy
-  local itemBox         = self.itemBox
   local tl, tt, nx, ny  = self:getTouch()
   local sl, st, sx, sy  = tl, tt, 0, 0
 
-  if vx ~= 0 or vy ~= 0 then
+  if self.vx ~= 0 or self.vy ~= 0 then
     if nx == 0 then
       sl = self.target_l
       sx = sl - tl
@@ -208,7 +206,21 @@ function Collision:getSlide()
       sy = st - tt
     end
   end
+
   return tl, tt, nx, ny, sl, st, sx, sy
+end
+
+function Collision:getBounce()
+  local tl, tt, nx, ny  = self:getTouch()
+  local bl, bt, bx,by = tl, tt, 0,0
+
+  if self.vx ~= 0 or self.vy ~= 0 then
+    bx, by = self.target_l - tl, self.target_t - tt
+    if nx == 0 then by = -by else bx = -bx end
+    bl, bt = tl + bx, tt + by
+  end
+
+  return tl, tt, nx, ny, bl, bt, bx, by
 end
 
 ------------------------------------------
