@@ -144,7 +144,7 @@ function Collision:resolve()
   local l,t,w,h         = aabb_getDiff(l1,t1,w1,h1, l2,t2,w2,h2)
 
   if aabb_containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
-    self.kind = 'intersection'
+    self.is_intersection = true
     local px, py = aabb_getNearestCorner(l,t,w,h, 0, 0)
     local wi, hi = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
     self.ti      = -wi * hi -- ti is the negative area of intersection
@@ -156,7 +156,7 @@ function Collision:resolve()
     -- b1 tunnels into b2 while it travels
     if ti and ti < 1 then
       -- local dx, dy = vx*ti-vx, vy*ti-vy
-      self.kind = 'tunnel'
+      self.is_intersection = false
       self.ti   = ti
       self.nx   = nx
       self.ny   = ny
@@ -169,32 +169,28 @@ end
 function Collision:getTouch()
   local vx,vy = self.vx, self.vy
   local itemBox = self.itemBox
+  assert(self.is_intersection ~= nil, 'unknown collision kind. Have you called :resolve()?')
 
-  if self.kind == 'intersection' then
+  local tl, tt, nx, ny
+
+  if self.is_intersection then
 
     if vx == 0 and vy == 0 then
       -- intersecting and not moving - use minimum displacement vector
       local px,py = aabb_getNearestCorner(self.ml, self.mt, self.mw, self.mh, 0,0)
       if abs(px) < abs(py) then py = 0 else px = 0 end
-      return itemBox.l + px, itemBox.t + py, sign(px), sign(py)
+      tl, tt, nx, ny = itemBox.l + px, itemBox.t + py, sign(px), sign(py)
     else
       -- intersecting and moving - move in the opposite direction
-      local ti,_,nx,ny = aabb_getSegmentIntersectionIndices(self.ml,self.mt,self.mw,self.mh, 0,0,vx,vy, -math.huge, 1)
-
-      return itemBox.l + vx * ti,
-             itemBox.t + vy * ti,
-             nx, ny
+      local ti,_,nx2,ny2 = aabb_getSegmentIntersectionIndices(self.ml,self.mt,self.mw,self.mh, 0,0,vx,vy, -math.huge, 1)
+      tl, tt, nx, ny = itemBox.l + vx * ti, itemBox.t + vy * ti, nx2, ny2
     end
 
-  elseif self.kind == 'tunnel' then
-
-    return itemBox.l + vx * self.ti,
-           itemBox.t + vy * self.ti,
-           self.nx, self.ny
-
-  else
-    error('unknown collision kind. Have you called :resolve()?')
+  else -- tunnel
+    tl, tt, nx, ny = itemBox.l + vx * self.ti, itemBox.t + vy * self.ti, self.nx, self.ny
   end
+
+  return tl, tt, nx, ny
 end
 
 function Collision:getSlide()
@@ -203,12 +199,11 @@ function Collision:getSlide()
   local tl, tt, nx, ny  = self:getTouch()
   local sl, st, sx, sy  = tl, tt, 0, 0
 
-  if vx ~= 0 and vy ~= 0 then
+  if vx ~= 0 or vy ~= 0 then
     if nx == 0 then
       sl = self.target_l
       sx = sl - tl
-    end
-    if ny == 0 then
+    else
       st = self.target_t
       sy = st - tt
     end
