@@ -93,44 +93,46 @@ describe('World', function()
     local other = box(0,0,8,8)
 
     describe('on intersections', function()
-      it('returns the left,top coordinates of the minimum displacement on static items', function()
+      describe('when there is no movement', function()
+        it('returns the left,top coordinates of the minimum displacement on static items', function()
 
-        --       -1     3     7
-        --     -1 +---+ +---+ +---+
-        --        | +-+-+---+-+-+ |    1     2     3
-        --        +-+-+ +---+ +-+-+
-        --          |           |
-        --      3 +-+-+ +---+ +-+-+
-        --        | | | |   | | | |    4     5     6
-        --        +-+-+ +---+ +-+-+
-        --          |           |
-        --      7 +-+-+ +---+ +-+-+
-        --        | +-+-+---+-+-+ |    7     8     9
-        --        +-+-+ +---+ +-+-+
+          --       -1     3     7
+          --     -1 +---+ +---+ +---+
+          --        | +-+-+---+-+-+ |    1     2     3
+          --        +-+-+ +---+ +-+-+
+          --          |           |
+          --      3 +-+-+ +---+ +-+-+
+          --        | | | |   | | | |    4     5     6
+          --        +-+-+ +---+ +-+-+
+          --          |           |
+          --      7 +-+-+ +---+ +-+-+
+          --        | +-+-+---+-+-+ |    7     8     9
+          --        +-+-+ +---+ +-+-+
 
-        assert.same({resolve(box(-1,-1,2,2), other):getTouch()}, {-1,-2, 0, -1}) -- 1
-        assert.same({resolve(box( 3,-1,2,2), other):getTouch()}, { 3,-2, 0, -1}) -- 2
-        assert.same({resolve(box( 7,-1,2,2), other):getTouch()}, { 7,-2, 0, -1}) -- 3
+          assert.same({resolve(box(-1,-1,2,2), other):getTouch()}, {-1,-2, 0, -1}) -- 1
+          assert.same({resolve(box( 3,-1,2,2), other):getTouch()}, { 3,-2, 0, -1}) -- 2
+          assert.same({resolve(box( 7,-1,2,2), other):getTouch()}, { 7,-2, 0, -1}) -- 3
 
-        assert.same({resolve(box(-1, 3,2,2), other):getTouch()}, {-2, 3, -1, 0}) -- 4
-        assert.same({resolve(box( 3, 3,2,2), other):getTouch()}, { 3, 8,  0, 1}) -- 5
-        assert.same({resolve(box( 7, 3,2,2), other):getTouch()}, { 8, 3,  1, 0}) -- 6
+          assert.same({resolve(box(-1, 3,2,2), other):getTouch()}, {-2, 3, -1, 0}) -- 4
+          assert.same({resolve(box( 3, 3,2,2), other):getTouch()}, { 3, 8,  0, 1}) -- 5
+          assert.same({resolve(box( 7, 3,2,2), other):getTouch()}, { 8, 3,  1, 0}) -- 6
 
-        assert.same({resolve(box(-1, 7,2,2), other):getTouch()}, {-1, 8,  0, 1}) -- 1
-        assert.same({resolve(box( 3, 7,2,2), other):getTouch()}, { 3, 8,  0, 1}) -- 2
-        assert.same({resolve(box( 7, 7,2,2), other):getTouch()}, { 7, 8,  0, 1}) -- 3
+          assert.same({resolve(box(-1, 7,2,2), other):getTouch()}, {-1, 8,  0, 1}) -- 1
+          assert.same({resolve(box( 3, 7,2,2), other):getTouch()}, { 3, 8,  0, 1}) -- 2
+          assert.same({resolve(box( 7, 7,2,2), other):getTouch()}, { 7, 8,  0, 1}) -- 3
 
+        end)
       end)
 
       describe('when the item is moving', function()
         it('returns the left,top coordinates of the intersection with the movement line, opposite direction', function()
           assert.same({resolve(box( 3, 3,2,2), other, 4, 3):getTouch()}, { -2,  3, -1,  0})
           assert.same({resolve(box( 3, 3,2,2), other, 2, 3):getTouch()}, {  8,  3,  1,  0})
+          assert.same({resolve(box( 3, 3,2,2), other, 2, 3):getTouch()}, {  8,  3,  1,  0})
           assert.same({resolve(box( 3, 3,2,2), other, 3, 4):getTouch()}, {  3, -2,  0, -1})
           assert.same({resolve(box( 3, 3,2,2), other, 3, 2):getTouch()}, {  3,  8,  0,  1})
         end)
       end)
-
     end)
 
     describe('on tunnels', function()
@@ -139,6 +141,33 @@ describe('World', function()
         assert.same({resolve(box(  9,  3,2,2), other, 3,3):getTouch()}, {  8,  3,  1,  0})
         assert.same({resolve(box(  3, -3,2,2), other, 3,3):getTouch()}, {  3, -2,  0, -1})
         assert.same({resolve(box(  3,  9,2,2), other, 3,3):getTouch()}, {  3,  8,  0,  1})
+      end)
+    end)
+  end)
+
+  describe(':getSlide', function()
+    local other = box(0,0,8,8)
+
+    describe('when there is no movement', function()
+      it('behaves like :getTouch(), plus safe info', function()
+        local c = resolve(box(3,3,2,2), other)
+        spy.on(c, 'getTouch')
+
+        assert.same({c:getSlide()}, {3,8, 0,1, 3,8, 0,0})
+        assert.spy(c.getTouch).was.called_with(c)
+      end)
+    end)
+    describe('when there is movement, it slides', function()
+      it('slides on intersections', function()
+        assert.same({resolve(box( 3, 3,2,2), other, 4, 5):getSlide()}, { 0.5, -2, 0,-1, 4, -2, 3.5, 0})
+        assert.same({resolve(box( 3, 3,2,2), other, 5, 4):getSlide()}, { -2, 0.5, -1,0, -2, 4, 0, 3.5})
+        assert.same({resolve(box( 3, 3,2,2), other, 2, 1):getSlide()}, { 5.5, 8, 0,1, 2, 8, -3.5, 0})
+        assert.same({resolve(box( 3, 3,2,2), other, 1, 2):getSlide()}, { 8, 5.5, 1,0, 8, 2, 0, -3.5})
+      end)
+
+      it('slides over tunnels', function()
+        assert.same({resolve(box(10,10,2,2), other, 1, 4):getSlide()}, { 7, 8, 0, 1, 1, 8, -6, 0})
+        assert.same({resolve(box(10,10,2,2), other, 4, 1):getSlide()}, { 8, 7, 1, 0, 8, 1, 0, -6})
       end)
     end)
   end)

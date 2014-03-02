@@ -192,10 +192,28 @@ function Collision:getTouch()
            itemBox.t + vy * self.ti,
            self.nx, self.ny
 
-
   else
     error('unknown collision kind. Have you called :resolve()?')
   end
+end
+
+function Collision:getSlide()
+  local vx,vy           = self.vx, self.vy
+  local itemBox         = self.itemBox
+  local tl, tt, nx, ny  = self:getTouch()
+  local sl, st, sx, sy  = tl, tt, 0, 0
+
+  if vx ~= 0 and vy ~= 0 then
+    if nx == 0 then
+      sl = self.target_l
+      sx = sl - tl
+    end
+    if ny == 0 then
+      st = self.target_t
+      sy = st - tt
+    end
+  end
+  return tl, tt, nx, ny, sl, st, sx, sy
 end
 
 ------------------------------------------
@@ -209,12 +227,12 @@ local function toCellBox(world, l,t,w,h)
   return cl, ct, cr-cl+1, cb-ct+1
 end
 
-local function collideBoxes(item, b1, b2, next_l, next_t)
+local function collideBoxes(item, b1, b2, target_l, target_t)
   local l1,t1,w1,h1  = b1.l, b1.t, b1.w, b1.h
   local l2,t2,w2,h2  = b2.l, b2.t, b2.w, b2.h
-  local l,t,w,h      = aabb_getDiff(next_l,next_t,w1,h1, l2,t2,w2,h2)
+  local l,t,w,h      = aabb_getDiff(target_l,target_t,w1,h1, l2,t2,w2,h2)
 
-  local vx, vy  = next_l - l1, next_t - t1
+  local vx, vy  = target_l - l1, target_t - t1
   if aabb_containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
     return {item = item, dx = -vx, dy = -vy, ti = 0, kind = 'intersection'}
   else
@@ -369,8 +387,8 @@ function World:move(item, l,t,w,h, options)
   assertIsBox(l,t,w,h)
 
   options        = options or {}
-  options.next_l = l
-  options.next_t = t
+  options.target_l = l
+  options.target_t = t
 
   if box.w ~= w or box.h ~= h then
     self:remove(item)
@@ -396,10 +414,10 @@ function World:getBox(item)
 end
 
 function World:check(item, options)
-  local next_l, next_t, filter, skip_collisions, opt_visited
+  local target_l, target_t, filter, skip_collisions, opt_visited
   if options then
-    next_l, next_t, filter, skip_collisions, opt_visited =
-      options.next_l, options.next_t, options.filter, options.skip_collisions, options.visited
+    target_l, target_t, filter, skip_collisions, opt_visited =
+      options.target_l, options.target_t, options.filter, options.skip_collisions, options.visited
   end
   local box = self.boxes[item]
   if not box then
@@ -414,13 +432,13 @@ function World:check(item, options)
       for _,v in pairs(opt_visited) do visited[v] = true end
     end
     local l,t,w,h = box.l, box.t, box.w, box.h
-    next_l, next_t = next_l or l, next_t or t
+    target_l, target_t = target_l or l, target_t or t
 
 
     -- TODO this could probably be done with less cells using a polygon raster over the cells instead of a
     -- bounding box of the whole movement. Conditional to building a queryPolygon method
-    local tl, tt = min(next_l, l),       min(next_t, t)
-    local tr, tb = max(next_l + w, l+w), max(next_t + h, t+h)
+    local tl, tt = min(target_l, l),       min(target_t, t)
+    local tr, tb = max(target_l + w, l+w), max(target_t + h, t+h)
     local tw, th = tr-tl, tb-tt
 
     local cl,ct,cw,ch = toCellBox(self, tl,tt,tw,th)
@@ -432,7 +450,7 @@ function World:check(item, options)
         visited[other] = true
         if not (filter and filter(other)) then
           local oBox = self.boxes[other]
-          local col  = collideBoxes(other, box, oBox, next_l, next_t, axis)
+          local col  = collideBoxes(other, box, oBox, target_l, target_t, axis)
           if col then
             len = len + 1
             collisions[len] = col
@@ -560,14 +578,16 @@ bump.newWorld = function(cellSize)
   )
 end
 
-bump.newCollision = function(item, other, itemBox, otherBox, next_l, next_t)
+bump.newCollision = function(item, other, itemBox, otherBox, target_l, target_t)
   return setmetatable({
     item      = item,
     other     = other,
     itemBox   = itemBox,
     otherBox  = otherBox,
-    vx        = next_l - itemBox.l,
-    vy        = next_t - itemBox.t
+    target_l  = target_l,
+    target_t  = target_t,
+    vx        = target_l - itemBox.l,
+    vy        = target_t - itemBox.t
   }, Collision_mt)
 end
 

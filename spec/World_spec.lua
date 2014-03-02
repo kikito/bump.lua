@@ -129,7 +129,7 @@ describe('World', function()
 
           world:add(a, 0,0, 2,2)
           world:add(b, 1,1, 2,2)
-          assert.same(world:check(b, {next_l = 1, next_t = 1}), {
+          assert.same(world:check(b, {target_l = 1, target_t = 1}), {
             { item = a, dx = 0, dy = 0, kind = 'intersection', ti = 0 }
           })
         end)
@@ -138,7 +138,7 @@ describe('World', function()
 
           world:add(a,  1,0, 2,1)
           world:add(b, -5,0, 4,1)
-          assert.same(world:check(b, {next_l = 5, next_t = 0}), {
+          assert.same(world:check(b, {target_l = 5, target_t = 0}), {
             { item = a, dx = -8, dy = 0, kind = 'tunnel', ti = 0.2 }
           })
         end)
@@ -148,7 +148,7 @@ describe('World', function()
           world:add(a, 32,50,20,20)
           world:add(b, 0,0,32,100)
 
-          assert.same(world:check(a, {next_l = 30, next_t = 50}), {
+          assert.same(world:check(a, {target_l = 30, target_t = 50}), {
             { item = b, dx = 2, dy = 0, kind = 'intersection', ti = 0 }
           })
         end)
@@ -160,7 +160,7 @@ describe('World', function()
           world:add(b, 70,0, 10,10)
           world:add(c, 50,0, 10,10)
           world:add(d, 90,0, 10,10)
-          assert.same(world:check(a, {next_l = 10, next_t = 0}), {
+          assert.same(world:check(a, {target_l = 10, target_t = 0}), {
             { item = d, dx = 90, dy = 0, kind = 'tunnel', ti = 0.1 },
             { item = b, dx = 70, dy = 0, kind = 'tunnel', ti = 0.3 },
             { item = c, dx = 50, dy = 0, kind = 'tunnel', ti = 0.5 }
@@ -181,13 +181,13 @@ describe('World', function()
 
         describe('the skip_collisions option', function()
           it('deactivates collisions when true', function()
-            assert.same(world:check(a, {next_l = 10, next_t = 0, skip_collisions = true}), {})
+            assert.same(world:check(a, {target_l = 10, target_t = 0, skip_collisions = true}), {})
           end)
         end)
 
         describe('the visited option', function()
           it('deactivates collisions with the items in the visited array', function()
-            assert.same(world:check(a, {next_l = 10, next_t = 0, visited = {b,c}}), {
+            assert.same(world:check(a, {target_l = 10, target_t = 0, visited = {b,c}}), {
               { item = d, dx = 90, dy = 0, kind = 'tunnel', ti = 0.1 }
             })
           end)
@@ -195,7 +195,7 @@ describe('World', function()
 
         describe('the filter option', function()
           it('deactivates collisions when filter returns true', function()
-            assert.same(world:check(a, {next_l = 10, next_t = 0, filter = function(obj)
+            assert.same(world:check(a, {target_l = 10, target_t = 0, filter = function(obj)
               return obj == d
             end}), {
               { item = b, dx = 70, dy = 0, kind = 'tunnel', ti = 0.3 },
