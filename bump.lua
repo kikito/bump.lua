@@ -234,25 +234,6 @@ local function toCellBox(world, l,t,w,h)
   return cl, ct, cr-cl+1, cb-ct+1
 end
 
-local function collideBoxes(item, b1, b2, target_l, target_t)
-  local l1,t1,w1,h1  = b1.l, b1.t, b1.w, b1.h
-  local l2,t2,w2,h2  = b2.l, b2.t, b2.w, b2.h
-  local l,t,w,h      = aabb_getDiff(target_l,target_t,w1,h1, l2,t2,w2,h2)
-
-  local vx, vy  = target_l - l1, target_t - t1
-  if aabb_containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
-    return {item = item, dx = -vx, dy = -vy, ti = 0, kind = 'intersection'}
-  else
-    l,t,w,h = aabb_getDiff(l1,t1,w1,h1, l2,t2,w2,h2)
-    local ti = aabb_getSegmentIntersectionIndices(l,t,w,h, 0,0,vx,vy)
-    -- b1 tunnels into b2 while it travels
-    if ti and ti < 1 then
-      local dx, dy = vx*ti-vx, vy*ti-vy
-      return {item = item, dx = dx, dy = dy, ti = ti, kind = 'tunnel'}
-    end
-  end
-end
-
 local function addItemToCell(self, item, cx, cy)
   self.rows[cy] = self.rows[cy] or setmetatable({}, {__mode = 'v'})
   local row = self.rows[cy]
@@ -457,7 +438,7 @@ function World:check(item, options)
         visited[other] = true
         if not (filter and filter(other)) then
           local oBox = self.boxes[other]
-          local col  = collideBoxes(other, box, oBox, target_l, target_t, axis)
+          local col  = bump.newCollision(item, other, box, oBox, target_l, target_t):resolve()
           if col then
             len = len + 1
             collisions[len] = col
