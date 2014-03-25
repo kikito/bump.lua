@@ -78,12 +78,14 @@ local function aabb_getNearestCorner(l,t,w,h, x, y)
 end
 
 -- This is a generalized implementation of the liang-barsky algorithm, which also returns
--- the normals of the sides where the segment intersects
+-- the normals of the sides where the segment intersects.
+-- Returns nil if the segment never touches the box
+-- Notice that normals are only guaranteed to be accurate when initially t0, t1 == -math.huge, math.huge
 local function aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
   t0, t1 = t0 or 0, t1 or 1
   local dx, dy = x2-x1, y2-y1
   local nx, ny
-  local nx0, ny0, nx1, ny1 = -1,0,-1,0
+  local nx0, ny0, nx1, ny1 = 0,0,0,0
   local p, q, r
 
   for side = 1,4 do
@@ -152,14 +154,12 @@ function Collision:resolve()
     self.ml, self.mt, self.mw, self.mh = l,t,w,h
     return self
   else
-    local ti,_,nx,ny = aabb_getSegmentIntersectionIndices(l,t,w,h, 0,0,vx,vy)
+    local t0,t1,nx,ny = aabb_getSegmentIntersectionIndices(l,t,w,h, 0,0,vx,vy, -math.huge, math.huge)
     -- b1 tunnels into b2 while it travels
-    if ti and ti < 1 then
+    if t0 and t0 < 1 and (0 < t0 or 0 == t0 and t1 > 0) then
       -- local dx, dy = vx*ti-vx, vy*ti-vy
       self.is_intersection = false
-      self.ti   = ti
-      self.nx   = nx
-      self.ny   = ny
+      self.ti, self.nx, self.ny          = t0, nx, ny
       self.ml, self.mt, self.mw, self.mh = l,t,w,h
       return self
     end
