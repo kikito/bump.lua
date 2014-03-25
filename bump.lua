@@ -78,8 +78,9 @@ local function aabb_getNearestCorner(l,t,w,h, x, y)
 end
 
 -- This is a generalized implementation of the liang-barsky algorithm, which also returns
--- the normals of the sides where the segment intersects
--- Notice that normals are only guaranteed if initially t0, t1 == -math.huge, math.huge
+-- the normals of the sides where the segment intersects.
+-- Returns nil if the segment never touches the box
+-- Notice that normals are only guaranteed to be accurate when initially t0, t1 == -math.huge, math.huge
 local function aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
   t0, t1 = t0 or 0, t1 or 1
   local dx, dy = x2-x1, y2-y1
@@ -100,13 +101,11 @@ local function aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
       r = q / p
       if p < 0 then
         if     r > t1 then return nil
-        elseif r > t0 then
-          t0,nx0,ny0 = r,nx,ny
+        elseif r > t0 then t0,nx0,ny0 = r,nx,ny
         end
       else -- p > 0
         if     r < t0 then return nil
-        elseif r < t1 then
-          t1,nx1,ny1 = r,nx,ny
+        elseif r < t1 then t1,nx1,ny1 = r,nx,ny
         end
       end
     end
