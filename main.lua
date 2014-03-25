@@ -41,10 +41,22 @@ local function updatePlayer(dt)
 
   if dx ~= 0 or dy ~= 0 then
     player.l, player.t = player.l + dx, player.t + dy
-    local collisions, len = world:move(player, player.l, player.t, player.w, player.h)
-    for i=1,len do
-      player.l = player.l + collisions[i].dx
-      player.t = player.t + collisions[i].dy
+
+    local cols = world:move(player, player.l, player.t)
+
+    -- slide the player on the first collision
+    if cols[1] then
+      local tl,tt,_,_,sl,st = cols[1]:getSlide()
+      player.l, player.t = tl, tt
+      world:move(player, player.l, player.t, player.w, player.h, {skip_collisions = true})
+      player.l, player.t = sl, st
+      cols = world:move(player, player.l, player.t)
+    end
+
+    -- touch on the rest of the collisions
+    for _,col in ipairs(cols) do
+      local tl, tt = cols[1]:getTouch()
+      player.l, player.t = tl, tt
     end
     world:move(player, player.l, player.t, player.w, player.h, {skip_collisions = true})
   end
