@@ -28,7 +28,27 @@ local bump = {
   ]]
 }
 
+------------------------------------------
+-- Auxiliary functions
+------------------------------------------
+
 local abs, floor, ceil, min, max = math.abs, math.floor, math.ceil, math.min, math.max
+
+local function clamp(x, lower, upper)
+  return max(lower, min(upper, x))
+end
+
+local function sign(x)
+  if x > 0 then return 1 end
+  if x == 0 then return 0 end
+  return -1
+end
+
+local function nearest(x, a, b)
+  if abs(a - x) < abs(b - x) then return a else return b end
+end
+
+local function sortByTi(a,b) return a.ti < b.ti end
 
 local function assertType(desiredType, value, name)
   if type(value) ~= desiredType then
@@ -49,92 +69,169 @@ local function assertIsBox(l,t,w,h)
   assertIsPositiveNumber(h, 'h')
 end
 
-local function getLiangBarskyIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
+------------------------------------------
+-- Axis-aligned bounding box functions
+------------------------------------------
+
+local function aabb_getNearestCorner(l,t,w,h, x, y)
+  return nearest(x, l, l+w), nearest(y, t, t+h)
+end
+
+-- This is a generalized implementation of the liang-barsky algorithm, which also returns
+-- the normals of the sides where the segment intersects.
+-- Returns nil if the segment never touches the box
+-- Notice that normals are only guaranteed to be accurate when initially t0, t1 == -math.huge, math.huge
+local function aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
   t0, t1 = t0 or 0, t1 or 1
   local dx, dy = x2-x1, y2-y1
+  local nx, ny
+  local nx0, ny0, nx1, ny1 = 0,0,0,0
   local p, q, r
 
   for side = 1,4 do
-    if     side == 1 then p,q = -dx, x1 - l
-    elseif side == 2 then p,q =  dx, l + w - x1
-    elseif side == 3 then p,q = -dy, y1 - t
-    else                  p,q =  dy, t + h - y1
+    if     side == 1 then nx,ny,p,q = -1,  0, -dx, x1 - l     -- left
+    elseif side == 2 then nx,ny,p,q =  1,  0,  dx, l + w - x1 -- right
+    elseif side == 3 then nx,ny,p,q =  0, -1, -dy, y1 - t     -- top
+    else                  nx,ny,p,q =  0,  1,  dy, t + h - y1 -- bottom
     end
 
     if p == 0 then
-      if q < 0 then return nil end
+      if q <= 0 then return nil end
     else
       r = q / p
       if p < 0 then
         if     r > t1 then return nil
-        elseif r > t0 then t0 = r
+        elseif r > t0 then t0,nx0,ny0 = r,nx,ny
         end
       else -- p > 0
         if     r < t0 then return nil
-        elseif r < t1 then t1 = r
+        elseif r < t1 then t1,nx1,ny1 = r,nx,ny
         end
       end
     end
   end
-  return t0, t1
+
+  return t0,t1, nx0,ny0, nx1,ny1
 end
 
-local function getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
+-- Calculates the minkowsky difference between 2 aabbs, which is another aabb
+local function aabb_getDiff(l1,t1,w1,h1, l2,t2,w2,h2)
   return l2 - l1 - w1,
          t2 - t1 - h1,
          w1 + w2,
          h1 + h2
 end
 
-local function containsPoint(l,t,w,h, x,y)
+local function aabb_containsPoint(l,t,w,h, x,y)
   return x > l and y > t and x < l + w and y < t + h
 end
 
-local function minAbs(a,b)
-  if abs(a) < abs(b) then return a else return b end
-end
-
-local function areColliding(l1,t1,w1,h1, l2,t2,w2,h2)
+local function aabb_isIntersecting(l1,t1,w1,h1, l2,t2,w2,h2)
   return l1 < l2+w2 and l2 < l1+w1 and
          t1 < t2+h2 and t2 < t1+h1
 end
 
-function toCellBox(world, l,t,w,h)
+------------------------------------------
+-- Collision
+------------------------------------------
+
+local Collision = {}
+local Collision_mt = {__index = Collision}
+
+function Collision:resolve()
+  local b1, b2          = self.itemBox, self.otherBox
+  local vx, vy          = self.vx, self.vy
+  local l1,t1,w1,h1     = b1.l, b1.t, b1.w, b1.h
+  local l2,t2,w2,h2     = b2.l, b2.t, b2.w, b2.h
+  local l,t,w,h         = aabb_getDiff(l1,t1,w1,h1, l2,t2,w2,h2)
+
+  if aabb_containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
+    self.is_intersection = true
+    local px, py = aabb_getNearestCorner(l,t,w,h, 0, 0)
+    local wi, hi = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
+    self.ti      = -wi * hi -- ti is the negative area of intersection
+    self.nx, self.ny = 0,0
+    self.ml, self.mt, self.mw, self.mh = l,t,w,h
+    return self
+  else
+    local t0,t1,nx,ny = aabb_getSegmentIntersectionIndices(l,t,w,h, 0,0,vx,vy, -math.huge, math.huge)
+    -- b1 tunnels into b2 while it travels
+    if t0 and t0 < 1 and (0 < t0 or 0 == t0 and t1 > 0) then
+      -- local dx, dy = vx*ti-vx, vy*ti-vy
+      self.is_intersection = false
+      self.ti, self.nx, self.ny          = t0, nx, ny
+      self.ml, self.mt, self.mw, self.mh = l,t,w,h
+      return self
+    end
+  end
+end
+
+function Collision:getTouch()
+  local vx,vy = self.vx, self.vy
+  local itemBox = self.itemBox
+  assert(self.is_intersection ~= nil, 'unknown collision kind. Have you called :resolve()?')
+
+  local tl, tt, nx, ny
+
+  if self.is_intersection then
+
+    if vx == 0 and vy == 0 then
+      -- intersecting and not moving - use minimum displacement vector
+      local px,py = aabb_getNearestCorner(self.ml, self.mt, self.mw, self.mh, 0,0)
+      if abs(px) < abs(py) then py = 0 else px = 0 end
+      tl, tt, nx, ny = itemBox.l + px, itemBox.t + py, sign(px), sign(py)
+    else
+      -- intersecting and moving - move in the opposite direction
+      local ti,_,nx2,ny2 = aabb_getSegmentIntersectionIndices(self.ml,self.mt,self.mw,self.mh, 0,0,vx,vy, -math.huge, 1)
+      tl, tt, nx, ny = itemBox.l + vx * ti, itemBox.t + vy * ti, nx2, ny2
+    end
+
+  else -- tunnel
+    tl, tt, nx, ny = itemBox.l + vx * self.ti, itemBox.t + vy * self.ti, self.nx, self.ny
+  end
+
+  return tl, tt, nx, ny
+end
+
+function Collision:getSlide()
+  local tl, tt, nx, ny  = self:getTouch()
+  local sl, st, sx, sy  = tl, tt, 0, 0
+
+  if self.vx ~= 0 or self.vy ~= 0 then
+    if nx == 0 then
+      sl = self.target_l
+      sx = sl - tl
+    else
+      st = self.target_t
+      sy = st - tt
+    end
+  end
+
+  return tl, tt, nx, ny, sl, st, sx, sy
+end
+
+function Collision:getBounce()
+  local tl, tt, nx, ny  = self:getTouch()
+  local bl, bt, bx,by = tl, tt, 0,0
+
+  if self.vx ~= 0 or self.vy ~= 0 then
+    bx, by = self.target_l - tl, self.target_t - tt
+    if nx == 0 then by = -by else bx = -bx end
+    bl, bt = tl + bx, tt + by
+  end
+
+  return tl, tt, nx, ny, bl, bt, bx, by
+end
+
+------------------------------------------
+-- World
+------------------------------------------
+
+local function toCellBox(world, l,t,w,h)
   local cellSize = world.cellSize
   local cl,ct    = world:toCell(l, t)
   local cr,cb    = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
   return cl, ct, cr-cl+1, cb-ct+1
-end
-
-local function sortByTi(a,b) return a.ti < b.ti end
-
-local function collideBoxes(item, b1, b2, next_l, next_t, axis)
-  local l1,t1,w1,h1  = b1.l, b1.t, b1.w, b1.h
-  local l2,t2,w2,h2  = b2.l, b2.t, b2.w, b2.h
-  local l,t,w,h      = getMinkowskyDiff(next_l,next_t,w1,h1, l2,t2,w2,h2)
-
-  if containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
-    local dx,dy = 0,0
-    if     axis == 'x' then dx = minAbs(l,l+w)
-    elseif axis == 'y' then dy = minAbs(t,t+h)
-    else
-      dx, dy = minAbs(l,l+w), minAbs(t,t+h)
-      if abs(dx) < abs(dy) then dy=0 else dx=0 end
-    end
-    return {item = item, dx = dx, dy = dy, ti = 0, kind = 'intersection'}
-  else
-    local vx, vy  = next_l - l1, next_t - t1
-    l,t,w,h = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
-    local ti,_ = getLiangBarskyIndices(l,t,w,h, 0,0,vx,vy)
-    -- b1 tunnels into b2 while it travels
-    if ti and ti > 0 then
-      local dx, dy = vx*ti-vx, vy*ti-vy
-      if     axis == 'x' then dy = 0
-      elseif axis == 'y' then dx = 0
-      end
-      return {item = item, dx = dx, dy = dy, ti = ti, kind = 'tunnel'}
-    end
-  end
 end
 
 local function addItemToCell(self, item, cx, cy)
@@ -245,7 +342,6 @@ local function getCellsTouchedBySegment(self, x1,y1,x2,y2)
   return cells, cellsLen
 end
 
-------------------------------------------------------------
 
 local World = {}
 local World_mt = {__index = World}
@@ -279,8 +375,8 @@ function World:move(item, l,t,w,h, options)
   assertIsBox(l,t,w,h)
 
   options        = options or {}
-  options.next_l = l
-  options.next_t = t
+  options.target_l = l
+  options.target_t = t
 
   if box.w ~= w or box.h ~= h then
     self:remove(item)
@@ -306,10 +402,10 @@ function World:getBox(item)
 end
 
 function World:check(item, options)
-  local next_l, next_t, filter, skip_collisions, opt_visited, axis
+  local target_l, target_t, filter, skip_collisions, opt_visited
   if options then
-    next_l, next_t, filter, skip_collisions, opt_visited, axis =
-      options.next_l, options.next_t, options.filter, options.skip_collisions, options.visited, options.axis
+    target_l, target_t, filter, skip_collisions, opt_visited =
+      options.target_l, options.target_t, options.filter, options.skip_collisions, options.visited
   end
   local box = self.boxes[item]
   if not box then
@@ -324,13 +420,13 @@ function World:check(item, options)
       for _,v in pairs(opt_visited) do visited[v] = true end
     end
     local l,t,w,h = box.l, box.t, box.w, box.h
-    next_l, next_t = next_l or l, next_t or t
+    target_l, target_t = target_l or l, target_t or t
 
 
     -- TODO this could probably be done with less cells using a polygon raster over the cells instead of a
     -- bounding box of the whole movement. Conditional to building a queryPolygon method
-    local tl, tt = min(next_l, l),       min(next_t, t)
-    local tr, tb = max(next_l + w, l+w), max(next_t + h, t+h)
+    local tl, tt = min(target_l, l),       min(target_t, t)
+    local tr, tb = max(target_l + w, l+w), max(target_t + h, t+h)
     local tw, th = tr-tl, tb-tt
 
     local cl,ct,cw,ch = toCellBox(self, tl,tt,tw,th)
@@ -342,7 +438,7 @@ function World:check(item, options)
         visited[other] = true
         if not (filter and filter(other)) then
           local oBox = self.boxes[other]
-          local col  = collideBoxes(other, box, oBox, next_l, next_t, axis)
+          local col  = bump.newCollision(item, other, box, oBox, target_l, target_t):resolve()
           if col then
             len = len + 1
             collisions[len] = col
@@ -401,7 +497,7 @@ function World:queryBox(l,t,w,h)
   local box
   for item,_ in pairs(dictItemsInCellBox) do
     box = self.boxes[item]
-    if areColliding(l,t,w,h, box.l, box.t, box.w, box.h) then
+    if aabb_isIntersecting(l,t,w,h, box.l, box.t, box.w, box.h) then
       len = len + 1
       items[len] = item
     end
@@ -419,7 +515,7 @@ function World:queryPoint(x,y)
   local box
   for item,_ in pairs(dictItemsInCellBox) do
     box = self.boxes[item]
-    if containsPoint(box.l, box.t, box.w, box.h, x, y) then
+    if aabb_containsPoint(box.l, box.t, box.w, box.h, x, y) then
       len = len + 1
       items[len] = item
     end
@@ -440,10 +536,10 @@ function World:querySegment(x1,y1,x2,y2)
         box = self.boxes[item]
         l,t,w,h = box.l,box.t,box.w,box.h
 
-        t0,t1 = getLiangBarskyIndices(l,t,w,h, x1,y1, x2,y2, 0, 1)
+        t0,t1 = aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, 0, 1)
         if t0 and ((0 < t0 and t0 < 1) or (0 < t1 and t1 < 1)) then
           -- the sorting is according to the t of an infinite line, not the segment
-          t0,t1 = getLiangBarskyIndices(l,t,w,h, x1,y1, x2,y2, -math.huge, math.huge)
+          t0,t1 = aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, -math.huge, math.huge)
           itemsLen = itemsLen + 1
           items[itemsLen] = {item=item, ti=min(t0,t1)}
         end
@@ -468,6 +564,19 @@ bump.newWorld = function(cellSize)
     },
     World_mt
   )
+end
+
+bump.newCollision = function(item, other, itemBox, otherBox, target_l, target_t)
+  return setmetatable({
+    item      = item,
+    other     = other,
+    itemBox   = itemBox,
+    otherBox  = otherBox,
+    target_l  = target_l,
+    target_t  = target_t,
+    vx        = target_l - itemBox.l,
+    vy        = target_t - itemBox.t
+  }, Collision_mt)
 end
 
 return bump

@@ -1,6 +1,5 @@
 local class  = require 'lib.middleclass'
-local Block  = require 'entities.Block'
-local Coin   = require 'entities.Coin'
+local Block  = require 'block'
 
 local random = math.random
 
@@ -35,12 +34,6 @@ function Map:initialize(world)
              random(32, 100),
              random(32, 100))
   end
-
-  -- random coins
-  for i=1,20 do
-    Coin:new(world, random(100, width-200), random(100, height-200))
-  end
-
 end
 
 return Map

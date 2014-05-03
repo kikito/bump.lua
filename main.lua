@@ -3,10 +3,8 @@ local bump       = require 'lib.bump'
 local bump_debug = require 'lib.bump_debug'
 local gamera     = require 'lib.gamera'
 
-local Map        = require 'Map'
-local Entity     = require 'entities.Entity'
-local Player     = require 'entities.Player'
-local Coin       = require 'entities.Coin'
+local Map        = require 'map'
+local Player     = require 'player'
 
 local drawDebug   = false  -- draw bump's debug info, fps and memory
 local player               -- a reference to the player (so the camera can follow him)
@@ -24,7 +22,6 @@ local instructions = [[
 local camera, world, map
 
 local function reset()
-  Entity:destroyAll()
   world  = bump.newWorld()
   map    = Map:new(world)
   player = Player:new(world, 60, 60)
@@ -38,22 +35,21 @@ end
 -- Updating
 -- Note that we only update elements that are visible to the camera. This is optional
 function love.update(dt)
-  player:update(dt)
-  camera:setPosition(player:getCenter())
-  local visibleEntities, len = world:queryBox(camera:getVisible())
+  local visibleThings, len = world:queryBox(camera:getVisible())
   for i=1, len do
-    local entity = visibleEntities[i]
-    if entity:isInstanceOf(Coin) then entity:update(dt) end
+    visibleThings[i]:update(dt)
   end
+  camera:setPosition(player:getCenter())
+  --print(require('inspect')(player, {depth = 1}))
 end
 
 -- Drawing
 function love.draw()
   camera:draw(function(l,t,w,h)
     if drawDebug then bump_debug.draw(world) end
-    local visibleEntities, len = world:queryBox(l,t,w,h)
+    local visibleThings, len = world:queryBox(l,t,w,h)
     for i=1, len do
-      visibleEntities[i]:draw()
+      visibleThings[i]:draw()
     end
   end)
 
@@ -61,7 +57,6 @@ function love.draw()
 
   local msg = instructions:format(tostring(drawDebug), tostring(player.canFly))
   love.graphics.print(msg, 550, 10)
-  love.graphics.print(("coins: %d"):format(player.coins), 10, 10)
 
   if drawDebug then
     local statistics = ("fps: %d, mem: %dKB"):format(love.timer.getFPS(), collectgarbage("count"))
