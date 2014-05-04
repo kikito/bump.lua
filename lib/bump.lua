@@ -302,7 +302,7 @@ local function getCellsTouchedBySegment(self, x1,y1,x2,y2)
   local coords, len = {{cx=cx,cy=cy}}, 1
 
   -- maxLen is a safety guard. In some cases this algorithm loops inf on the last step without it
-  while len <= maxLen and (cx~=cx2 or y~=cy2) do
+  while len <= maxLen and (cx~=cx2 or cy~=cy2) do
     if tx < ty then
       tx, cx, len = tx + dx, cx + stepX, len + 1
       coords[len] = {cx=cx,cy=cy}
