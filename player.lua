@@ -61,10 +61,7 @@ function Player:checkGroundByCollisionNormal(ny)
 end
 
 function Player:collideSliding(col)
-  print('slide')
   local tl,tt,nx,ny,sl,st = col:getSlide()
-  print(tl,tt,nx,ny,sl,st)
-
 
   -- Make the player contact the rock
   self:changeVelocityByCollisionNormal(nx, ny)
@@ -76,10 +73,8 @@ function Player:collideSliding(col)
   self.l, self.t = sl, st
 end
 
-function Player:collideTouching(col)
-  print('touch')
+function Player:collideTouching(col, i)
   local tl, tt, nx, ny = col:getTouch()
-  print(tl,tt,nx,ny)
 
   self:changeVelocityByCollisionNormal(nx, ny)
   self:checkGroundByCollisionNormal(ny)
@@ -91,12 +86,12 @@ function Player:collide(dt)
   local world = self.world
 
   local cols, len = world:move(self, self.l, self.t)
-  if cols[1] then
+  if len > 0 then
     self:collideSliding(cols[1])
 
-    cols = world:move(self, self.l, self.t)
-    for _,col in ipairs(cols) do
-      self:collideTouching(col)
+    cols, len = world:move(self, self.l, self.t)
+    for i=1,len do
+      self:collideTouching(cols[i], i)
     end
     world:move(self, self.l, self.t, self.w, self.h, {skip_collisions = true})
   end
