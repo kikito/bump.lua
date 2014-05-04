@@ -122,8 +122,10 @@ local function aabb_getDiff(l1,t1,w1,h1, l2,t2,w2,h2)
          h1 + h2
 end
 
+local delta = 0.00001 -- floating-point-safe comparisons here, otherwise bugs
 local function aabb_containsPoint(l,t,w,h, x,y)
-  return x > l and y > t and x < l + w and y < t + h
+  return x - l > delta     and y - t > delta and
+         l + w - x > delta and t + h - y > delta
 end
 
 local function aabb_isIntersecting(l1,t1,w1,h1, l2,t2,w2,h2)
