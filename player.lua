@@ -5,6 +5,7 @@ local util   = require 'util'
 local Player = class('Player')
 
 local runAccel             = 500 -- the player acceleration while going left/right
+local brakeAccel           = 2000
 local jumpVelocity         = 400 -- the initial upwards velocity when jumping
 local width                = 32
 local height               = 64
@@ -23,11 +24,16 @@ function Player:changeVelocityByKeys(dt)
   local vx, vy = self.vx, self.vy
 
   if love.keyboard.isDown("left") then
-    vx = vx - dt * (vx > 0 and breakAccel or runAccel)
+    vx = vx - dt * (vx > 0 and brakeAccel or runAccel)
   elseif love.keyboard.isDown("right") then
-    vx = vx + dt * (vx < 0 and breakAccel or runAccel)
+    vx = vx + dt * (vx < 0 and brakeAccel or runAccel)
   else
-    vx = 0
+    local brake = dt * (vx < 0 and brakeAccel or -brakeAccel)
+    if math.abs(brake) > math.abs(vx) then
+      vx = 0
+    else
+      vx = vx + brake
+    end
   end
 
   if love.keyboard.isDown("up") and (self.canFly or self.onGround) then -- jump/fly
