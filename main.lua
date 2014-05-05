@@ -5,6 +5,7 @@ local gamera     = require 'lib.gamera'
 
 local Map        = require 'map'
 local Player     = require 'player'
+local Turret     = require 'turret'
 
 local drawDebug   = false  -- draw bump's debug info, fps and memory
 local player               -- a reference to the player (so the camera can follow him)
@@ -23,8 +24,8 @@ local camera, world, map
 
 local function reset()
   world  = bump.newWorld()
-  map    = Map:new(world)
   player = Player:new(world, 60, 60)
+  map    = Map:new(world, player)
   camera = gamera.new(0,0,map.width,map.height)
 end
 
@@ -35,12 +36,23 @@ end
 -- Updating
 -- Note that we only update elements that are visible to the camera. This is optional
 function love.update(dt)
+
+  player:update(dt)
+
   local visibleThings, len = world:queryBox(camera:getVisible())
+  local turrets, turretsLen = {},0
   for i=1, len do
-    visibleThings[i]:update(dt)
+    if visibleThings[i]:isInstanceOf(Turret) then
+      turretsLen = turretsLen + 1
+      turrets[turretsLen] = visibleThings[i]
+    end
   end
+
+  for i=1, turretsLen do
+    turrets[i]:update(dt)
+  end
+
   camera:setPosition(player:getCenter())
-  --print(require('inspect')(player, {depth = 1}))
 end
 
 -- Drawing

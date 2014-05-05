@@ -9,9 +9,6 @@ function Block:initialize(world, l,t,w,h)
   world:add(self, l,t,w,h)
 end
 
-function Block:update(dt)
-end
-
 function Block:draw()
   local r,g,b = 220, 150, 150
   util.drawFilledRectangle(self.l, self.t, self.w, self.h, r,g,b)

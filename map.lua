@@ -1,5 +1,6 @@
 local class  = require 'lib.middleclass'
 local Block  = require 'block'
+local Turret = require 'turret'
 
 local random = math.random
 
@@ -8,8 +9,9 @@ local Map = class('Map')
 Map.static.WIDTH  = 4000
 Map.static.HEIGHT = 2000
 
-function Map:initialize(world)
+function Map:initialize(world, player)
   self.world  = world
+  self.player = player
   self.width  = Map.WIDTH
   self.height = Map.HEIGHT
 
@@ -28,11 +30,18 @@ function Map:initialize(world)
 
   -- random blocks
   for i=1,100 do
-    Block:new(world,
-             random(100, width-200),
-             random(100, height-150),
-             random(32, 100),
-             random(32, 100))
+    Block:new( world,
+               random(100, width-200),
+               random(100, height-150),
+               random(32, 100),
+               random(32, 100) )
+  end
+
+  for i=1,5 do
+    Turret:new( world,
+                player,
+                random(100, width-200),
+                random(100, height-150) )
   end
 end
 
