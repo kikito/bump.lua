@@ -566,9 +566,9 @@ function World:querySegmentWithCoords(x1, y1, x2, y2)
 
     info.weight  = nil
     info.x1      = x1 + dx * t0
-    info.y1      = y1 + dx * t0
+    info.y1      = y1 + dy * t0
     info.x2      = x1 + dx * t1
-    info.y2      = y1 + dx * t1
+    info.y2      = y1 + dy * t1
   end
   return itemInfo, len
 end
