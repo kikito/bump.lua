@@ -48,6 +48,12 @@ local function nearest(x, a, b)
   if abs(a - x) < abs(b - x) then return a else return b end
 end
 
+local function toDict(arr)
+  local dict = {}
+  for _,v in pairs(arr) do dict[v] = true end
+  return dict
+end
+
 local function sortByTi(a,b)    return a.ti < b.ti end
 local function sortByWeight(a,b) return a.weight < b.weight end
 
@@ -374,7 +380,7 @@ end
 local World = {}
 local World_mt = {__index = World}
 
-function World:add(item, l,t,w,h, options)
+function World:add(item, l,t,w,h)
   local box = self.boxes[item]
   if box then
     error('Item ' .. tostring(item) .. ' added to the world twice.')
@@ -405,7 +411,7 @@ function World:remove(item)
   end
 end
 
-function World:move(item, l,t,w,h, options)
+function World:move(item, l,t,w,h, ignore, filter)
   local box = self.boxes[item]
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being moved. Use world:add(item, l,t,w,h) to add it first.')
@@ -414,20 +420,14 @@ function World:move(item, l,t,w,h, options)
 
   assertIsBox(l,t,w,h)
 
-  options        = options or {}
-  options.target_l = l
-  options.target_t = t
-
   if box.w ~= w or box.h ~= h then
-    self:remove(item)
-    self:add(item, box.l, box.t, w,h)
+    self:teleport(item, box.l, box.t, w,h)
   end
 
-  local collisions, len = self:check(item, options)
+  local collisions, len = self:check(item, l, t, ignore, filter)
 
   if box.l ~= l or box.t ~= t then
-    self:remove(item)
-    self:add(item, l,t,w,h)
+    self:teleport(item, l, t, w,h)
   end
 
   return collisions, len
@@ -438,12 +438,7 @@ function World:teleport(item, l,t,w,h)
   self:add(item, l,t,w,h)
 end
 
-function World:check(item, options)
-  local target_l, target_t, filter, opt_visited
-  if options then
-    target_l, target_t, filter, opt_visited =
-      options.target_l, options.target_t, options.filter, options.visited
-  end
+function World:check(item, target_l, target_t, ignore, filter)
   local box = self.boxes[item]
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being checked for collisions. Use world:add(item, l,t,w,h) to add it first.')
@@ -451,10 +446,9 @@ function World:check(item, options)
 
   local collisions, len = {}, 0
 
-  local visited = {[item] = true}
-  if opt_visited then
-    for _,v in pairs(opt_visited) do visited[v] = true end
-  end
+  ignore       = toDict(ignore or {})
+  ignore[item] = true
+
   local l,t,w,h = box.l, box.t, box.w, box.h
   target_l, target_t = target_l or l, target_t or t
 
@@ -469,8 +463,8 @@ function World:check(item, options)
   local dictItemsInCellBox = getDictItemsInCellBox(self, cl,ct,cw,ch)
 
   for other,_ in pairs(dictItemsInCellBox) do
-    if not visited[other] then
-      visited[other] = true
+    if not ignore[other] then
+      ignore[other] = true
       if not (filter and filter(other)) then
         local oBox = self.boxes[other]
         local col  = bump.newCollision(item, other, box, oBox, target_l, target_t):resolve()
