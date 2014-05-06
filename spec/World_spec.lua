@@ -24,10 +24,6 @@ describe('World', function()
     end)
 
     describe('when the world is empty', function()
-      it('returns an empty list of collisions', function()
-        local world = bump.newWorld()
-        assert.same(world:add({}, 0,0,10,10), {})
-      end)
       it('creates as many cells as needed to hold the item', function()
         local world = bump.newWorld()
 
@@ -47,17 +43,6 @@ describe('World', function()
         assert.equal(world:countCells(), 7)
       end)
     end)
-
-    describe('when the world is not empty', function()
-      it('returns an empty list of collisions', function()
-        local world, a, b = bump.newWorld(), {}, {}
-
-        world:add(a, 0,0,10,10)
-        local cols = world:add(b, 4,6,10,10)
-
-        assert.same(#cols, 1)
-      end)
-    end)
   end)
 
   describe(':move', function()
@@ -71,8 +56,9 @@ describe('World', function()
 
     describe('when the world is empty', function()
       it('returns an empty list of collisions', function()
-        local world = bump.newWorld()
-        assert.same(world:add({}, 0,0,10,10), {})
+        local world, a = bump.newWorld(), {}
+        world:add(a, 0,0,10,10)
+        assert.same(world:move(a, 40,40), {})
       end)
     end)
 
@@ -81,7 +67,8 @@ describe('World', function()
         local world, a, b = bump.newWorld(), {'a'}, {'b'}
 
         world:add(a, 0,0,10,10)
-        assert.same(#world:add(b, 4,6,10,10), 1)
+        world:add(b, 20,0,10,10)
+        assert.same(#world:move(a, 30,0), 1)
       end)
     end)
 
@@ -168,12 +155,6 @@ describe('World', function()
           world:add(b, 70,0, 10,10)
           world:add(c, 50,0, 10,10)
           world:add(d, 90,0, 10,10)
-        end)
-
-        describe('the skip_collisions option', function()
-          it('deactivates collisions when true', function()
-            assert.same(world:check(a, {target_l = 10, target_t = 0, skip_collisions = true}), {})
-          end)
         end)
 
         describe('the visited option', function()

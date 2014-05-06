@@ -371,7 +371,6 @@ local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2)
   return itemInfo, itemInfoLen
 end
 
-
 local World = {}
 local World_mt = {__index = World}
 
@@ -390,8 +389,20 @@ function World:add(item, l,t,w,h, options)
       addItemToCell(self, item, cx, cy)
     end
   end
+end
 
-  return self:check(item, options)
+function World:remove(item)
+  local box = self.boxes[item]
+  if not box then
+    error('Item ' .. tostring(item) .. ' must be added to the world before being removed. Use world:add(item, l,t,w,h) to add it first.')
+  end
+  self.boxes[item] = nil
+  local cl,ct,cw,ch = toCellBox(self, box.l,box.t,box.w,box.h)
+  for cy = ct, ct+ch-1 do
+    for cx = cl, cl+cw-1 do
+      removeItemFromCell(self, item, cx, cy)
+    end
+  end
 end
 
 function World:move(item, l,t,w,h, options)
@@ -409,15 +420,69 @@ function World:move(item, l,t,w,h, options)
 
   if box.w ~= w or box.h ~= h then
     self:remove(item)
-    self:add(item, box.l, box.t, w,h, {skip_collisions = true})
+    self:add(item, box.l, box.t, w,h)
   end
 
   local collisions, len = self:check(item, options)
 
   if box.l ~= l or box.t ~= t then
     self:remove(item)
-    self:add(item, l,t,w,h, {skip_collisions = true})
+    self:add(item, l,t,w,h)
   end
+
+  return collisions, len
+end
+
+function World:teleport(item, l,t,w,h)
+  self:remove(item)
+  self:add(item, l,t,w,h)
+end
+
+function World:check(item, options)
+  local target_l, target_t, filter, opt_visited
+  if options then
+    target_l, target_t, filter, opt_visited =
+      options.target_l, options.target_t, options.filter, options.visited
+  end
+  local box = self.boxes[item]
+  if not box then
+    error('Item ' .. tostring(item) .. ' must be added to the world before being checked for collisions. Use world:add(item, l,t,w,h) to add it first.')
+  end
+
+  local collisions, len = {}, 0
+
+  local visited = {[item] = true}
+  if opt_visited then
+    for _,v in pairs(opt_visited) do visited[v] = true end
+  end
+  local l,t,w,h = box.l, box.t, box.w, box.h
+  target_l, target_t = target_l or l, target_t or t
+
+  -- TODO this could probably be done with less cells using a polygon raster over the cells instead of a
+  -- bounding box of the whole movement. Conditional to building a queryPolygon method
+  local tl, tt = min(target_l, l),       min(target_t, t)
+  local tr, tb = max(target_l + w, l+w), max(target_t + h, t+h)
+  local tw, th = tr-tl, tb-tt
+
+  local cl,ct,cw,ch = toCellBox(self, tl,tt,tw,th)
+
+  local dictItemsInCellBox = getDictItemsInCellBox(self, cl,ct,cw,ch)
+
+  for other,_ in pairs(dictItemsInCellBox) do
+    if not visited[other] then
+      visited[other] = true
+      if not (filter and filter(other)) then
+        local oBox = self.boxes[other]
+        local col  = bump.newCollision(item, other, box, oBox, target_l, target_t):resolve()
+        if col then
+          len = len + 1
+          collisions[len] = col
+        end
+      end
+    end
+  end
+
+  table.sort(collisions, sortByTi)
 
   return collisions, len
 end
@@ -428,72 +493,6 @@ function World:getBox(item)
     error('Item ' .. tostring(item) .. ' must be added to the world before getting its box. Use world:add(item, l,t,w,h) to add it first.')
   end
   return box.l, box.t, box.w, box.h
-end
-
-function World:check(item, options)
-  local target_l, target_t, filter, skip_collisions, opt_visited
-  if options then
-    target_l, target_t, filter, skip_collisions, opt_visited =
-      options.target_l, options.target_t, options.filter, options.skip_collisions, options.visited
-  end
-  local box = self.boxes[item]
-  if not box then
-    error('Item ' .. tostring(item) .. ' must be added to the world before being checked for collisions. Use world:add(item, l,t,w,h) to add it first.')
-  end
-
-  local collisions, len = {}, 0
-
-  if not skip_collisions then
-    local visited = {[item] = true}
-    if opt_visited then
-      for _,v in pairs(opt_visited) do visited[v] = true end
-    end
-    local l,t,w,h = box.l, box.t, box.w, box.h
-    target_l, target_t = target_l or l, target_t or t
-
-
-    -- TODO this could probably be done with less cells using a polygon raster over the cells instead of a
-    -- bounding box of the whole movement. Conditional to building a queryPolygon method
-    local tl, tt = min(target_l, l),       min(target_t, t)
-    local tr, tb = max(target_l + w, l+w), max(target_t + h, t+h)
-    local tw, th = tr-tl, tb-tt
-
-    local cl,ct,cw,ch = toCellBox(self, tl,tt,tw,th)
-
-    local dictItemsInCellBox = getDictItemsInCellBox(self, cl,ct,cw,ch)
-
-    for other,_ in pairs(dictItemsInCellBox) do
-      if not visited[other] then
-        visited[other] = true
-        if not (filter and filter(other)) then
-          local oBox = self.boxes[other]
-          local col  = bump.newCollision(item, other, box, oBox, target_l, target_t):resolve()
-          if col then
-            len = len + 1
-            collisions[len] = col
-          end
-        end
-      end
-    end
-
-    table.sort(collisions, sortByTi)
-  end
-
-  return collisions, len
-end
-
-function World:remove(item)
-  local box = self.boxes[item]
-  if not box then
-    error('Item ' .. tostring(item) .. ' must be added to the world before being removed. Use world:add(item, l,t,w,h) to add it first.')
-  end
-  self.boxes[item] = nil
-  local cl,ct,cw,ch = toCellBox(self, box.l,box.t,box.w,box.h)
-  for cy = ct, ct+ch-1 do
-    for cx = cl, cl+cw-1 do
-      removeItemFromCell(self, item, cx, cy)
-    end
-  end
 end
 
 function World:countCells()
