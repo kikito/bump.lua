@@ -362,7 +362,7 @@ local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2)
           -- the sorting is according to the t of an infinite line, not the segment
           ti0,ti1      = aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, -math.huge, math.huge)
           itemInfoLen  = itemInfoLen + 1
-          itemInfo[itemInfoLen] = {item = item, t0 = t0, weight = min(ti0,ti1)}
+          itemInfo[itemInfoLen] = {item = item, t0 = t0, t1 = t1, weight = min(ti0,ti1)}
         end
       end
     end
@@ -563,18 +563,21 @@ function World:querySegment(x1, y1, x2, y2)
 end
 
 function World:querySegmentWithCoords(x1, y1, x2, y2)
-  local itemInfo, len   = getInfoAboutItemsTouchedBySegment(self, x1, y1, x2, y2)
-  local itemsWithCoords = {}
-  local dx, dy          = x2-x1, y2-y1
-  local info, t0, x, y
+  local itemInfo, len = getInfoAboutItemsTouchedBySegment(self, x1, y1, x2, y2)
+  local dx, dy        = x2-x1, y2-y1
+  local info, t0, t1
   for i=1, len do
     info  = itemInfo[i]
     t0    = info.t0
-    x     = x1 + dx * t0
-    y     = y1 + dy * t0
-    itemsWithCoords[i] = { item = itemInfo.item, x = x, y = y }
+    t1    = info.t1
+
+    info.weight  = nil
+    info.x1      = x1 + dx * t0
+    info.y1      = y1 + dx * t0
+    info.x2      = x1 + dx * t1
+    info.y2      = y1 + dx * t1
   end
-  return itemsWithCoords, len
+  return itemInfo, len
 end
 
 bump.newWorld = function(cellSize)
