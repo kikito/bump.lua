@@ -75,7 +75,7 @@ function Player:collideSliding(col)
   self.l, self.t = tl, tt
 
   -- And then make the player "slide" over the rock
-  self.world:move(self, self.l, self.t, self.w, self.h, {skip_collisions = true})
+  self.world:teleport(self, self.l, self.t, self.w, self.h)
   self.l, self.t = sl, st
 end
 
@@ -99,7 +99,7 @@ function Player:collide(dt)
     for i=1,len do
       self:collideTouching(cols[i], i)
     end
-    world:move(self, self.l, self.t, self.w, self.h, {skip_collisions = true})
+    world:teleport(self, self.l, self.t, self.w, self.h)
   end
 end
 

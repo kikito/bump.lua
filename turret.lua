@@ -11,7 +11,8 @@ function Turret:initialize(world, target, x, y)
   self.world, self.target, self.l, self.t = world, target, x, y
 
   -- remove any blocks it touches on creation
-  local cols, len = world:add(self, x,y, width, height)
+  world:add(self, x,y, width, height)
+  local cols, len = world:check(self)
   for i=1,len do
     world:remove(cols[i].other)
   end
@@ -53,8 +54,8 @@ function Turret:update()
     -- ignore itemsInfo[1] because that's always self
     local info = itemInfo[2]
     if info then
-      self.laserX = info.x
-      self.laserY = info.y
+      self.laserX = info.x1
+      self.laserY = info.y1
       self.canSeeTarget = info.item == self.target
     end
   else
