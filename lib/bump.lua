@@ -48,7 +48,8 @@ local function nearest(x, a, b)
   if abs(a - x) < abs(b - x) then return a else return b end
 end
 
-local function sortByTi(a,b) return a.ti < b.ti end
+local function sortByTi(a,b)    return a.ti < b.ti end
+local function sortByWeight(a,b) return a.weight < b.weight end
 
 local function assertType(desiredType, value, name)
   if type(value) ~= desiredType then
@@ -344,6 +345,32 @@ local function getCellsTouchedBySegment(self, x1,y1,x2,y2)
   return cells, cellsLen
 end
 
+local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2)
+  local cells, len = getCellsTouchedBySegment(self, x1,y1,x2,y2)
+  local cell, box, l,t,w,h, t0,t1, ti0,ti1
+  local visited, itemInfo, itemInfoLen = {},{},0
+  for i=1,len do
+    cell = cells[i]
+    for item in pairs(cell.items) do
+      if not visited[item] then
+        visited[item]  = true
+        box            = self.boxes[item]
+        l,t,w,h        = box.l,box.t,box.w,box.h
+
+        t0,t1 = aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, 0, 1)
+        if t0 and ((0 < t0 and t0 < 1) or (0 < t1 and t1 < 1)) then
+          -- the sorting is according to the t of an infinite line, not the segment
+          ti0,ti1      = aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, -math.huge, math.huge)
+          itemInfoLen  = itemInfoLen + 1
+          itemInfo[itemInfoLen] = {item = item, t0 = t0, weight = min(ti0,ti1)}
+        end
+      end
+    end
+  end
+  table.sort(itemInfo, sortByWeight)
+  return itemInfo, itemInfoLen
+end
+
 
 local World = {}
 local World_mt = {__index = World}
@@ -526,49 +553,28 @@ function World:queryPoint(x,y)
   return items, len
 end
 
-function World:querySegment(x1,y1,x2,y2, f)
-  local cells, len = getCellsTouchedBySegment(self, x1,y1,x2,y2)
-  local cell, box, l,t,w,h, t0, t1, ti0, ti1
-  local visited, items, itemsLen = {},{},0
-  for i=1,len do
-    cell = cells[i]
-    for item in pairs(cell.items) do
-      if not visited[item] then
-        visited[item] = true
-        box = self.boxes[item]
-        l,t,w,h = box.l,box.t,box.w,box.h
-
-        t0,t1 = aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, 0, 1)
-        if t0 and ((0 < t0 and t0 < 1) or (0 < t1 and t1 < 1)) then
-          -- the sorting is according to the t of an infinite line, not the segment
-          ti0,ti1 = aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, -math.huge, math.huge)
-          itemsLen = itemsLen + 1
-          items[itemsLen] = {item=item, ti=min(ti0,ti1), t0 = t0}
-        end
-      end
-    end
+function World:querySegment(x1, y1, x2, y2)
+  local itemInfo, len = getInfoAboutItemsTouchedBySegment(self, x1, y1, x2, y2)
+  local items = {}
+  for i=1, len do
+    items[i] = itemInfo[i].item
   end
-  table.sort(items, sortByTi)
-  local res, resLen = {}, 0
-  if f then
-    local dx, dy = x2-x1, y2-y1
-    for i=1,itemsLen do
-      local item = items[i]
-      local t0 = item.t0
-      local x,y = x1 + dx * t0, y1 + dy * t0
-      local r = f(item, i, x, y, t0)
+  return items, len
+end
 
-      resLen = i
-      res[i] = item
-      if r == false then break end
-    end
-  else
-    resLen = itemsLen
-    for i=1,itemsLen do
-      res[i] = items[i].item
-    end
+function World:querySegmentWithCoords(x1, y1, x2, y2)
+  local itemInfo, len   = getInfoAboutItemsTouchedBySegment(self, x1, y1, x2, y2)
+  local itemsWithCoords = {}
+  local dx, dy          = x2-x1, y2-y1
+  local info, t0, x, y
+  for i=1, len do
+    info  = itemInfo[i]
+    t0    = info.t0
+    x     = x1 + dx * t0
+    y     = y1 + dy * t0
+    itemsWithCoords[i] = { item = itemInfo.item, x = x, y = y }
   end
-  return res, resLen
+  return itemsWithCoords, len
 end
 
 bump.newWorld = function(cellSize)

@@ -49,15 +49,14 @@ function Turret:update()
 
   if distance2 <= activeRadius * activeRadius then
     self.isNearTarget = true
-    self.world:querySegment(cx,cy,tx,ty, function(item, index, x, y)
-      if index == 1 then return end -- ignore self
-      if index == 2 then
-        self.laserX = x
-        self.laserY = y
-        self.canSeeTarget = item == self.target
-        return false
-      end
-    end)
+    local itemInfo, len = self.world:querySegmentWithCoords(cx,cy,tx,ty)
+    -- ignore itemsInfo[1] because that's always self
+    local info = itemInfo[2]
+    if info then
+      self.laserX = info.x
+      self.laserY = info.y
+      self.canSeeTarget = info.item == self.target
+    end
   else
     self.isNearTarget = false
     self.canSeeTarget = false
