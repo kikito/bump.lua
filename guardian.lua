@@ -1,13 +1,13 @@
 local class  = require 'lib.middleclass'
 local util   = require 'util'
 
-local Turret = class('Player')
+local Guardian = class('Player')
 
 local width  = 50
 local height = 110
 local activeRadius = 400
 
-function Turret:initialize(world, target, x, y)
+function Guardian:initialize(world, target, x, y)
   self.world, self.target, self.l, self.t = world, target, x, y
 
   -- remove any blocks it touches on creation
@@ -18,11 +18,11 @@ function Turret:initialize(world, target, x, y)
   end
 end
 
-function Turret:getCenter()
+function Guardian:getCenter()
   return self.l + width / 2, self.t + height / 2
 end
 
-function Turret:draw()
+function Guardian:draw()
   local r,g,b = 255,0,255
   util.drawFilledRectangle(self.l, self.t, width, height, r,g,b)
 
@@ -41,7 +41,7 @@ function Turret:draw()
   end
 end
 
-function Turret:update()
+function Guardian:update()
   local cx,cy = self:getCenter()
   local tx,ty = self.target:getCenter()
 
@@ -65,6 +65,6 @@ function Turret:update()
   end
 end
 
-return Turret
+return Guardian
 
 
