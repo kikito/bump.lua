@@ -24,7 +24,7 @@ function Guardian:getCenter()
          self.t + height * (1 - Phi)
 end
 
-function Guardian:draw()
+function Guardian:draw(drawDebug)
   local r,g,b = 255,0,255
   util.drawFilledRectangle(self.l, self.t, width, height, r,g,b)
 
@@ -32,12 +32,19 @@ function Guardian:draw()
   love.graphics.setColor(255,0,0)
   love.graphics.circle('line', cx, cy, 8)
 
-  love.graphics.setColor(255,255,255,100)
-  love.graphics.circle('line', cx, cy, activeRadius)
+  if drawDebug then
+    love.graphics.setColor(255,255,255,100)
+    love.graphics.circle('line', cx, cy, activeRadius)
+  end
 
   if self.isNearTarget then
     local tx,ty = self.target:getCenter()
-    love.graphics.line(cx, cy, tx, ty)
+
+    if drawDebug then
+      love.graphics.setColor(255,255,255,100)
+      love.graphics.line(cx, cy, tx, ty)
+    end
+
     love.graphics.setColor(255,0,0)
     love.graphics.line(cx, cy, self.laserX, self.laserY)
   end

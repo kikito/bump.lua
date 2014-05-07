@@ -29,7 +29,7 @@ function Map:initialize(width, height)
   end
 
   -- random blocks
-  for i=1,100 do
+  for i=1,500 do
     Block:new( self.world,
                random(100, width-200),
                random(100, height-150),
@@ -67,7 +67,7 @@ function Map:draw(drawDebug, l,t,w,h)
   local visibleThings, len = self.world:queryBox(l,t,w,h)
 
   for i=1, len do
-    visibleThings[i]:draw()
+    visibleThings[i]:draw(drawDebug)
   end
 end
 
