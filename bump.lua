@@ -236,9 +236,17 @@ end
 -- World
 ------------------------------------------
 
-local function toCellBox(world, l,t,w,h)
-  local cellSize = world.cellSize
-  local cl,ct    = world:toCell(l, t)
+local function getBox(self, item)
+  local box = self.boxes[item]
+  if not box then
+    error('Item ' .. tostring(item) .. ' must be added to the world before getting its box. Use world:add(item, l,t,w,h) to add it first.')
+  end
+  return box
+end
+
+local function toCellBox(self, l,t,w,h)
+  local cellSize = self.cellSize
+  local cl,ct    = self:toCell(l, t)
   local cr,cb    = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
   return cl, ct, cr-cl+1, cb-ct+1
 end
@@ -398,10 +406,8 @@ function World:add(item, l,t,w,h)
 end
 
 function World:remove(item)
-  local box = self.boxes[item]
-  if not box then
-    error('Item ' .. tostring(item) .. ' must be added to the world before being removed. Use world:add(item, l,t,w,h) to add it first.')
-  end
+  local box = getBox(self, item)
+
   self.boxes[item] = nil
   local cl,ct,cw,ch = toCellBox(self, box.l,box.t,box.w,box.h)
   for cy = ct, ct+ch-1 do
@@ -412,11 +418,7 @@ function World:remove(item)
 end
 
 function World:move(item, l,t, ignore, filter)
-  local box = self.boxes[item]
-  if not box then
-    error('Item ' .. tostring(item) .. ' must be added to the world before being moved. Use world:add(item, l,t,w,h) to add it first.')
-  end
-
+  local box             = getBox(self, item)
   local collisions, len = self:check(item, l, t, ignore, filter)
 
   if box.l ~= l or box.t ~= t then
@@ -475,10 +477,7 @@ function World:check(item, target_l, target_t, ignore, filter)
 end
 
 function World:getBox(item)
-  local box = self.boxes[item]
-  if not box then
-    error('Item ' .. tostring(item) .. ' must be added to the world before getting its box. Use world:add(item, l,t,w,h) to add it first.')
-  end
+  local box = getBox(self, item)
   return box.l, box.t, box.w, box.h
 end
 
