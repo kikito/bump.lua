@@ -411,23 +411,16 @@ function World:remove(item)
   end
 end
 
-function World:move(item, l,t,w,h, ignore, filter)
+function World:move(item, l,t, ignore, filter)
   local box = self.boxes[item]
   if not box then
     error('Item ' .. tostring(item) .. ' must be added to the world before being moved. Use world:add(item, l,t,w,h) to add it first.')
-  end
-  w,h = w or box.w, h or box.h
-
-  assertIsBox(l,t,w,h)
-
-  if box.w ~= w or box.h ~= h then
-    self:teleport(item, box.l, box.t, w,h)
   end
 
   local collisions, len = self:check(item, l, t, ignore, filter)
 
   if box.l ~= l or box.t ~= t then
-    self:teleport(item, l, t, w,h)
+    self:teleport(item, l, t, box.w, box.h)
   end
 
   return collisions, len

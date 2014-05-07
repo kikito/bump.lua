@@ -50,7 +50,7 @@ describe('World', function()
     describe('when the object is not there', function()
       it('throws an error', function()
         local world = bump.newWorld()
-        assert.is_error(function() world:move({}, 0,0,10,10) end)
+        assert.is_error(function() world:move({}, 0,0) end)
       end)
     end)
 
