@@ -208,10 +208,10 @@ function Collision:getSlide()
 
   if self.vx ~= 0 or self.vy ~= 0 then
     if nx == 0 then
-      sl = self.target_l
+      sl = self.future_l
       sx = sl - tl
     else
-      st = self.target_t
+      st = self.future_t
       sy = st - tt
     end
   end
@@ -224,7 +224,7 @@ function Collision:getBounce()
   local bl, bt, bx,by = tl, tt, 0,0
 
   if self.vx ~= 0 or self.vy ~= 0 then
-    bx, by = self.target_l - tl, self.target_t - tt
+    bx, by = self.future_l - tl, self.future_t - tt
     if nx == 0 then by = -by else bx = -bx end
     bl, bt = tl + bx, tt + by
   end
@@ -236,9 +236,17 @@ end
 -- World
 ------------------------------------------
 
-local function toCellBox(world, l,t,w,h)
-  local cellSize = world.cellSize
-  local cl,ct    = world:toCell(l, t)
+local function getBox(self, item)
+  local box = self.boxes[item]
+  if not box then
+    error('Item ' .. tostring(item) .. ' must be added to the world before getting its box. Use world:add(item, l,t,w,h) to add it first.')
+  end
+  return box
+end
+
+local function toCellBox(self, l,t,w,h)
+  local cellSize = self.cellSize
+  local cl,ct    = self:toCell(l, t)
   local cr,cb    = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
   return cl, ct, cr-cl+1, cb-ct+1
 end
@@ -398,10 +406,8 @@ function World:add(item, l,t,w,h)
 end
 
 function World:remove(item)
-  local box = self.boxes[item]
-  if not box then
-    error('Item ' .. tostring(item) .. ' must be added to the world before being removed. Use world:add(item, l,t,w,h) to add it first.')
-  end
+  local box = getBox(self, item)
+
   self.boxes[item] = nil
   local cl,ct,cw,ch = toCellBox(self, box.l,box.t,box.w,box.h)
   for cy = ct, ct+ch-1 do
@@ -411,23 +417,12 @@ function World:remove(item)
   end
 end
 
-function World:move(item, l,t,w,h, ignore, filter)
-  local box = self.boxes[item]
-  if not box then
-    error('Item ' .. tostring(item) .. ' must be added to the world before being moved. Use world:add(item, l,t,w,h) to add it first.')
-  end
-  w,h = w or box.w, h or box.h
-
-  assertIsBox(l,t,w,h)
-
-  if box.w ~= w or box.h ~= h then
-    self:teleport(item, box.l, box.t, w,h)
-  end
-
+function World:move(item, l,t, ignore, filter)
+  local box             = getBox(self, item)
   local collisions, len = self:check(item, l, t, ignore, filter)
 
   if box.l ~= l or box.t ~= t then
-    self:teleport(item, l, t, w,h)
+    self:teleport(item, l, t, box.w, box.h)
   end
 
   return collisions, len
@@ -438,24 +433,20 @@ function World:teleport(item, l,t,w,h)
   self:add(item, l,t,w,h)
 end
 
-function World:check(item, target_l, target_t, ignore, filter)
-  local box = self.boxes[item]
-  if not box then
-    error('Item ' .. tostring(item) .. ' must be added to the world before being checked for collisions. Use world:add(item, l,t,w,h) to add it first.')
-  end
-
+function World:check(item, future_l, future_t, ignore, filter)
+  local box = getBox(self, item)
   local collisions, len = {}, 0
 
   ignore       = toDict(ignore or {})
   ignore[item] = true
 
   local l,t,w,h = box.l, box.t, box.w, box.h
-  target_l, target_t = target_l or l, target_t or t
+  future_l, future_t = future_l or l, future_t or t
 
   -- TODO this could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding box of the whole movement. Conditional to building a queryPolygon method
-  local tl, tt = min(target_l, l),       min(target_t, t)
-  local tr, tb = max(target_l + w, l+w), max(target_t + h, t+h)
+  local tl, tt = min(future_l, l),       min(future_t, t)
+  local tr, tb = max(future_l + w, l+w), max(future_t + h, t+h)
   local tw, th = tr-tl, tb-tt
 
   local cl,ct,cw,ch = toCellBox(self, tl,tt,tw,th)
@@ -467,7 +458,7 @@ function World:check(item, target_l, target_t, ignore, filter)
       ignore[other] = true
       if not (filter and filter(other)) then
         local oBox = self.boxes[other]
-        local col  = bump.newCollision(item, other, box, oBox, target_l, target_t):resolve()
+        local col  = bump.newCollision(item, other, box, oBox, future_l, future_t):resolve()
         if col then
           len = len + 1
           collisions[len] = col
@@ -482,10 +473,7 @@ function World:check(item, target_l, target_t, ignore, filter)
 end
 
 function World:getBox(item)
-  local box = self.boxes[item]
-  if not box then
-    error('Item ' .. tostring(item) .. ' must be added to the world before getting its box. Use world:add(item, l,t,w,h) to add it first.')
-  end
+  local box = getBox(self, item)
   return box.l, box.t, box.w, box.h
 end
 
@@ -586,16 +574,16 @@ bump.newWorld = function(cellSize)
   )
 end
 
-bump.newCollision = function(item, other, itemBox, otherBox, target_l, target_t)
+bump.newCollision = function(item, other, itemBox, otherBox, future_l, future_t)
   return setmetatable({
     item      = item,
     other     = other,
     itemBox   = itemBox,
     otherBox  = otherBox,
-    target_l  = target_l,
-    target_t  = target_t,
-    vx        = target_l - itemBox.l,
-    vy        = target_t - itemBox.t
+    future_l  = future_l,
+    future_t  = future_t,
+    vx        = future_l - itemBox.l,
+    vy        = future_t - itemBox.t
   }, Collision_mt)
 end
 
