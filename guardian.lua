@@ -3,8 +3,9 @@ local util   = require 'util'
 
 local Guardian = class('Player')
 
-local width  = 50
+local Phi = 0.61803398875
 local height = 110
+local width  = height * (1 - Phi)
 local activeRadius = 400
 
 function Guardian:initialize(world, target, x, y)
@@ -19,7 +20,8 @@ function Guardian:initialize(world, target, x, y)
 end
 
 function Guardian:getCenter()
-  return self.l + width / 2, self.t + height / 2
+  return self.l + width / 2,
+         self.t + height * (1 - Phi)
 end
 
 function Guardian:draw()

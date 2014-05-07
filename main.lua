@@ -1,6 +1,5 @@
 require 'lib.middleclass'
 local gamera     = require 'lib.gamera'
-
 local Map        = require 'map'
 
 local drawDebug   = false  -- draw bump's debug info, fps and memory
@@ -16,6 +15,7 @@ local instructions = [[
 ]]
 
 local camera, map
+local Phi = 0.61803398875
 
 local function reset()
   map    = Map:new(4000, 2000)
