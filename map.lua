@@ -8,6 +8,10 @@ local Guardian    = require 'guardian'
 
 local random = math.random
 
+local sortByUpdateOrder = function(a,b)
+  return a:getUpdateOrder() < b:getUpdateOrder()
+end
+
 local Map = class('Map')
 
 function Map:initialize(width, height)
@@ -50,14 +54,12 @@ function Map:getDimensions()
 end
 
 function Map:update(dt, l,t,w,h)
-  self.player:update(dt)
-
   local visibleThings, len = self.world:queryBox(l,t,w,h)
 
+  table.sort(visibleThings, sortByUpdateOrder)
+
   for i=1, len do
-    if visibleThings[i]:isInstanceOf(Guardian) then
-      visibleThings[i]:update(dt)
-    end
+    visibleThings[i]:update(dt)
   end
 end
 

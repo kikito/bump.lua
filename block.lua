@@ -14,4 +14,11 @@ function Block:draw()
   util.drawFilledRectangle(self.l, self.t, self.w, self.h, r,g,b)
 end
 
+function Block:getUpdateOrder()
+  return 1000
+end
+
+function Block:update(dt)
+end
+
 return Block

@@ -4,12 +4,12 @@ local util   = require 'util'
 
 local Player = class('Player')
 
-local runAccel             = 500 -- the player acceleration while going left/right
-local brakeAccel           = 2000
-local jumpVelocity         = 400 -- the initial upwards velocity when jumping
-local width                = 32
-local height               = 64
-local gravityAcceleration  = 500 -- pixels per second^2
+local runAccel      = 500 -- the player acceleration while going left/right
+local brakeAccel    = 2000
+local jumpVelocity  = 400 -- the initial upwards velocity when jumping
+local gravityAccel  = 500 -- pixels per second^2
+local width         = 32
+local height        = 64
 
 local abs = math.abs
 
@@ -47,7 +47,7 @@ function Player:changeVelocityByGravity(dt)
   if self.onGround then
     self.vy = math.min(self.vy, 0)
   else
-    self.vy = self.vy + gravityAcceleration * dt
+    self.vy = self.vy + gravityAccel * dt
   end
 end
 
@@ -79,7 +79,7 @@ function Player:collideSliding(col)
   self.l, self.t = sl, st
 end
 
-function Player:collideTouching(col, i)
+function Player:collideTouching(col)
   local tl, tt, nx, ny = col:getTouch()
 
   self:changeVelocityByCollisionNormal(nx, ny)
@@ -101,6 +101,10 @@ function Player:collide(dt)
     end
     world:teleport(self, self.l, self.t, self.w, self.h)
   end
+end
+
+function Player:getUpdateOrder()
+  return 1
 end
 
 function Player:update(dt)
