@@ -241,7 +241,7 @@ as a complement to the other resolutions.
   `nx` and `ny` can not be 0 at the same time.
 
 ``` lua
-return tl, tt, nx, ny, sl, st = col:getSlide()
+local tl, tt, nx, ny, sl, st = col:getSlide()
 ```
 This is the type of collision resolution used by objects that "slide" over other objects after colliding with them.
 
@@ -255,7 +255,7 @@ This is a slightly more complex resolution: `item` first "touches" `other`, and 
 In scenarios where `item` can slide over more than 1 object, I usually `slide` over the first and `touch` the rest.
 
 ``` lua
-return tl, tt, nx, ny, bl, bt = col:getSlide()
+local tl, tt, nx, ny, bl, bt = col:getSlide()
 ```
 This is the type of collision resolution used by objects that "bounce".
 
