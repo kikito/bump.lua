@@ -87,12 +87,12 @@ end
 -- This is a generalized implementation of the liang-barsky algorithm, which also returns
 -- the normals of the sides where the segment intersects.
 -- Returns nil if the segment never touches the box
--- Notice that normals are only guaranteed to be accurate when initially t0, t1 == -math.huge, math.huge
-local function aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
-  t0, t1 = t0 or 0, t1 or 1
+-- Notice that normals are only guaranteed to be accurate when initially ti1, ti2 == -math.huge, math.huge
+local function aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1,x2,y2, ti1,ti2)
+  ti1, ti2 = ti1 or 0, ti2 or 1
   local dx, dy = x2-x1, y2-y1
   local nx, ny
-  local nx0, ny0, nx1, ny1 = 0,0,0,0
+  local nx1, ny1, nx2, ny2 = 0,0,0,0
   local p, q, r
 
   for side = 1,4 do
@@ -107,18 +107,18 @@ local function aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1,x2,y2, t0,t1)
     else
       r = q / p
       if p < 0 then
-        if     r > t1 then return nil
-        elseif r > t0 then t0,nx0,ny0 = r,nx,ny
+        if     r > ti2 then return nil
+        elseif r > ti1 then ti1,nx1,ny1 = r,nx,ny
         end
       else -- p > 0
-        if     r < t0 then return nil
-        elseif r < t1 then t1,nx1,ny1 = r,nx,ny
+        if     r < ti1 then return nil
+        elseif r < ti2 then ti2,nx2,ny2 = r,nx,ny
         end
       end
     end
   end
 
-  return t0,t1, nx0,ny0, nx1,ny1
+  return ti1,ti2, nx1,ny1, nx2,ny2
 end
 
 -- Calculates the minkowsky difference between 2 aabbs, which is another aabb
@@ -163,12 +163,12 @@ function Collision:resolve()
     self.ml, self.mt, self.mw, self.mh = l,t,w,h
     return self
   else
-    local t0,t1,nx,ny = aabb_getSegmentIntersectionIndices(l,t,w,h, 0,0,vx,vy, -math.huge, math.huge)
+    local ti1,ti2,nx,ny = aabb_getSegmentIntersectionIndices(l,t,w,h, 0,0,vx,vy, -math.huge, math.huge)
     -- b1 tunnels into b2 while it travels
-    if t0 and t0 < 1 and (0 < t0 or 0 == t0 and t1 > 0) then
+    if ti1 and ti1 < 1 and (0 < ti1 or 0 == ti1 and ti2 > 0) then
       -- local dx, dy = vx*ti-vx, vy*ti-vy
       self.is_intersection = false
-      self.ti, self.nx, self.ny          = t0, nx, ny
+      self.ti, self.nx, self.ny          = ti1, nx, ny
       self.ml, self.mt, self.mw, self.mh = l,t,w,h
       return self
     end
@@ -361,7 +361,7 @@ end
 
 local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2)
   local cells, len = getCellsTouchedBySegment(self, x1,y1,x2,y2)
-  local cell, box, l,t,w,h, t0,t1, ti0,ti1
+  local cell, box, l,t,w,h, ti1,ti2, tii0,tii1
   local visited, itemInfo, itemInfoLen = {},{},0
   for i=1,len do
     cell = cells[i]
@@ -371,12 +371,12 @@ local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2)
         box            = self.boxes[item]
         l,t,w,h        = box.l,box.t,box.w,box.h
 
-        t0,t1 = aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, 0, 1)
-        if t0 and ((0 < t0 and t0 < 1) or (0 < t1 and t1 < 1)) then
+        ti1,ti2 = aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, 0, 1)
+        if ti1 and ((0 < ti1 and ti1 < 1) or (0 < ti2 and ti2 < 1)) then
           -- the sorting is according to the t of an infinite line, not the segment
-          ti0,ti1      = aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, -math.huge, math.huge)
+          tii0,tii1      = aabb_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, -math.huge, math.huge)
           itemInfoLen  = itemInfoLen + 1
-          itemInfo[itemInfoLen] = {item = item, t0 = t0, t1 = t1, weight = min(ti0,ti1)}
+          itemInfo[itemInfoLen] = {item = item, ti1 = ti1, ti2 = ti2, weight = min(tii0,tii1)}
         end
       end
     end
@@ -546,17 +546,17 @@ end
 function World:querySegmentWithCoords(x1, y1, x2, y2)
   local itemInfo, len = getInfoAboutItemsTouchedBySegment(self, x1, y1, x2, y2)
   local dx, dy        = x2-x1, y2-y1
-  local info, t0, t1
+  local info, ti1, ti2
   for i=1, len do
     info  = itemInfo[i]
-    t0    = info.t0
-    t1    = info.t1
+    ti1   = info.ti1
+    ti2   = info.ti2
 
     info.weight  = nil
-    info.x1      = x1 + dx * t0
-    info.y1      = y1 + dy * t0
-    info.x2      = x1 + dx * t1
-    info.y2      = y1 + dy * t1
+    info.x1      = x1 + dx * ti1
+    info.y1      = y1 + dy * ti1
+    info.x2      = x1 + dx * ti2
+    info.y2      = y1 + dy * ti2
   end
   return itemInfo, len
 end
