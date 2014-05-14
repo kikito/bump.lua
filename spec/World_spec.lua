@@ -58,7 +58,7 @@ describe('World', function()
       local world, a = bump.newWorld(), {}
       world:add(a, 0,0,10,10)
       world:move(a, 40,40, 20,20)
-      assert.same(world:getBox(a), {l=40,t=40,w=20,h=20})
+      assert.same(world:getRect(a), {l=40,t=40,w=20,h=20})
     end)
 
     describe('when no width or height is given', function()
@@ -66,7 +66,7 @@ describe('World', function()
         local world, a = bump.newWorld(), {'a'}
         world:add(a, 0,0, 10,10)
         world:move(a, 5,5)
-        assert.same({l=5,t=5,w=10,h=10}, world:getBox(a))
+        assert.same({l=5,t=5,w=10,h=10}, world:getRect(a))
       end)
     end)
   end)
@@ -203,11 +203,11 @@ describe('World', function()
     end)
   end)
 
-  describe(':queryBox', function()
+  describe(':queryRect', function()
     it('returns nothing when the world is empty', function()
-      assert.same(bump.newWorld():queryBox(0,0,1,1), {})
+      assert.same(bump.newWorld():queryRect(0,0,1,1), {})
     end)
-    it('returns the items inside/partially inside the given box', function()
+    it('returns the items inside/partially inside the given rect', function()
       local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
       world:add(a, 10,0, 10,10)
       world:add(b, 70,0, 10,10)
@@ -219,8 +219,8 @@ describe('World', function()
         return tbl
       end
 
-      assert.same(sorted(world:queryBox(55, 5, 20, 20)), {b,c})
-      assert.same(sorted(world:queryBox(0, 5, 100, 20)), {a,b,c,d})
+      assert.same(sorted(world:queryRect(55, 5, 20, 20)), {b,c})
+      assert.same(sorted(world:queryRect(0, 5, 100, 20)), {a,b,c,d})
     end)
   end)
 
@@ -228,7 +228,7 @@ describe('World', function()
     it('returns nothing when the world is empty', function()
       assert.same(bump.newWorld():queryPoint(0,0), {})
     end)
-    it('returns the items inside/partially inside the given box', function()
+    it('returns the items inside/partially inside the given rect', function()
       local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
       world:add(a, 10,0, 10,10)
       world:add(b, 15,0, 10,10)

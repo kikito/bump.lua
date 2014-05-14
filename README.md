@@ -1,8 +1,8 @@
 ## bump.lua
 
-Lua collision-detection library for axis-aligned boxes. Its main features are:
+Lua collision-detection library for axis-aligned rectes. Its main features are:
 
-* Bump only does axis-aligned bounding-box (AABB) collisions. If you need anything more complicated than that (circles, polygons, etc.) give HardonCollider a look.
+* Bump only does axis-aligned bounding-rect (AABB) collisions. If you need anything more complicated than that (circles, polygons, etc.) give HardonCollider a look.
 * Handles tunnelling - all items are treated as "bullets". The fact that we only use AABBs allows doing this fast.
 * Strives to be fast and have a small memory footprint
 * It's centered on *detection*, but it also offers *minimal collision resolution*
@@ -215,7 +215,7 @@ following attributes:
 * `col.item`: the item that was being tested for collisions (the first parameter passed to `world:check(item, ...)`)
 * `col.other`: the item that has been found colliding with `item`
 * `col.future_l` & `col.future_t`: the `future_l` and `future_t` parameters passed to `world:check`.
-* `col.itemBox` & `col.otherBox`: the bounding boxes of the items, in the form `{l=...,t=...,w=...,h=...}`.
+* `col.itemRect` & `col.otherRect`: the bounding rectes of the items, in the form `{l=...,t=...,w=...,h=...}`.
 * `col.is_intersection`: `true` if `item` and `other` are currently intersecting in the world. `false` if the collision
   is a "tunnelling collision" - `item` will collides with `other` when it travels from its current position to `{future_l, future_t}`,
   but it is not presently intersecting with `other`.
@@ -285,7 +285,7 @@ It is useful for things like clicking with the mouse.
 * `len` is the length of the items list. It is equivalent to `#items`, but it's slightly faster to use `len` instead.
 
 ``` lua
-local items, len = world:queryBox(l,t,w,h)
+local items, len = world:queryRect(l,t,w,h)
 ```
 Returns the items that touch a given rectangle.
 
@@ -317,7 +317,7 @@ An extended version of `world:querySegment` which returns the collision points o
 in addition to the items.
 
 It is useful if you need to **actually show** the lasers/bullets or if you need to show some impact effects (i.e. spawning some particles
-where a bullet hits a wall). If you don't need the actual points of contact between the segment and the bounding boxes, use
+where a bullet hits a wall). If you don't need the actual points of contact between the segment and the bounding rectes, use
 `world:querySegment`, since it's faster.
 
 * `x1,y1,x2,y2` same as in `world:querySegment`
@@ -335,15 +335,15 @@ calculating the intensity of a shooting that becomes weaker with distance.
 ### Misc functions
 
 ``` lua
-local box = world:getBox(item)
+local rect = world:getRect(item)
 ```
 
-Given an item, obtain the coordinates of its bounding box.
+Given an item, obtain the coordinates of its bounding rect.
 Useful for debugging/testing things.
 
 * `item` is an item that must exist in world (it must have been inserted with `world:add(item ...)`). Otherwise this method will
   throw an error.
-* `box` is a lua table in the form `{l=... , t=... , w=... , h=...}`
+* `rect` is a lua table in the form `{l=... , t=... , w=... , h=...}`
 
 ``` lua
 local cell_count = world:countCells()
