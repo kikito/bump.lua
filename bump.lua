@@ -204,19 +204,17 @@ end
 
 function Collision:getSlide()
   local tl, tt, nx, ny  = self:getTouch()
-  local sl, st, sx, sy  = tl, tt, 0, 0
+  local sl, st = tl, tt
 
   if self.vx ~= 0 or self.vy ~= 0 then
     if nx == 0 then
       sl = self.future_l
-      sx = sl - tl
     else
       st = self.future_t
-      sy = st - tt
     end
   end
 
-  return tl, tt, nx, ny, sl, st, sx, sy
+  return tl, tt, nx, ny, sl, st
 end
 
 function Collision:getBounce()
