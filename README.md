@@ -2,7 +2,7 @@
 
 Lua collision-detection library for axis-aligned rectes. Its main features are:
 
-* Bump only does axis-aligned bounding-rect (AABB) collisions. If you need anything more complicated than that (circles, polygons, etc.) give HardonCollider a look.
+* Bump only does axis-aligned bounding-box (AABB) collisions. If you need anything more complicated than that (circles, polygons, etc.) give HardonCollider a look.
 * Handles tunnelling - all items are treated as "bullets". The fact that we only use AABBs allows doing this fast.
 * Strives to be fast and have a small memory footprint
 * It's centered on *detection*, but it also offers *minimal collision resolution*
