@@ -227,7 +227,7 @@ function Collision:getBounce()
     bl, bt = tl + bx, tt + by
   end
 
-  return tl, tt, nx, ny, bl, bt, bx, by
+  return tl, tt, nx, ny, bl, bt
 end
 
 ------------------------------------------
