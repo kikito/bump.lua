@@ -48,12 +48,6 @@ local function nearest(x, a, b)
   if abs(a - x) < abs(b - x) then return a else return b end
 end
 
-local function toDict(arr)
-  local dict = {}
-  for _,v in pairs(arr) do dict[v] = true end
-  return dict
-end
-
 local function sortByTi(a,b)    return a.ti < b.ti end
 local function sortByWeight(a,b) return a.weight < b.weight end
 
@@ -415,28 +409,21 @@ function World:remove(item)
   end
 end
 
-function World:move(item, l,t, ignore, filter)
-  local box             = getBox(self, item)
-  local collisions, len = self:check(item, l, t, ignore, filter)
-
-  if box.l ~= l or box.t ~= t then
-    self:teleport(item, l, t, box.w, box.h)
+function World:move(item, l,t,w,h)
+  local box = getBox(self, item)
+  w,h = w or box.w, h or box.h
+  assertIsBox(l,t,w,h)
+  if box.l ~= l or box.t ~= t or box.w ~= w or box.h ~= h then
+    self:remove(item)
+    self:add(item, l,t,w,h)
   end
-
-  return collisions, len
 end
 
-function World:teleport(item, l,t,w,h)
-  self:remove(item)
-  self:add(item, l,t,w,h)
-end
-
-function World:check(item, future_l, future_t, ignore, filter)
+function World:check(item, future_l, future_t, filter)
   local box = getBox(self, item)
   local collisions, len = {}, 0
 
-  ignore       = toDict(ignore or {})
-  ignore[item] = true
+  local visited = { [item] = true }
 
   local l,t,w,h = box.l, box.t, box.w, box.h
   future_l, future_t = future_l or l, future_t or t
@@ -452,8 +439,8 @@ function World:check(item, future_l, future_t, ignore, filter)
   local dictItemsInCellBox = getDictItemsInCellBox(self, cl,ct,cw,ch)
 
   for other,_ in pairs(dictItemsInCellBox) do
-    if not ignore[other] then
-      ignore[other] = true
+    if not visited[other] then
+      visited[other] = true
       if not (filter and filter(other)) then
         local oBox = self.boxes[other]
         local col  = bump.newCollision(item, other, box, oBox, future_l, future_t):resolve()
@@ -472,7 +459,7 @@ end
 
 function World:getBox(item)
   local box = getBox(self, item)
-  return box.l, box.t, box.w, box.h
+  return {l = box.l, t = box.t, w = box.w, h = box.h }
 end
 
 function World:countCells()

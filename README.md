@@ -335,7 +335,7 @@ calculating the intensity of a shooting that becomes weaker with distance.
 ### Misc functions
 
 ``` lua
-local l,t,w,h = world:getBox(item)
+local box = world:getBox(item)
 ```
 
 Given an item, obtain the coordinates of its bounding box.
@@ -343,7 +343,7 @@ Useful for debugging/testing things.
 
 * `item` is an item that must exist in world (it must have been inserted with `world:add(item ...)`). Otherwise this method will
   throw an error.
-* `l,t,w,h` are the coordinates of the bounding box corresponding to `item`
+* `box` is a lua table in the form `{l=... , t=... , w=... , h=...}`
 
 ``` lua
 local cell_count = world:countCells()
