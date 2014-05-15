@@ -46,15 +46,13 @@ local function updatePlayer(dt)
       player.l, player.t = future_l, future_t
       world:move(player, future_l, future_t)
     else
-      local visited = {}
       local col, tl, tt, sl, st
       while len > 0 do
         col = cols[1]
-        visited[col.other] = true
         tl,tt,_,_,sl,st = col:getSlide()
         player.l, player.t = tl, tt
         world:move(player, tl, tt)
-        cols, len = world:check(player, sl, st, nil, nil, function(other) return visited[other] end)
+        cols, len = world:check(player, sl, st)
         if len == 0 then
           player.l, player.t = sl, st
           world:move(player, sl, st)
