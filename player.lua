@@ -62,44 +62,39 @@ function Player:changeVelocityByCollisionNormal(nx, ny)
   end
 end
 
-function Player:checkGroundByCollisionNormal(ny)
+function Player:checkIfOnGround(ny)
   if ny < 0 then self.onGround = true end
-end
-
-function Player:collideSliding(col)
-  local tl,tt,nx,ny,sl,st = col:getSlide()
-
-  -- Make the player contact the rock
-  self:changeVelocityByCollisionNormal(nx, ny)
-  self:checkGroundByCollisionNormal(ny)
-  self.l, self.t = tl, tt
-
-  -- And then make the player "slide" over the rock
-  self.world:teleport(self, self.l, self.t, self.w, self.h)
-  self.l, self.t = sl, st
-end
-
-function Player:collideTouching(col)
-  local tl, tt, nx, ny = col:getTouch()
-
-  self:changeVelocityByCollisionNormal(nx, ny)
-  self:checkGroundByCollisionNormal(ny)
-  self.l, self.t = tl, tt
 end
 
 function Player:collide(dt)
   self.onGround = false
   local world = self.world
 
-  local cols, len = world:move(self, self.l, self.t)
-  if len > 0 then
-    self:collideSliding(cols[1])
+  local future_l = self.l + self.vx * dt
+  local future_t = self.t + self.vy * dt
 
-    cols, len = world:move(self, self.l, self.t)
-    for i=1,len do
-      self:collideTouching(cols[i], i)
+  local cols, len = world:check(self, future_l, future_t)
+  if len == 0 then
+    self.l, self.t = future_l, future_t
+    world:move(self, future_l, future_t)
+  else
+    local col, tl, tt, nx, ny, sl, st
+    while len > 0 do
+      col = cols[1]
+      tl,tt,nx,ny,sl,st = col:getSlide()
+
+      self:changeVelocityByCollisionNormal(nx, ny)
+      self:checkIfOnGround(ny)
+
+      self.l, self.t = tl, tt
+      world:move(self, tl, tt)
+
+      cols, len = world:check(self, sl, st)
+      if len == 0 then
+        self.l, self.t = sl, st
+        world:move(self, sl, st)
+      end
     end
-    world:teleport(self, self.l, self.t, self.w, self.h)
   end
 end
 
@@ -110,9 +105,6 @@ end
 function Player:update(dt)
   self:changeVelocityByKeys(dt)
   self:changeVelocityByGravity(dt)
-
-  self.l = self.l + self.vx * dt
-  self.t = self.t + self.vy * dt
 
   self:collide(dt)
 end

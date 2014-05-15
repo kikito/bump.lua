@@ -16,6 +16,7 @@ function Ball:initialize(world, parent, x, y, vx, vy)
   self.parent = parent
   self.vx, self.vy  = vx, vy
   self.lived = 0
+  self.isMyParentFunc = function(other) return other == self.parent end
   world:add(self, x,y,width,height)
 end
 
@@ -42,37 +43,33 @@ function Ball:changeVelocityByCollisionNormal(nx, ny)
   self.vx, self.vy = vx, vy
 end
 
-function Ball:collideBouncing(col)
-  local tl,tt,nx,ny,bl,bt = col:getBounce()
-
-  -- Make the ball contact the surface
-  self:changeVelocityByCollisionNormal(nx, ny)
-  self.l, self.t = tl, tt
-
-  -- And then make the ball "bounce"
-  self.world:teleport(self, self.l, self.t, self.w, self.h)
-  self.l, self.t = bl, bt
-end
-
-function Ball:collideTouching(col)
-  local tl, tt, nx, ny = col:getTouch()
-
-  self:changeVelocityByCollisionNormal(nx, ny)
-  self.l, self.t = tl, tt
-end
-
 function Ball:collide(dt)
   local world = self.world
 
-  local cols, len = world:move(self, self.l, self.t, {self.parent})
-  if len > 0 then
-    self:collideBouncing(cols[1])
+  local future_l = self.l + self.vx * dt
+  local future_t = self.t + self.vy * dt
 
-    cols, len = world:move(self, self.l, self.t, {self.parent})
-    for i=1,len do
-      self:collideTouching(cols[i], i)
+  local cols, len = world:check(self, future_l, future_t, self.isMyParentFunc)
+  if len == 0 then
+    self.l, self.t = future_l, future_t
+    world:move(self, future_l, future_t)
+  else
+    local col, tl, tt, nx, ny, bl, bt
+    while len > 0 do
+      col = cols[1]
+      tl,tt,nx,ny,sl,st = col:getBounce()
+
+      self:changeVelocityByCollisionNormal(nx, ny)
+
+      self.l, self.t = tl, tt
+      world:move(self, tl, tt)
+
+      cols, len = world:check(self, sl, st, self.isMyParentFunc)
+      if len == 0 then
+        self.l, self.t = sl, st
+        world:move(self, sl, st)
+      end
     end
-    world:teleport(self, self.l, self.t, self.w, self.h)
   end
 end
 
@@ -82,10 +79,6 @@ function Ball:update(dt)
     self:destroy()
   else
     self:changeVelocityByGravity(dt)
-
-    self.l = self.l + self.vx * dt
-    self.t = self.t + self.vy * dt
-
     self:collide(dt)
   end
 end

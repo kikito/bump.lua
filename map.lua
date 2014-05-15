@@ -54,7 +54,7 @@ function Map:getDimensions()
 end
 
 function Map:update(dt, l,t,w,h)
-  local visibleThings, len = self.world:queryBox(l,t,w,h)
+  local visibleThings, len = self.world:queryRect(l,t,w,h)
 
   table.sort(visibleThings, sortByUpdateOrder)
 
@@ -66,7 +66,7 @@ end
 function Map:draw(drawDebug, l,t,w,h)
   if drawDebug then bump_debug.draw(self.world, l,t,w,h) end
 
-  local visibleThings, len = self.world:queryBox(l,t,w,h)
+  local visibleThings, len = self.world:queryRect(l,t,w,h)
 
   for i=1, len do
     visibleThings[i]:draw(drawDebug)
