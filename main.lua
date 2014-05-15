@@ -40,25 +40,27 @@ local function updatePlayer(dt)
   end
 
   if dx ~= 0 or dy ~= 0 then
-    player.l, player.t = player.l + dx, player.t + dy
-
-    local cols = world:move(player, player.l, player.t)
-
-    -- slide the player on the first collision
-    if cols[1] then
-      local tl,tt,_,_,sl,st = cols[1]:getSlide()
-      player.l, player.t = tl, tt
-      world:move(player, player.l, player.t, player.w, player.h, {skip_collisions = true})
-      player.l, player.t = sl, st
-      cols = world:move(player, player.l, player.t)
+    local future_l, future_t = player.l + dx, player.t + dy
+    local cols, len = world:check(player, future_l, future_t)
+    if len == 0 then
+      player.l, player.t = future_l, future_t
+      world:move(player, future_l, future_t)
+    else
+      local visited = {}
+      local col, tl, tt, sl, st
+      while len > 0 do
+        col = cols[1]
+        visited[col.other] = true
+        tl,tt,_,_,sl,st = col:getSlide()
+        player.l, player.t = tl, tt
+        world:move(player, tl, tt)
+        cols, len = world:check(player, sl, st, nil, nil, function(other) return visited[other] end)
+        if len == 0 then
+          player.l, player.t = sl, st
+          world:move(player, sl, st)
+        end
+      end
     end
-
-    -- touch on the rest of the collisions
-    for _,col in ipairs(cols) do
-      local tl, tt = cols[1]:getTouch()
-      player.l, player.t = tl, tt
-    end
-    world:move(player, player.l, player.t, player.w, player.h, {skip_collisions = true})
   end
 end
 
