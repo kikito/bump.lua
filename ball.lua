@@ -55,11 +55,14 @@ function Ball:collide(dt)
     world:move(self, future_l, future_t)
   else
     local col, tl, tt, nx, ny, bl, bt
+    local visited = {}
     while len > 0 do
       col = cols[1]
       tl,tt,nx,ny,sl,st = col:getBounce()
 
       self:changeVelocityByCollisionNormal(nx, ny)
+      if visited[col.other] then return end -- stop iterating when we collide with the same item twice
+      visited[col.other] = true
 
       self.l, self.t = tl, tt
       world:move(self, tl, tt)
