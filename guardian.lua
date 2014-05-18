@@ -111,6 +111,10 @@ function Guardian:fire()
   self.fireTimer = 0
 end
 
+function Guardian:destroy()
+  self.world:remove(self)
+end
+
 return Guardian
 
 
