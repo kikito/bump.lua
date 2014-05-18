@@ -1,5 +1,5 @@
 local class  = require 'lib.middleclass'
-local util   = require 'util'
+local Explosion = require 'explosion'
 
 local Ball = class('Ball')
 
@@ -29,7 +29,6 @@ function Ball:changeVelocityByGravity(dt)
 end
 
 function Ball:changeVelocityByCollisionNormal(nx, ny)
-  local min, max = math.min, math.max
   local vx, vy = self.vx, self.vy
 
   if (nx < 0 and vx > 0) or (nx > 0 and vx < 0) then
@@ -105,6 +104,7 @@ end
 
 function Ball:destroy()
   self.world:remove(self)
+  Explosion:new(self.world, self:getCenter())
 end
 
 return Ball
