@@ -22,14 +22,14 @@ function Map:initialize(width, height)
   self.player = Player:new(self.world, 60, 60)
 
   -- walls & ceiling
-  Block:new(self.world,        0,         0, width,        32)
-  Block:new(self.world,        0,        32,    32, height-64)
-  Block:new(self.world, width-32,        32,    32, height-64)
+  Block:new(self.world,        0,         0, width,        32, true)
+  Block:new(self.world,        0,        32,    32, height-64, true)
+  Block:new(self.world, width-32,        32,    32, height-64, true)
 
   -- tiled floor
   local tilesOnFloor = 40
   for i=0,tilesOnFloor - 1 do
-    Block:new(self.world, i*width/tilesOnFloor, height-32, width/tilesOnFloor, 32)
+    Block:new(self.world, i*width/tilesOnFloor, height-32, width/tilesOnFloor, 32, true)
   end
 
   -- random blocks
