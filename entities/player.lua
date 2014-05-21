@@ -44,10 +44,12 @@ function Player:changeVelocityByKeys(dt)
 end
 
 function Player:changeVelocityByGravity(dt)
+  self.vy = self.vy + gravityAccel * dt
+end
+
+function Player:changeVelocityByBeingOnGround()
   if self.onGround then
     self.vy = math.min(self.vy, 0)
-  else
-    self.vy = self.vy + gravityAccel * dt
   end
 end
 
@@ -105,6 +107,7 @@ end
 function Player:update(dt)
   self:changeVelocityByKeys(dt)
   self:changeVelocityByGravity(dt)
+  self:changeVelocityByBeingOnGround(dt)
 
   self:collide(dt)
 end
