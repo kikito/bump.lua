@@ -69,7 +69,6 @@ function Explosion:update()
   end
 
   -- todo: camera shake?
-  -- todo: push stuff out
   self:destroy()
 end
 
