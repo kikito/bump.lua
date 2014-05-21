@@ -1,7 +1,9 @@
-local class = require 'lib.middleclass'
-local util  = require 'util'
+local class   = require 'lib.middleclass'
+local util    = require 'util'
+local Entity  = require 'entities.entity'
 
-local Explosion = class('Explosion')
+local Explosion = class('Explosion', Entity)
+Explosion.static.updateOrder = 0
 
 local width = 75
 local height = width
@@ -13,12 +15,7 @@ local explosionFilter = function(other)
 end
 
 function Explosion:initialize(world, x, y)
-  self.world, self.l, self.t = world, x-width/2, y-width/2
-  world:add(self, self.l, self.t, width,height)
-end
-
-function Explosion:getUpdateOrder()
-  return 0
+  Entity.initialize(self, world, x-width/2, y-height/2, width, height)
 end
 
 function Explosion:draw()
@@ -32,7 +29,6 @@ function Explosion:update()
   for i=1,len do
     cols[i].other:destroy()
   end
-  -- todo: ignore player, indestructible blocks, grenades
   -- todo: spawn puffs
   -- todo: camera shake?
   -- todo: push stuff out
@@ -40,7 +36,7 @@ function Explosion:update()
 end
 
 function Explosion:destroy()
-  self.world:remove(self)
+  Entity.destroy(self)
 end
 
 return Explosion

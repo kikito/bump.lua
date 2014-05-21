@@ -2,22 +2,23 @@
 local class  = require 'lib.middleclass'
 local util   = require 'util'
 
-local Player = class('Player')
+local Entity = require 'entities.entity'
+
+local Player = class('Player', Entity)
+Player.static.updateOrder = 2
+
 
 local runAccel      = 500 -- the player acceleration while going left/right
 local brakeAccel    = 2000
 local jumpVelocity  = 400 -- the initial upwards velocity when jumping
-local gravityAccel  = 500 -- pixels per second^2
 local width         = 32
 local height        = 64
 
 local abs = math.abs
 
 function Player:initialize(world, x,y)
-  self.world, self.l, self.t, self.w, self.h = world, x,y, width, height
-  world:add(self, x,y,width,height)
-  self.canFly       = false
-  self.vx, self.vy  = 0,0
+  Entity.initialize(self, world, x, y, width, height)
+  self.canFly = false
 end
 
 function Player:changeVelocityByKeys(dt)
@@ -41,10 +42,6 @@ function Player:changeVelocityByKeys(dt)
   end
 
   self.vx, self.vy = vx, vy
-end
-
-function Player:changeVelocityByGravity(dt)
-  self.vy = self.vy + gravityAccel * dt
 end
 
 function Player:changeVelocityByBeingOnGround()
@@ -116,10 +113,6 @@ function Player:draw()
   local r,g,b = 0,255,255
   if self.canFly then r,g,b = 0,255,0 end
   util.drawFilledRectangle(self.l, self.t, self.w, self.h, r,g,b)
-end
-
-function Player:getCenter()
-  return self.l + self.w / 2, self.t + self.h / 2
 end
 
 return Player

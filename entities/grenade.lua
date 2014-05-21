@@ -1,31 +1,23 @@
 local class  = require 'lib.middleclass'
+local Entity = require 'entities.entity'
 local Explosion = require 'entities.explosion'
 
-local Grenade = class('Grenade')
+local Grenade = class('Grenade', Entity)
 
+Grenade.static.updateOrder = 1
 Grenade.static.radius = 8
 
-local gravityAccel  = 500 -- pixels per second^2
 local width         = math.sqrt(2 * Grenade.radius * Grenade.radius)
 local height        = width
 local bounciness    = 0.4 -- How much energy is lost on each bounce. 1 is perfect bounce, 0 is no bounce
 local lifeTime      = 5
 
 function Grenade:initialize(world, parent, x, y, vx, vy)
-  self.world, self.l, self.t, self.w, self.h = world, x,y, width, height
+  Entity.initialize(self, world, x, y, width, height)
   self.parent = parent
   self.vx, self.vy  = vx, vy
   self.lived = 0
   self.skipParent = function(other) return other ~= self.parent end
-  world:add(self, x,y,width,height)
-end
-
-function Grenade:getUpdateOrder()
-  return 2
-end
-
-function Grenade:changeVelocityByGravity(dt)
-  self.vy = self.vy + gravityAccel * dt
 end
 
 function Grenade:changeVelocityByCollisionNormal(nx, ny)
@@ -97,13 +89,8 @@ function Grenade:draw(drawDebug)
   end
 end
 
-function Grenade:getCenter()
-  return self.l + self.w / 2,
-         self.t + self.h / 2
-end
-
 function Grenade:destroy()
-  self.world:remove(self)
+  Entity.destroy(self)
   Explosion:new(self.world, self:getCenter())
 end
 

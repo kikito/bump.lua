@@ -1,8 +1,9 @@
-local class  = require 'lib.middleclass'
-local util   = require 'util'
-local Grenade   = require 'entities.grenade'
+local class    = require 'lib.middleclass'
+local util     = require 'util'
+local Entity   = require 'entities.entity'
+local Grenade  = require 'entities.grenade'
 
-local Guardian = class('Guardian')
+local Guardian = class('Guardian', Entity)
 
 local Phi           = 0.61803398875
 local height        = 110
@@ -11,12 +12,12 @@ local activeRadius  = 400
 local coolDown      = 2
 
 function Guardian:initialize(world, target, x, y)
-  self.world, self.target, self.l, self.t = world, target, x, y
+  Entity.initialize(self, world, x, y, width, height)
 
+  self.target = target
   self.fireTimer = 0
 
   -- remove any blocks it touches on creation
-  world:add(self, x,y, width, height)
   local cols, len = world:check(self)
   for i=1,len do
     world:remove(cols[i].other)
@@ -112,7 +113,7 @@ function Guardian:fire()
 end
 
 function Guardian:destroy()
-  self.world:remove(self)
+  Entity.destroy(self)
 end
 
 return Guardian

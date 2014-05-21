@@ -1,13 +1,13 @@
 -- represents the walls, floors and platforms of the level
 local class = require 'lib.middleclass'
 local util  = require 'util'
+local Entity = require 'entities.entity'
 
-local Block = class('Block')
+local Block = class('Block', Entity)
 
 function Block:initialize(world, l,t,w,h, indestructible)
-  self.world, self.l, self.t, self.w, self.h = world, l,t,w,h
+  Entity.initialize(self, world, l,t,w,h)
   self.indestructible = indestructible
-  world:add(self, l,t,w,h)
 end
 
 function Block:draw()
@@ -18,15 +18,7 @@ function Block:draw()
   util.drawFilledRectangle(self.l, self.t, self.w, self.h, r,g,b)
 end
 
-function Block:getUpdateOrder()
-  return 1000
-end
-
 function Block:update(dt)
-end
-
-function Block:destroy()
-  self.world:remove(self)
 end
 
 return Block
