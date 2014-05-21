@@ -50,17 +50,6 @@ function Player:changeVelocityByBeingOnGround()
   end
 end
 
-function Player:changeVelocityByCollisionNormal(nx, ny)
-  local min, max = math.min, math.max
-  if     nx < 0 then self.vx = min(self.vx, 0)
-  elseif nx > 0 then self.vx = max(self.vx, 0)
-  end
-
-  if     ny < 0 then self.vy = min(self.vy, 0)
-  elseif ny > 0 then self.vy = max(self.vy, 0)
-  end
-end
-
 function Player:checkIfOnGround(ny)
   if ny < 0 then self.onGround = true end
 end

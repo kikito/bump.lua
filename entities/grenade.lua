@@ -20,19 +20,7 @@ function Grenade:initialize(world, parent, x, y, vx, vy)
   self.skipParent = function(other) return other ~= self.parent end
 end
 
-function Grenade:changeVelocityByCollisionNormal(nx, ny)
-  local vx, vy = self.vx, self.vy
 
-  if (nx < 0 and vx > 0) or (nx > 0 and vx < 0) then
-    vx = -vx * bounciness
-  end
-
-  if (ny < 0 and vy > 0) or (ny > 0 and vy < 0) then
-    vy = -vy * bounciness
-  end
-
-  self.vx, self.vy = vx, vy
-end
 
 function Grenade:collide(dt)
   local world = self.world
@@ -51,7 +39,7 @@ function Grenade:collide(dt)
       col = cols[1]
       tl,tt,nx,ny,sl,st = col:getBounce()
 
-      self:changeVelocityByCollisionNormal(nx, ny)
+      self:changeVelocityByCollisionNormal(nx, ny, bounciness)
       if visited[col.other] then return end -- stop iterating when we collide with the same item twice
       visited[col.other] = true
 
