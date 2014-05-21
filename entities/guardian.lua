@@ -1,6 +1,6 @@
 local class  = require 'lib.middleclass'
 local util   = require 'util'
-local Ball   = require 'entities.ball'
+local Grenade   = require 'entities.grenade'
 
 local Guardian = class('Guardian')
 
@@ -38,7 +38,7 @@ function Guardian:draw(drawDebug)
 
   local cx,cy = self:getCenter()
   love.graphics.setColor(255,0,0)
-  local radius = Ball.radius
+  local radius = Grenade.radius
   if self.isLoading then
     local percent = self.fireTimer / coolDown
     local alpha = 255 - math.floor(255 * percent)
@@ -107,7 +107,7 @@ function Guardian:fire()
   local cx, cy = self:getCenter()
   local tx, ty = self.target:getCenter()
   local vx, vy = (tx - cx) * 3, (ty - cy) * 3
-  Ball:new(self.world, self, cx, cy, vx, vy)
+  Grenade:new(self.world, self, cx, cy, vx, vy)
   self.fireTimer = 0
 end
 

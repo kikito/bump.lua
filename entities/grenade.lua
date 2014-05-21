@@ -1,17 +1,17 @@
 local class  = require 'lib.middleclass'
 local Explosion = require 'entities.explosion'
 
-local Ball = class('Ball')
+local Grenade = class('Grenade')
 
-Ball.static.radius = 8
+Grenade.static.radius = 8
 
 local gravityAccel  = 500 -- pixels per second^2
-local width         = math.sqrt(2 * Ball.radius * Ball.radius)
+local width         = math.sqrt(2 * Grenade.radius * Grenade.radius)
 local height        = width
 local bounciness    = 0.4 -- How much energy is lost on each bounce. 1 is perfect bounce, 0 is no bounce
 local lifeTime      = 5
 
-function Ball:initialize(world, parent, x, y, vx, vy)
+function Grenade:initialize(world, parent, x, y, vx, vy)
   self.world, self.l, self.t, self.w, self.h = world, x,y, width, height
   self.parent = parent
   self.vx, self.vy  = vx, vy
@@ -20,15 +20,15 @@ function Ball:initialize(world, parent, x, y, vx, vy)
   world:add(self, x,y,width,height)
 end
 
-function Ball:getUpdateOrder()
+function Grenade:getUpdateOrder()
   return 2
 end
 
-function Ball:changeVelocityByGravity(dt)
+function Grenade:changeVelocityByGravity(dt)
   self.vy = self.vy + gravityAccel * dt
 end
 
-function Ball:changeVelocityByCollisionNormal(nx, ny)
+function Grenade:changeVelocityByCollisionNormal(nx, ny)
   local vx, vy = self.vx, self.vy
 
   if (nx < 0 and vx > 0) or (nx > 0 and vx < 0) then
@@ -42,7 +42,7 @@ function Ball:changeVelocityByCollisionNormal(nx, ny)
   self.vx, self.vy = vx, vy
 end
 
-function Ball:collide(dt)
+function Grenade:collide(dt)
   local world = self.world
 
   local future_l = self.l + self.vx * dt
@@ -75,7 +75,7 @@ function Ball:collide(dt)
   end
 end
 
-function Ball:update(dt)
+function Grenade:update(dt)
   self.lived = self.lived + dt
   if self.lived >= lifeTime then
     self:destroy()
@@ -85,11 +85,11 @@ function Ball:update(dt)
   end
 end
 
-function Ball:draw(drawDebug)
+function Grenade:draw(drawDebug)
   local r,g,b = 255,0,0
   love.graphics.setColor(r,g,b)
   local cx, cy = self:getCenter()
-  love.graphics.circle('line', cx, cy, Ball.radius)
+  love.graphics.circle('line', cx, cy, Grenade.radius)
 
   if drawDebug then
     love.graphics.setColor(255,255,255,200)
@@ -97,14 +97,14 @@ function Ball:draw(drawDebug)
   end
 end
 
-function Ball:getCenter()
+function Grenade:getCenter()
   return self.l + self.w / 2,
          self.t + self.h / 2
 end
 
-function Ball:destroy()
+function Grenade:destroy()
   self.world:remove(self)
   Explosion:new(self.world, self:getCenter())
 end
 
-return Ball
+return Grenade
