@@ -1,5 +1,5 @@
 local class  = require 'lib.middleclass'
-local Explosion = require 'explosion'
+local Explosion = require 'entities.explosion'
 
 local Ball = class('Ball')
 

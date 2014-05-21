@@ -2,9 +2,9 @@ local class       = require 'lib.middleclass'
 local bump        = require 'lib.bump'
 local bump_debug  = require 'lib.bump_debug'
 
-local Player      = require 'player'
-local Block       = require 'block'
-local Guardian    = require 'guardian'
+local Player      = require 'entities.player'
+local Block       = require 'entities.block'
+local Guardian    = require 'entities.guardian'
 
 local random = math.random
 

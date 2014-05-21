@@ -1,6 +1,6 @@
 local class  = require 'lib.middleclass'
 local util   = require 'util'
-local Ball   = require 'ball'
+local Ball   = require 'entities.ball'
 
 local Guardian = class('Guardian')
 
