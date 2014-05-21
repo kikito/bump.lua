@@ -16,6 +16,11 @@ local height        = 64
 
 local abs = math.abs
 
+local playerFilter = function(other)
+  local cname = other.class.name
+  return cname == 'Guardian' or cname == 'Block'
+end
+
 function Player:initialize(world, x,y)
   Entity.initialize(self, world, x, y, width, height)
   self.canFly = false
@@ -61,7 +66,7 @@ function Player:collide(dt)
   local future_l = self.l + self.vx * dt
   local future_t = self.t + self.vy * dt
 
-  local cols, len = world:check(self, future_l, future_t)
+  local cols, len = world:check(self, future_l, future_t, playerFilter)
   if len == 0 then
     self.l, self.t = future_l, future_t
     world:move(self, future_l, future_t)
@@ -77,17 +82,13 @@ function Player:collide(dt)
       self.l, self.t = tl, tt
       world:move(self, tl, tt)
 
-      cols, len = world:check(self, sl, st)
+      cols, len = world:check(self, sl, st, playerFilter)
       if len == 0 then
         self.l, self.t = sl, st
         world:move(self, sl, st)
       end
     end
   end
-end
-
-function Player:getUpdateOrder()
-  return 1
 end
 
 function Player:update(dt)

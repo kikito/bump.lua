@@ -1,6 +1,7 @@
 local class   = require 'lib.middleclass'
 local util    = require 'util'
 local Entity  = require 'entities.entity'
+local Puff    = require 'entities.puff'
 
 local Explosion = class('Explosion', Entity)
 Explosion.static.updateOrder = 0
@@ -29,7 +30,13 @@ function Explosion:update()
   for i=1,len do
     cols[i].other:destroy()
   end
-  -- todo: spawn puffs
+
+  for i=1, math.random(10,20) do
+    Puff:new( self.world,
+              math.random(self.l, self.l + self.w),
+              math.random(self.t, self.t + self.h) )
+  end
+
   -- todo: camera shake?
   -- todo: push stuff out
   self:destroy()

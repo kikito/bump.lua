@@ -17,10 +17,12 @@ function Grenade:initialize(world, parent, x, y, vx, vy)
   self.parent = parent
   self.vx, self.vy  = vx, vy
   self.lived = 0
-  self.skipParent = function(other) return other ~= self.parent end
+  self.filter = function(other)
+    if other == self.parent then return false end
+    local cname = other.class.name
+    return cname == 'Block' or cname == 'Guardian' or cname == 'Player'
+  end
 end
-
-
 
 function Grenade:collide(dt)
   local world = self.world
@@ -28,7 +30,7 @@ function Grenade:collide(dt)
   local future_l = self.l + self.vx * dt
   local future_t = self.t + self.vy * dt
 
-  local cols, len = world:check(self, future_l, future_t, self.skipParent)
+  local cols, len = world:check(self, future_l, future_t, self.filter)
   if len == 0 then
     self.l, self.t = future_l, future_t
     world:move(self, future_l, future_t)
@@ -46,7 +48,7 @@ function Grenade:collide(dt)
       self.l, self.t = tl, tt
       world:move(self, tl, tt)
 
-      cols, len = world:check(self, sl, st, self.isMyParentFunc)
+      cols, len = world:check(self, sl, st, self.filter)
       if len == 0 then
         self.l, self.t = sl, st
         world:move(self, sl, st)
