@@ -6,14 +6,10 @@ local Explosion = class('Explosion')
 local width = 75
 local height = width
 
-local shouldBeDestroyedByBombs = function(other)
+local explosionFilter = function(other)
   return other.class.name == 'Guardian'
       or (other.class.name == 'Block'
           and not other.indestructible)
-end
-
-local explosionFilter = function(other)
-  return not shouldBeDestroyedByBombs(other)
 end
 
 function Explosion:initialize(world, x, y)

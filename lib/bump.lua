@@ -441,7 +441,7 @@ function World:check(item, future_l, future_t, filter)
   for other,_ in pairs(dictItemsInCellRect) do
     if not visited[other] then
       visited[other] = true
-      if not (filter and filter(other)) then
+      if not filter or filter(other) then
         local oRect = self.rects[other]
         local col  = bump.newCollision(item, other, rect, oRect, future_l, future_t):resolve()
         if col then

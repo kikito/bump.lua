@@ -16,7 +16,7 @@ function Ball:initialize(world, parent, x, y, vx, vy)
   self.parent = parent
   self.vx, self.vy  = vx, vy
   self.lived = 0
-  self.isMyParentFunc = function(other) return other == self.parent end
+  self.skipParent = function(other) return other ~= self.parent end
   world:add(self, x,y,width,height)
 end
 
@@ -48,7 +48,7 @@ function Ball:collide(dt)
   local future_l = self.l + self.vx * dt
   local future_t = self.t + self.vy * dt
 
-  local cols, len = world:check(self, future_l, future_t, self.isMyParentFunc)
+  local cols, len = world:check(self, future_l, future_t, self.skipParent)
   if len == 0 then
     self.l, self.t = future_l, future_t
     world:move(self, future_l, future_t)
