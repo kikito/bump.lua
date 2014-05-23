@@ -14,13 +14,14 @@ local debrisFilter = function(other)
   return other.class.name == 'Block' or other.class.name == 'Guardian'
 end
 
-function Debris:initialize(world, x, y)
+function Debris:initialize(world, x, y, r,g,b)
   Entity.initialize(self,
     world,
     x, y,
     math.random(minSize, maxSize),
     math.random(minSize, maxSize)
   )
+  self.r, self.g, self.b = r,g,b
 
   self.lifeTime = 1 + 2 * math.random()
   self.lived = 0
@@ -74,8 +75,7 @@ function Debris:update(dt)
 end
 
 function Debris:draw()
-  local r,g,b = 220, 150, 150
-  util.drawFilledRectangle(self.l, self.t, self.w, self.h, r,g,b)
+  util.drawFilledRectangle(self.l, self.t, self.w, self.h, self.r, self.g, self.b)
 end
 
 return Debris

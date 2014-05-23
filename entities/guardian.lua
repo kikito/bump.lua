@@ -2,6 +2,7 @@ local class    = require 'lib.middleclass'
 local util     = require 'util'
 local Entity   = require 'entities.entity'
 local Grenade  = require 'entities.grenade'
+local Debris   = require 'entities.debris'
 
 local Guardian = class('Guardian', Entity)
 
@@ -117,6 +118,17 @@ end
 
 function Guardian:destroy()
   Entity.destroy(self)
+
+  local area = self.w * self.h
+  local debrisNumber = math.floor(math.max(30, area / 100))
+
+  for i=1, debrisNumber do
+    Debris:new(self.world,
+               math.random(self.l, self.l + self.w),
+               math.random(self.t, self.t + self.h),
+               255, 0, 255
+    )
+  end
 end
 
 return Guardian

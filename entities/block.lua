@@ -31,7 +31,8 @@ function Block:destroy()
   for i=1, debrisNumber do
     Debris:new(self.world,
                math.random(self.l, self.l + self.w),
-               math.random(self.t, self.t + self.h)
+               math.random(self.t, self.t + self.h),
+               220, 150, 150
     )
   end
 
