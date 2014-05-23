@@ -8,6 +8,7 @@ local minSize = 5
 local maxSize = 10
 local minVel = -100
 local maxVel = -1 * minVel
+local bounciness = 0.01
 
 local debrisFilter = function(other)
   return other.class.name == 'Block' or other.class.name == 'Guardian'
@@ -21,7 +22,7 @@ function Debris:initialize(world, x, y)
     math.random(minSize, maxSize)
   )
 
-  self.lifeTime = 1 + 3 * math.random()
+  self.lifeTime = 1 + 2 * math.random()
   self.lived = 0
   self.vx = math.random(minVel, maxVel)
   self.vy = math.random(minVel, maxVel)
@@ -38,20 +39,25 @@ function Debris:collide(dt)
     self.l, self.t = future_l, future_t
     world:move(self, future_l, future_t)
   else
-    local col, tl, tt, nx, ny
+    local col, tl, tt, nx, ny, bl, bt
     local visited = {}
     while len > 0 do
       col = cols[1]
-      tl,tt,nx,ny = col:getTouch()
+      tl,tt,nx,ny,sl,st = col:getBounce()
 
-      self:changeVelocityByCollisionNormal(nx, ny)
+      self:changeVelocityByCollisionNormal(nx, ny, bounciness)
 
       self.l, self.t = tl, tt
       world:move(self, tl, tt)
 
       if visited[col.other] then return end -- stop iterating when we collide with the same item twice
       visited[col.other] = true
-      cols, len = world:check(self, tl, tt, debrisFilter)
+
+      cols, len = world:check(self, sl, st, debrisFilter)
+      if len == 0 then
+        self.l, self.t = sl, st
+        world:move(self, sl, st)
+      end
     end
   end
 end
