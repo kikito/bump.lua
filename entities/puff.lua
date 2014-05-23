@@ -8,21 +8,21 @@ local upwardVelocity = 10
 
 function Puff:initialize(world, x, y)
   Entity.initialize(self, world, x, y, math.random(2,10), math.random(2,10))
-  self.duration = 0.5 + math.random()
-  self.lifeTime = 0
+  self.lifeTime = 0.5 + math.random()
+  self.lived = 0
 end
 
 function Puff:update(dt)
-  self.lifeTime = self.lifeTime + dt
+  self.lived = self.lived + dt
 
-  if self.lifeTime >= self.duration  then
+  if self.lived >= self.lifeTime  then
     self:destroy()
   else
 
     self.t = self.t - upwardVelocity * dt
 
     local cx,cy = self:getCenter()
-    local percent = self.lifeTime / self.duration
+    local percent = self.lived / self.lifeTime
     if percent < 0.2 then
       self.w = self.w + (200 + percent) * dt
       self.h = self.h + (200 + percent) * dt
@@ -39,7 +39,7 @@ function Puff:update(dt)
 end
 
 function Puff:draw()
-  local percent = math.min(1, (self.lifeTime / self.duration) * 1.8)
+  local percent = math.min(1, (self.lived / self.lifeTime) * 1.8)
 
   local r = 255 - math.floor(155*percent)
   local g = 255 - math.floor(155*percent)
