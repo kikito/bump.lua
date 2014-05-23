@@ -17,13 +17,14 @@ local clamp = function(x, a, b)
 end
 
 local destroyFilter = function(other)
-  return other.class.name == 'Guardian'
-      or (other.class.name == 'Block'
-          and not other.indestructible)
+  local cname = other.class.name
+  return cname == 'Guardian'
+      or (cname == 'Block' and not other.indestructible)
 end
 
 local pushFilter = function(other)
-  return other.class.name == 'Player' or other.class.name == 'Grenade'
+  local cname = other.class.name
+  return cname == 'Player' or cname == 'Grenade' or cname == 'Debris'
 end
 
 function Explosion:initialize(world, x, y)
