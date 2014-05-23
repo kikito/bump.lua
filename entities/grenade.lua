@@ -68,10 +68,20 @@ function Grenade:update(dt)
 end
 
 function Grenade:draw(drawDebug)
+
   local r,g,b = 255,0,0
   love.graphics.setColor(r,g,b)
+
   local cx, cy = self:getCenter()
   love.graphics.circle('line', cx, cy, Grenade.radius)
+
+  local percent = self.lived / lifeTime
+
+  g = math.floor(255 * percent)
+  b = g
+  love.graphics.setColor(r,g,b)
+
+  love.graphics.circle('fill', cx, cy, Grenade.radius)
 
   if drawDebug then
     love.graphics.setColor(255,255,255,200)

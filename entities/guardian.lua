@@ -42,7 +42,7 @@ function Guardian:draw(drawDebug)
   local radius = Grenade.radius
   if self.isLoading then
     local percent = self.fireTimer / coolDown
-    local alpha = 255 - math.floor(255 * percent)
+    local alpha = math.floor(255 * percent)
     radius = radius * percent
 
     love.graphics.setColor(255,0,0,alpha)
@@ -52,6 +52,7 @@ function Guardian:draw(drawDebug)
   else
     love.graphics.setColor(255,0,0)
     love.graphics.circle('line', cx, cy, radius)
+    love.graphics.circle('fill', cx, cy, radius)
 
     if drawDebug then
       love.graphics.setColor(255,255,255,100)
@@ -66,8 +67,10 @@ function Guardian:draw(drawDebug)
         love.graphics.line(cx, cy, tx, ty)
       end
 
-      love.graphics.setColor(255,0,0)
+      love.graphics.setColor(0,100,200)
+      love.graphics.setLineWidth(2)
       love.graphics.line(cx, cy, self.laserX, self.laserY)
+      love.graphics.setLineWidth(1)
     end
 
   end
