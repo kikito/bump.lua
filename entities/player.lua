@@ -72,12 +72,16 @@ function Player:collide(dt)
     world:move(self, future_l, future_t)
   else
     local col, tl, tt, nx, ny, sl, st
+    local visited = {}
     while len > 0 do
       col = cols[1]
       tl,tt,nx,ny,sl,st = col:getSlide()
 
       self:changeVelocityByCollisionNormal(nx, ny)
       self:checkIfOnGround(ny)
+
+      if visited[col.other] then return end -- prevent infinite loops
+      visited[col.other] = true
 
       self.l, self.t = tl, tt
       world:move(self, tl, tt)
