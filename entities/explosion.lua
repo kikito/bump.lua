@@ -1,10 +1,7 @@
 local class   = require 'lib.middleclass'
-local util    = require 'util'
-local Entity  = require 'entities.entity'
 local Puff    = require 'entities.puff'
 
-local Explosion = class('Explosion', Entity)
-Explosion.static.updateOrder = 0
+local Explosion = class('Explosion')
 
 local width  = 150
 local height = width
@@ -27,18 +24,8 @@ local pushFilter = function(other)
   return cname == 'Player' or cname == 'Grenade' or cname == 'Debris'
 end
 
-function Explosion:initialize(world, x, y)
-  Entity.initialize(self, world, x-width/2, y-height/2, width, height)
-end
-
-function Explosion:draw()
-  local r,g,b = 255,0,0
-  love.graphics.setColor(r,g,b)
-  util.drawFilledRectangle(self.l, self.t, width, height, r,g,b)
-end
-
 function Explosion:pushItem(other)
-  local cx, cy = self:getCenter()
+  local cx, cy = self.l + self.w / 2, self.t + self.h / 2
   local ox, oy = other:getCenter()
   local dx, dy = ox - cx, oy - cy
 
@@ -55,29 +42,25 @@ function Explosion:pushItem(other)
   other.vy = other.vy + dy
 end
 
-function Explosion:update()
-  local cols, len = self.world:check(self, nil, nil, destroyFilter)
+function Explosion:initialize(world, x, y)
+  self.l,self.t,self.w,self.h = x-width/2, y-height/2, width, height
+
+  local items, len = world:queryRect(self.l,self.t,self.w,self.h, destroyFilter)
   for i=1,len do
-    cols[i].other:destroy()
+    items[i]:destroy()
   end
 
-  local cols, len = self.world:check(self, nil, nil, pushFilter)
+  local items, len = world:queryRect(self.l,self.t,self.w,self.h, pushFilter)
   for i=1,len do
-    self:pushItem(cols[i].other)
+    self:pushItem(items[i])
   end
 
   for i=1, math.random(minPuffs, maxPuffs) do
-    Puff:new( self.world,
+    Puff:new( world,
               math.random(self.l, self.l + self.w),
               math.random(self.t, self.t + self.h) )
   end
 
-  -- todo: camera shake?
-  self:destroy()
-end
-
-function Explosion:destroy()
-  Entity.destroy(self)
 end
 
 return Explosion
