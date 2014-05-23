@@ -6,8 +6,11 @@ local Puff    = require 'entities.puff'
 local Explosion = class('Explosion', Entity)
 Explosion.static.updateOrder = 0
 
-local width = 75
+local width  = 150
 local height = width
+local maxPushSpeed = 300
+local minPuffs = 15
+local maxPuffs = 30
 
 local clamp = function(x, a, b)
   return math.max(a, math.min(b, x))
@@ -33,18 +36,18 @@ function Explosion:draw()
   util.drawFilledRectangle(self.l, self.t, width, height, r,g,b)
 end
 
-function Explosion:push(other)
+function Explosion:pushItem(other)
   local cx, cy = self:getCenter()
   local ox, oy = other:getCenter()
   local dx, dy = ox - cx, oy - cy
 
-  dx, dy = clamp(dx, -300, 300),
-           clamp(dy, -300, 300)
-  if     dx > 0 then dx = 300 - dx
-  elseif dx < 0 then dx = dx - 300
+  dx, dy = clamp(dx, -maxPushSpeed, maxPushSpeed),
+           clamp(dy, -maxPushSpeed, maxPushSpeed)
+  if     dx > 0 then dx = maxPushSpeed - dx
+  elseif dx < 0 then dx = dx - maxPushSpeed
   end
-  if     dy > 0 then dy = 300 - dy
-  elseif dy < 0 then dy = dy - 300
+  if     dy > 0 then dy = maxPushSpeed - dy
+  elseif dy < 0 then dy = dy - maxPushSpeed
   end
 
   other.vx = other.vx + dx
@@ -57,12 +60,12 @@ function Explosion:update()
     cols[i].other:destroy()
   end
 
-  local items, len = self.world:queryRect(self.l - 100, self.t - 100, self.w + 200, self.h + 200, pushFilter)
+  local cols, len = self.world:check(self, nil, nil, pushFilter)
   for i=1,len do
-    self:push(items[i])
+    self:pushItem(cols[i].other)
   end
 
-  for i=1, math.random(10,20) do
+  for i=1, math.random(minPuffs, maxPuffs) do
     Puff:new( self.world,
               math.random(self.l, self.l + self.w),
               math.random(self.t, self.t + self.h) )
