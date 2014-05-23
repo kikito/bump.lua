@@ -80,11 +80,12 @@ function Player:collide(dt)
       self:changeVelocityByCollisionNormal(nx, ny)
       self:checkIfOnGround(ny)
 
+      self.l, self.t = tl, tt
+      world:move(self, tl, tt)
+
       if visited[col.other] then return end -- prevent infinite loops
       visited[col.other] = true
 
-      self.l, self.t = tl, tt
-      world:move(self, tl, tt)
 
       cols, len = world:check(self, sl, st, playerFilter)
       if len == 0 then

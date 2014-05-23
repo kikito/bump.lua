@@ -42,11 +42,12 @@ function Grenade:collide(dt)
       tl,tt,nx,ny,sl,st = col:getBounce()
 
       self:changeVelocityByCollisionNormal(nx, ny, bounciness)
-      if visited[col.other] then return end -- stop iterating when we collide with the same item twice
-      visited[col.other] = true
 
       self.l, self.t = tl, tt
       world:move(self, tl, tt)
+
+      if visited[col.other] then return end -- stop iterating when we collide with the same item twice
+      visited[col.other] = true
 
       cols, len = world:check(self, sl, st, self.filter)
       if len == 0 then
