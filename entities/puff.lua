@@ -5,9 +5,16 @@ local Entity  = require 'entities.entity'
 local Puff = class('Puff', Entity)
 
 local upwardVelocity = 10
+local minSize = 2
+local maxSize = 10
 
 function Puff:initialize(world, x, y)
-  Entity.initialize(self, world, x, y, math.random(2,10), math.random(2,10))
+  Entity.initialize(self,
+    world,
+    x, y,
+    math.random(minSize, maxSize),
+    math.random(minSize, maxSize)
+  )
   self.lifeTime = 0.5 + math.random()
   self.lived = 0
 end
