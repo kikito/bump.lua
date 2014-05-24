@@ -12,10 +12,11 @@ local width         = height * (1 - Phi)
 local activeRadius  = 400
 local coolDown      = 2
 
-function Guardian:initialize(world, target, x, y)
+function Guardian:initialize(world, target, camera, x, y)
   Entity.initialize(self, world, x, y, width, height)
 
   self.target = target
+  self.camera = camera
   self.fireTimer = 0
 
   -- remove any blocks it touches on creation
@@ -112,7 +113,7 @@ function Guardian:fire()
   local cx, cy = self:getCenter()
   local tx, ty = self.target:getCenter()
   local vx, vy = (tx - cx) * 3, (ty - cy) * 3
-  Grenade:new(self.world, self, cx, cy, vx, vy)
+  Grenade:new(self.world, self, self.camera, cx, cy, vx, vy)
   self.fireTimer = 0
 end
 

@@ -1,5 +1,6 @@
 require 'lib.middleclass'
 local gamera     = require 'lib.gamera'
+local shakycam   = require 'lib.shakycam'
 local Map        = require 'map'
 
 local drawDebug   = false  -- draw bump's debug info, fps and memory
@@ -18,8 +19,10 @@ local camera, map
 local Phi = 0.61803398875
 
 local function reset()
-  map    = Map:new(4000, 2000)
-  camera = gamera.new(0,0, map:getDimensions())
+  local width, height = 4000, 2000
+  local gamera_cam = gamera.new(0,0, width, height)
+  camera = shakycam.new(gamera_cam)
+  map    = Map:new(width, height, camera)
 end
 
 function love.load()
@@ -31,6 +34,7 @@ end
 function love.update(dt)
   map:update(dt, camera:getVisible())
   camera:setPosition(map.player:getCenter())
+  camera:update(dt)
 end
 
 -- Drawing
@@ -66,4 +70,5 @@ function love.keypressed(k)
   if k=="rshift" then
     map.player.canFly = not map.player.canFly
   end
+
 end

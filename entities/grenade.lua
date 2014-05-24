@@ -12,9 +12,10 @@ local height        = width
 local bounciness    = 0.4 -- How much energy is lost on each bounce. 1 is perfect bounce, 0 is no bounce
 local lifeTime      = 5
 
-function Grenade:initialize(world, parent, x, y, vx, vy)
+function Grenade:initialize(world, parent, camera, x, y, vx, vy)
   Entity.initialize(self, world, x, y, width, height)
   self.parent = parent
+  self.camera = camera
   self.vx, self.vy  = vx, vy
   self.lived = 0
   self.filter = function(other)
@@ -92,7 +93,7 @@ end
 
 function Grenade:destroy()
   Entity.destroy(self)
-  Explosion:new(self.world, self:getCenter())
+  Explosion:new(self.world, self.camera, self:getCenter())
 end
 
 return Grenade

@@ -14,9 +14,10 @@ end
 
 local Map = class('Map')
 
-function Map:initialize(width, height)
+function Map:initialize(width, height, camera)
   self.width  = width
   self.height = height
+  self.camera = camera
 
   self.world  = bump.newWorld()
   self.player = Player:new(self.world, 60, 60)
@@ -44,13 +45,10 @@ function Map:initialize(width, height)
   for i=1,5 do
     Guardian:new( self.world,
                   self.player,
+                  self.camera,
                   random(100, width-200),
                   random(100, height-150) )
   end
-end
-
-function Map:getDimensions()
-  return self.width, self.height
 end
 
 function Map:update(dt, l,t,w,h)

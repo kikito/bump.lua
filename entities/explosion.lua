@@ -42,8 +42,10 @@ function Explosion:pushItem(other)
   other.vy = other.vy + dy
 end
 
-function Explosion:initialize(world, x, y)
+function Explosion:initialize(world, camera, x, y)
   self.l,self.t,self.w,self.h = x-width/2, y-height/2, width, height
+
+  camera:shake()
 
   local items, len = world:queryRect(self.l,self.t,self.w,self.h, destroyFilter)
   for i=1,len do
