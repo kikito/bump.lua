@@ -8,7 +8,7 @@ local minSize = 5
 local maxSize = 10
 local minVel = -100
 local maxVel = -1 * minVel
-local bounciness = 0.01
+local bounciness = 0.1
 
 local debrisFilter = function(other)
   return other.class.name == 'Block' or other.class.name == 'Guardian'

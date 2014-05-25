@@ -1,7 +1,9 @@
 require 'lib.middleclass'
 local gamera     = require 'lib.gamera'
 local shakycam   = require 'lib.shakycam'
+local media      = require 'media'
 local Map        = require 'map'
+
 
 local drawDebug   = false  -- draw bump's debug info, fps and memory
 local instructions = [[
@@ -26,12 +28,15 @@ local function reset()
 end
 
 function love.load()
+  media.load()
+  media.music:play()
   reset()
 end
 
 -- Updating
 -- Note that we only update elements that are visible to the camera. This is optional
 function love.update(dt)
+  media.cleanup()
   map:update(dt, camera:getVisible())
   camera:setPosition(map.player:getCenter())
   camera:update(dt)
@@ -51,8 +56,8 @@ function love.draw()
   love.graphics.printf(msg, w - 200, 10, 200, 'left')
 
   if drawDebug then
-    local statistics = ("fps: %d, mem: %dKB"):format(love.timer.getFPS(), collectgarbage("count"))
-    love.graphics.printf(statistics, w - 200, h - 20, 200, 'right')
+    local statistics = ("fps: %d, mem: %dKB\n sfx: %d"):format(love.timer.getFPS(), collectgarbage("count"), media.countInstances())
+    love.graphics.printf(statistics, w - 200, h - 40, 200, 'right')
   end
 end
 

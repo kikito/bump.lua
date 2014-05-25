@@ -1,6 +1,7 @@
 -- this file defines how the player moves/reacts to collisions
 local class  = require 'lib.middleclass'
 local util   = require 'util'
+local media  = require 'media'
 
 local Entity = require 'entities.entity'
 
@@ -43,6 +44,9 @@ function Player:changeVelocityByKeys(dt)
   end
 
   if love.keyboard.isDown("up") and (self.canFly or self.onGround) then -- jump/fly
+    if self.onGround then
+      media.sfx.player_jump:play()
+    end
     vy = -jumpVelocity
   end
 
@@ -85,7 +89,6 @@ function Player:collide(dt)
 
       if visited[col.other] then return end -- prevent infinite loops
       visited[col.other] = true
-
 
       cols, len = world:check(self, sl, st, playerFilter)
       if len == 0 then

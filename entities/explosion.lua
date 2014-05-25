@@ -1,4 +1,5 @@
 local class   = require 'lib.middleclass'
+local media   = require 'media'
 local Puff    = require 'entities.puff'
 
 local Explosion = class('Explosion')
@@ -45,6 +46,7 @@ end
 function Explosion:initialize(world, camera, x, y)
   self.l,self.t,self.w,self.h = x-width/2, y-height/2, width, height
 
+  media.sfx.explosion:play()
   camera:shake()
 
   local items, len = world:queryRect(self.l,self.t,self.w,self.h, destroyFilter)

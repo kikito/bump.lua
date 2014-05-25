@@ -3,6 +3,7 @@ local util     = require 'util'
 local Entity   = require 'entities.entity'
 local Grenade  = require 'entities.grenade'
 local Debris   = require 'entities.debris'
+local media    = require 'media'
 
 local Guardian = class('Guardian', Entity)
 
@@ -113,12 +114,15 @@ function Guardian:fire()
   local cx, cy = self:getCenter()
   local tx, ty = self.target:getCenter()
   local vx, vy = (tx - cx) * 3, (ty - cy) * 3
+  media.sfx.guardian_shoot:play()
   Grenade:new(self.world, self, self.camera, cx, cy, vx, vy)
   self.fireTimer = 0
 end
 
 function Guardian:destroy()
   Entity.destroy(self)
+
+  media.sfx.guardian_death:play()
 
   local area = self.w * self.h
   local debrisNumber = math.floor(math.max(30, area / 100))

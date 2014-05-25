@@ -1,16 +1,18 @@
-local class  = require 'lib.middleclass'
-local Entity = require 'entities.entity'
-local Explosion = require 'entities.explosion'
+local class      = require 'lib.middleclass'
+local Entity     = require 'entities.entity'
+local Explosion  = require 'entities.explosion'
+local media      = require 'media'
 
 local Grenade = class('Grenade', Entity)
 
 Grenade.static.updateOrder = 1
 Grenade.static.radius = 8
 
-local width         = math.sqrt(2 * Grenade.radius * Grenade.radius)
-local height        = width
-local bounciness    = 0.4 -- How much energy is lost on each bounce. 1 is perfect bounce, 0 is no bounce
-local lifeTime      = 5
+local width             = math.sqrt(2 * Grenade.radius * Grenade.radius)
+local height            = width
+local bounciness        = 0.4 -- How much energy is lost on each bounce. 1 is perfect bounce, 0 is no bounce
+local lifeTime          = 4   -- Lifetime in seconds
+local bounceSoundSpeed  = 30  -- How fast must a grenade go to make bouncing noises
 
 function Grenade:initialize(world, parent, camera, x, y, vx, vy)
   Entity.initialize(self, world, x, y, width, height)
@@ -25,6 +27,10 @@ function Grenade:initialize(world, parent, camera, x, y, vx, vy)
   end
 end
 
+function Grenade:getBounceSpeed(nx, ny)
+  if nx == 0 then return math.abs(self.vy) else return math.abs(self.vx) end
+end
+
 function Grenade:collide(dt)
   local world = self.world
 
@@ -37,12 +43,17 @@ function Grenade:collide(dt)
     world:move(self, future_l, future_t)
   else
     local col, tl, tt, nx, ny, bl, bt
+    local speed
     local visited = {}
     while len > 0 do
       col = cols[1]
       tl,tt,nx,ny,sl,st = col:getBounce()
 
       self:changeVelocityByCollisionNormal(nx, ny, bounciness)
+      speed = self:getBounceSpeed(nx, ny)
+      if speed >= bounceSoundSpeed then
+        media.sfx.grenade_wall_hit:play()
+      end
 
       self.l, self.t = tl, tt
       world:move(self, tl, tt)
