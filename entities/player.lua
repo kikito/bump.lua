@@ -99,15 +99,21 @@ end
 function Player:update(dt)
   self:changeVelocityByKeys(dt)
   self:changeVelocityByGravity(dt)
-  self:changeVelocityByBeingOnGround(dt)
 
   self:collide(dt)
+  self:changeVelocityByBeingOnGround(dt)
 end
 
-function Player:draw()
+function Player:draw(drawDebug)
   local r,g,b = 0,255,255
   if self.canFly then r,g,b = 0,255,0 end
   util.drawFilledRectangle(self.l, self.t, self.w, self.h, r,g,b)
+  if drawDebug then
+    if self.onGround then
+      util.drawFilledRectangle(self.l, self.t + self.h * 2/3, self.w, self.h/3, 255,255,255)
+    end
+  end
+
 end
 
 return Player
