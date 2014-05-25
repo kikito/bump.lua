@@ -304,12 +304,10 @@ local function getCellsTouchedBySegment(self, x1,y1,x2,y2)
   local cx2,cy2        = self:toCell(x2,y2)
   local stepX, dx, tx  = getSegmentStep(self.cellSize, cx1, x1, x2)
   local stepY, dy, ty  = getSegmentStep(self.cellSize, cy1, y1, y2)
-  local maxLen         = 2*(abs(cx2-cx1) + abs(cy2-cy1))
   local cx,cy          = cx1,cy1
   local coords, len = {{cx=cx,cy=cy}}, 1
 
-  -- maxLen is a safety guard. In some cases this algorithm loops inf on the last step without it
-  while len <= maxLen and (cx~=cx2 or cy~=cy2) do
+  while (cx~=cx2 or cy~=cy2) do
     if tx < ty then
       tx, cx, len = tx + dx, cx + stepX, len + 1
       coords[len] = {cx=cx,cy=cy}
@@ -367,7 +365,7 @@ local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
           ti1,ti2 = rect_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, 0, 1)
           if ti1 and ((0 < ti1 and ti1 < 1) or (0 < ti2 and ti2 < 1)) then
             -- the sorting is according to the t of an infinite line, not the segment
-            tii0,tii1      = rect_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, -math.huge, math.huge)
+            tii0,tii1    = rect_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, -math.huge, math.huge)
             itemInfoLen  = itemInfoLen + 1
             itemInfo[itemInfoLen] = {item = item, ti1 = ti1, ti2 = ti2, weight = min(tii0,tii1)}
           end
@@ -461,7 +459,7 @@ end
 
 function World:getRect(item)
   local rect = getRect(self, item)
-  return {l = rect.l, t = rect.t, w = rect.w, h = rect.h }
+  return { l = rect.l, t = rect.t, w = rect.w, h = rect.h }
 end
 
 function World:countCells()
