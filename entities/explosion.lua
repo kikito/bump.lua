@@ -41,6 +41,10 @@ function Explosion:pushItem(other)
 
   other.vx = other.vx + dx
   other.vy = other.vy + dy
+
+  if other.class.name == 'Player' then
+    other:takeHit()
+  end
 end
 
 function Explosion:initialize(world, camera, x, y)

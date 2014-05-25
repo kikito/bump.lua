@@ -22,7 +22,6 @@ local Phi = 0.61803398875
 
 function love.load()
   media.load()
-  media.music:play()
 
   local width, height = 4000, 2000
   local gamera_cam = gamera.new(0,0, width, height)
@@ -74,5 +73,4 @@ function love.keypressed(k)
   if k=="rshift" then
     map.player.canFly = not map.player.canFly
   end
-
 end

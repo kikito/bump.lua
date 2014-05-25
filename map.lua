@@ -2,6 +2,8 @@ local class       = require 'lib.middleclass'
 local bump        = require 'lib.bump'
 local bump_debug  = require 'lib.bump_debug'
 
+local media       = require 'media'
+
 local Player      = require 'entities.player'
 local Block       = require 'entities.block'
 local Guardian    = require 'entities.guardian'
@@ -23,9 +25,13 @@ function Map:initialize(width, height, camera)
 end
 
 function Map:reset()
+  local music = media.music
+  music:rewind()
+  music:play()
+
   local width, height = self.width, self.height
   self.world  = bump.newWorld()
-  self.player = Player:new(self.world, 60, 60)
+  self.player = Player:new(self, self.world, 60, 60)
 
   -- walls & ceiling
   Block:new(self.world,        0,         0, width,        32, true)

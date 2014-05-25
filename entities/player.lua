@@ -4,11 +4,13 @@ local util   = require 'util'
 local media  = require 'media'
 
 local Entity = require 'entities.entity'
+local Debris = require 'entities.debris'
 
 local Player = class('Player', Entity)
 Player.static.updateOrder = 1
 
 
+local deadDuration  = 3   -- seconds until res-pawn
 local runAccel      = 500 -- the player acceleration while going left/right
 local brakeAccel    = 2000
 local jumpVelocity  = 400 -- the initial upwards velocity when jumping
@@ -22,12 +24,17 @@ local playerFilter = function(other)
   return cname == 'Guardian' or cname == 'Block'
 end
 
-function Player:initialize(world, x,y)
+function Player:initialize(map, world, x,y)
   Entity.initialize(self, world, x, y, width, height)
   self.canFly = false
+  self.health = 1
+  self.deadCounter = 0
+  self.map = map
 end
 
 function Player:changeVelocityByKeys(dt)
+  if self.isDead then return end
+
   local vx, vy = self.vx, self.vy
 
   if love.keyboard.isDown("left") then
@@ -99,7 +106,19 @@ function Player:collide(dt)
   end
 end
 
+function Player:updateHealth(dt)
+  if self.isDead then
+    self.deadCounter = self.deadCounter + dt
+    if self.deadCounter >= deadDuration then
+      self.map:reset()
+    end
+  else
+    self.health = math.min(1, self.health + dt / 10)
+  end
+end
+
 function Player:update(dt)
+  self:updateHealth(dt)
   self:changeVelocityByKeys(dt)
   self:changeVelocityByGravity(dt)
 
@@ -107,16 +126,50 @@ function Player:update(dt)
   self:changeVelocityByBeingOnGround(dt)
 end
 
+function Player:takeHit()
+  self.health = self.health - 0.5
+  if self.health <= 0 then
+    self:die()
+  end
+end
+
+function Player:die()
+  media.music:stop()
+
+  self.isDead = true
+  self.health = 0
+  for i=1,20 do
+    Debris:new(self.world,
+               math.random(self.l, self.l + self.w),
+               math.random(self.t, self.t + self.h),
+               255,0,0)
+  end
+  local cx,cy = self:getCenter()
+  self.w = math.random(8, 10)
+  self.h = math.random(8, 10)
+  self.l = cx + self.w / 2
+  self.t = cy + self.h / 2
+  self.vx = math.random(-100, 100)
+  self.vy = math.random(-100, 100)
+  self.world:remove(self)
+  self.world:add(self, self.l, self.t, self.w, self.h)
+end
+
+function Player:getColor()
+  local g = math.floor(255 * self.health)
+  local r = 255 - g
+  local b = 0
+  return r,g,b
+end
+
 function Player:draw(drawDebug)
-  local r,g,b = 0,255,255
-  if self.canFly then r,g,b = 0,255,0 end
+  local r,g,b = self:getColor()
   util.drawFilledRectangle(self.l, self.t, self.w, self.h, r,g,b)
   if drawDebug then
     if self.onGround then
       util.drawFilledRectangle(self.l, self.t + self.h * 2/3, self.w, self.h/3, 255,255,255)
     end
   end
-
 end
 
 return Player
