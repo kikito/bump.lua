@@ -14,17 +14,18 @@ local bounciness        = 0.4 -- How much energy is lost on each bounce. 1 is pe
 local lifeTime          = 4   -- Lifetime in seconds
 local bounceSoundSpeed  = 30  -- How fast must a grenade go to make bouncing noises
 
+local grenadeFilter = function(other)
+  local cname = other.class.name
+  return cname == 'Block' or cname == 'Guardian' or cname == 'Player'
+end
+
 function Grenade:initialize(world, parent, camera, x, y, vx, vy)
   Entity.initialize(self, world, x, y, width, height)
   self.parent = parent
   self.camera = camera
   self.vx, self.vy  = vx, vy
   self.lived = 0
-  self.filter = function(other)
-    if other == self.parent then return false end
-    local cname = other.class.name
-    return cname == 'Block' or cname == 'Guardian' or cname == 'Player'
-  end
+  self.insideParent = true
 end
 
 function Grenade:getBounceSpeed(nx, ny)
@@ -33,18 +34,26 @@ end
 
 function Grenade:collide(dt)
   local world = self.world
+  local isTouchingParent = false
 
   local future_l = self.l + self.vx * dt
   local future_t = self.t + self.vy * dt
 
-  local cols, len = world:check(self, future_l, future_t, self.filter)
+  local cols, len = world:check(self, future_l, future_t, grenadeFilter)
+  local col = cols[1]
+  if col and col.other == self.parent and self.insideParent then
+    isTouchingParent = true
+    table.remove(cols, 1)
+    len = len - 1
+  end
   if len == 0 then
     self.l, self.t = future_l, future_t
     world:move(self, future_l, future_t)
   else
-    local col, tl, tt, nx, ny, bl, bt
+    local tl, tt, nx, ny, bl, bt
     local speed
     local visited = {}
+
     while len > 0 do
       col = cols[1]
       tl,tt,nx,ny,sl,st = col:getBounce()
@@ -61,13 +70,15 @@ function Grenade:collide(dt)
       if visited[col.other] then return end -- stop iterating when we collide with the same item twice
       visited[col.other] = true
 
-      cols, len = world:check(self, sl, st, self.filter)
+      cols, len = world:check(self, sl, st, grenadeFilter)
       if len == 0 then
         self.l, self.t = sl, st
         world:move(self, sl, st)
       end
     end
   end
+
+  if not isTouchingParent then self.insideParent = false end
 end
 
 function Grenade:update(dt)
