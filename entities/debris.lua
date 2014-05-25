@@ -23,7 +23,7 @@ function Debris:initialize(world, x, y, r,g,b)
   )
   self.r, self.g, self.b = r,g,b
 
-  self.lifeTime = 1 + 2 * math.random()
+  self.lifeTime = 1 + 3 * math.random()
   self.lived = 0
   self.vx = math.random(minVel, maxVel)
   self.vy = math.random(minVel, maxVel)
