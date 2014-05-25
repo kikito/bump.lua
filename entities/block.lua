@@ -1,4 +1,9 @@
--- represents the walls, floors and platforms of the level
+--[[
+-- Block Class
+-- This is the class that represents the walls, floors and "rocks" in the Demo.
+-- * A "breakable" rock is brown, while an "indestructible" one is blue
+-- * When a rock is destroyed, it spawns some debris
+--]]
 local class = require 'lib.middleclass'
 local util  = require 'util'
 local Entity = require 'entities.entity'
@@ -11,11 +16,13 @@ function Block:initialize(world, l,t,w,h, indestructible)
   self.indestructible = indestructible
 end
 
+function Block:getColor()
+  if self.indestructible then return 150,150,220 end
+  return 220, 150, 150
+end
+
 function Block:draw()
-  local r,g,b = 220, 150, 150
-  if self.indestructible then
-    r,g,b = 150,150,220
-  end
+  local r,g,b = self:getColor()
   util.drawFilledRectangle(self.l, self.t, self.w, self.h, r,g,b)
 end
 

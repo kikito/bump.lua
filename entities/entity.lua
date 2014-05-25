@@ -1,3 +1,13 @@
+--[[
+-- Entity Class
+-- This is the base class of all the "Objects" in the Demo (except Explosions)
+-- It has some basic common methods:
+-- * The constructor adds the object to the world, and the destructor removes it
+-- * Some common velocity-related methods
+-- * getCenter returns the center of the rectangle
+-- * Finally, getUpdateOrder is used to sort the objects out before calling :update() on them
+--]]
+
 local class = require 'lib.middleclass'
 
 local Entity = class('Entity')

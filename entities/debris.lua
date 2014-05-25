@@ -1,3 +1,10 @@
+--[[
+-- Debris Class
+-- Debris are the little pieces that fall when a Block, a Guardian or the Player are destroyed by an Explosion
+-- These little pieces bounce around (using collision:getBounce()) until their internal timer (self.lived)
+-- expires. Then they simply disappear.
+--]]
+
 local class   = require 'lib.middleclass'
 local util    = require 'util'
 local Entity  = require 'entities.entity'
@@ -29,7 +36,7 @@ function Debris:initialize(world, x, y, r,g,b)
   self.vy = math.random(minVel, maxVel)
 end
 
-function Debris:collide(dt)
+function Debris:moveColliding(dt)
   local world = self.world
 
   local future_l = self.l + self.vx * dt
@@ -70,7 +77,7 @@ function Debris:update(dt)
     self:destroy()
   else
     self:changeVelocityByGravity(dt)
-    self:collide(dt)
+    self:moveColliding(dt)
   end
 end
 

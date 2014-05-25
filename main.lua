@@ -13,8 +13,7 @@ local instructions = [[
     up:     jump/fly
     return: reset map
     delete: run garbage collection
-    tab:         toggle debug info (%s)
-    right shift: toggle fly (%s)
+    tab:    toggle debug info (%s)
 ]]
 
 local camera, map
@@ -50,7 +49,7 @@ function love.draw()
 
   local w,h = love.graphics.getDimensions()
 
-  local msg = instructions:format(tostring(drawDebug), tostring(map.player.canFly))
+  local msg = instructions:format(tostring(drawDebug))
   love.graphics.printf(msg, w - 200, 10, 200, 'left')
 
   if drawDebug then
@@ -69,8 +68,5 @@ function love.keypressed(k)
   end
   if k=="return" then
     map:reset()
-  end
-  if k=="rshift" then
-    map.player.canFly = not map.player.canFly
   end
 end

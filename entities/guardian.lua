@@ -1,3 +1,20 @@
+--[[
+-- Guardian class
+-- The guardians are the Enemies on this demo. They throw grenades at the Player when they see him.
+-- This class shows how to use bump to get a "line-of-sight" (using world:querySegmentWithCoords()).
+-- The line-of-sight is visible when the player is near a Guardian, but protected by an obstacle (like
+-- a Block). Notice that everything hinders line of sight - even puffs of smoke.
+--
+-- The most complex method of this class is :draw - there Guardian is the most visually complex
+-- figure in the demo, especially if the debugging info is on.
+--
+-- Notice that one of the Constructor's parameters is the game's Camera. This is needed because
+-- Explosions make the Camera shake a bit. Explosions are created by Grenades. And
+-- grenades are created by Guardians.
+--
+-- When a Guardian dies, it spawns some Debris (and emits a terrible sound)
+--]]
+
 local class    = require 'lib.middleclass'
 local util     = require 'util'
 local Entity   = require 'entities.entity'
@@ -6,6 +23,7 @@ local Debris   = require 'entities.debris'
 local media    = require 'media'
 
 local Guardian = class('Guardian', Entity)
+Guardian.static.updateOrder = 3
 
 local Phi           = 0.61803398875
 local height        = 110
@@ -25,10 +43,6 @@ function Guardian:initialize(world, target, camera, x, y)
   for i=1,len do
     world:remove(cols[i].other)
   end
-end
-
-function Guardian:getUpdateOrder()
-  return 3
 end
 
 function Guardian:getCenter()

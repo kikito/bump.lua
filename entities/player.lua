@@ -1,4 +1,17 @@
--- this file defines how the player moves/reacts to collisions
+--[[
+-- Player Class
+-- This entity collides "sliding" over walls and floors.
+--
+-- It also models flying (when at full health) and jumping (when not at full health).
+--
+-- Health continuously regenerates. The player can survive 1 hit from a grenade, but the second one needs to happen
+-- at least 4 secons later. Otherwise they player will die.
+--
+-- The most interesting method is :update() - it's a high level description of how the player behaves
+--
+-- Players need to have a Map on their constructor because they will call map:reset() before dissapearing.
+--
+--]]
 local class  = require 'lib.middleclass'
 local util   = require 'util'
 local media  = require 'media'
@@ -102,7 +115,7 @@ function Player:checkIfOnGround(ny)
   if ny < 0 then self.onGround = true end
 end
 
-function Player:collide(dt)
+function Player:moveColliding(dt)
   self.onGround = false
   local world = self.world
 
@@ -157,7 +170,7 @@ function Player:update(dt)
   self:changeVelocityByGravity(dt)
   self:playEffects()
 
-  self:collide(dt)
+  self:moveColliding(dt)
   self:changeVelocityByBeingOnGround(dt)
 end
 

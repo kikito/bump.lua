@@ -1,3 +1,10 @@
+--[[
+-- Map class
+-- The map is in charge of creaating the scenario where the game is played - it spawns a bunch of rocks, walls, floors and guardians, and a player.
+-- Map:reset() restarts the map. It can be done when the player dies, or manually.
+-- Map:update() updates the visible entities on a given rectangle (by default, what's visible on the screen). See main.lua to see how to update
+-- all entities instead.
+--]]
 local class       = require 'lib.middleclass'
 local bump        = require 'lib.bump'
 local bump_debug  = require 'lib.bump_debug'

@@ -1,3 +1,20 @@
+--[[
+-- Grenade Class
+-- Grenades are tiny balls (squares) that bounce and roll around until they explode.
+-- They don't directly destroy anything - when they die, they spawn an instance of Explosion, which
+-- is in charge of destroying & pushing things around. The variables that regulate how long does it
+-- take to explode are liveTime and self.lived
+--
+-- Grenades need to have a camera parameter on their constructor because the Explosion they spawn
+-- needs to know it (to make the camera shake)
+--
+-- Grenades bounce using collision:getBounce(). Two points of interest:
+-- * Grenades won't collide with the Guardian that created them (their "parent") at the beginning -
+--   they need to "exit their parent" first. That's what the self.insideParent attribute controls.
+-- * Grenades explode instantly if they touch the Player. They will bounce over Blocks and Guardians
+--   (except their parent, until they exit it for the first time)
+-- ]]
+
 local class      = require 'lib.middleclass'
 local Entity     = require 'entities.entity'
 local Explosion  = require 'entities.explosion'
@@ -32,7 +49,7 @@ function Grenade:getBounceSpeed(nx, ny)
   if nx == 0 then return math.abs(self.vy) else return math.abs(self.vx) end
 end
 
-function Grenade:collide(dt)
+function Grenade:moveColliding(dt)
   local world = self.world
   local isTouchingParent = false
 
@@ -91,7 +108,7 @@ function Grenade:update(dt)
     self:destroy()
   else
     self:changeVelocityByGravity(dt)
-    self:collide(dt)
+    self:moveColliding(dt)
   end
 end
 

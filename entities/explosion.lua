@@ -1,3 +1,29 @@
+--[[
+-- Explosion Class
+-- Explosions are very special. They are inside the "Entities" folder, but
+-- they are not a subclass of Entity, like the rest. This is because when an
+-- explosion is created, it does its thing, and it immediatelly disappears!
+--
+-- "Its thing" is:
+-- * Shakes the camera
+-- * Destroying Guardians and destructible Blocks
+-- * Pushing the Player, Grenades, Puffs and Debris around
+-- * Damaging the player
+-- * Spawning some Puffs
+--
+-- Then the explosion ceases to exist.
+--
+-- As a result, it doesn't have neither `update` or `draw` methods. All the work
+-- is done in the constructor.
+--
+-- For detecting which items can be destroyed / pushed / damaged by a particular
+-- explosion, this class uses bump's world:queryRect several times. It would
+-- be a bit more efficient to do this with a single queryRect, but the code would
+-- be uglier and a bit less flexible (you can, for example, use a bigger "push radius"
+-- and a smaller "destroy radius", if you want.
+--
+--]]
+
 local class   = require 'lib.middleclass'
 local media   = require 'media'
 local Puff    = require 'entities.puff'
