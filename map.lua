@@ -52,6 +52,7 @@ function Map:initialize(width, height, camera)
 end
 
 function Map:update(dt, l,t,w,h)
+  l,t,w,h = l or 0, t or 0, w or self.width, h or self.height
   local visibleThings, len = self.world:queryRect(l,t,w,h)
 
   table.sort(visibleThings, sortByUpdateOrder)

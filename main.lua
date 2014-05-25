@@ -34,9 +34,11 @@ function love.load()
 end
 
 -- Updating
--- Note that we only update elements that are visible to the camera. This is optional
 function love.update(dt)
   media.cleanup()
+  -- Note that we only update elements that are visible to the camera. This is optional
+  -- replace the map:update(dt, camera:getVisible()) with the following line to update everything
+  -- map:update(dt)
   map:update(dt, camera:getVisible())
   camera:setPosition(map.player:getCenter())
   camera:update(dt)
