@@ -20,17 +20,14 @@ local instructions = [[
 local camera, map
 local Phi = 0.61803398875
 
-local function reset()
+function love.load()
+  media.load()
+  media.music:play()
+
   local width, height = 4000, 2000
   local gamera_cam = gamera.new(0,0, width, height)
   camera = shakycam.new(gamera_cam)
   map    = Map:new(width, height, camera)
-end
-
-function love.load()
-  media.load()
-  media.music:play()
-  reset()
 end
 
 -- Updating
@@ -72,7 +69,7 @@ function love.keypressed(k)
     collectgarbage("collect")
   end
   if k=="return" then
-    reset()
+    map:reset()
   end
   if k=="rshift" then
     map.player.canFly = not map.player.canFly

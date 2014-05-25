@@ -19,6 +19,11 @@ function Map:initialize(width, height, camera)
   self.height = height
   self.camera = camera
 
+  self:reset()
+end
+
+function Map:reset()
+  local width, height = self.width, self.height
   self.world  = bump.newWorld()
   self.player = Player:new(self.world, 60, 60)
 
@@ -51,10 +56,6 @@ function Map:initialize(width, height, camera)
                  random(32, 100),
                  random() > 0.75 )
     end
-
-    if random() > 0.8 then
-
-    end
   end
 
   for i=1,5 do
@@ -64,7 +65,9 @@ function Map:initialize(width, height, camera)
                   random(100, width-200),
                   random(100, height-150) )
   end
+
 end
+
 
 function Map:update(dt, l,t,w,h)
   l,t,w,h = l or 0, t or 0, w or self.width, h or self.height
