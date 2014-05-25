@@ -10,7 +10,7 @@ local Guardian = class('Guardian', Entity)
 local Phi           = 0.61803398875
 local height        = 110
 local width         = height * (1 - Phi)
-local activeRadius  = 400
+local activeRadius  = 500
 local coolDown      = 2
 
 function Guardian:initialize(world, target, camera, x, y)
