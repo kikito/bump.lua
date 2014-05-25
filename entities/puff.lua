@@ -4,7 +4,7 @@ local Entity  = require 'entities.entity'
 
 local Puff = class('Puff', Entity)
 
-local upwardVelocity = 10
+local upwardSpeed = 10
 local minSize = 2
 local maxSize = 10
 
@@ -17,6 +17,7 @@ function Puff:initialize(world, x, y)
   )
   self.lifeTime = 0.5 + math.random()
   self.lived = 0
+  self.vx, self.vy = 0, -upwardSpeed
 end
 
 function Puff:update(dt)
@@ -26,7 +27,8 @@ function Puff:update(dt)
     self:destroy()
   else
 
-    self.t = self.t - upwardVelocity * dt
+    self.l = self.l + self.vx * dt
+    self.t = self.t + self.vy * dt
 
     local cx,cy = self:getCenter()
     local percent = self.lived / self.lifeTime

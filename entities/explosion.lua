@@ -22,7 +22,7 @@ end
 
 local pushFilter = function(other)
   local cname = other.class.name
-  return cname == 'Player' or cname == 'Grenade' or cname == 'Debris'
+  return cname == 'Player' or cname == 'Grenade' or cname == 'Debris' or cname == 'Puff'
 end
 
 function Explosion:pushItem(other)
