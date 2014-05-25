@@ -5,6 +5,7 @@ local media  = require 'media'
 
 local Entity = require 'entities.entity'
 local Debris = require 'entities.debris'
+local Puff   = require 'entities.puff'
 
 local Player = class('Player', Entity)
 Player.static.updateOrder = 1
@@ -16,6 +17,8 @@ local brakeAccel    = 2000
 local jumpVelocity  = 400 -- the initial upwards velocity when jumping
 local width         = 32
 local height        = 64
+local beltWidth     = 2
+local beltHeight    = 8
 
 local abs = math.abs
 
@@ -26,13 +29,14 @@ end
 
 function Player:initialize(map, world, x,y)
   Entity.initialize(self, world, x, y, width, height)
-  self.canFly = false
   self.health = 1
   self.deadCounter = 0
   self.map = map
 end
 
 function Player:changeVelocityByKeys(dt)
+  self.isJumpingOrFlying = false
+
   if self.isDead then return end
 
   local vx, vy = self.vx, self.vy
@@ -50,14 +54,42 @@ function Player:changeVelocityByKeys(dt)
     end
   end
 
-  if love.keyboard.isDown("up") and (self.canFly or self.onGround) then -- jump/fly
-    if self.onGround then
-      media.sfx.player_jump:play()
-    end
+  if love.keyboard.isDown("up") and (self:canFly() or self.onGround) then -- jump/fly
     vy = -jumpVelocity
+    self.isJumpingOrFlying = true
   end
 
   self.vx, self.vy = vx, vy
+end
+
+function Player:playEffects()
+  if self.isJumpingOrFlying then
+    if self.onGround then
+      media.sfx.player_jump:play()
+    else
+      Puff:new(self.world,
+               self.l,
+               self.t + self.h / 2,
+               20 * (1 - math.random()),
+               50,
+               2, 3)
+      Puff:new(self.world,
+               self.l + self.w,
+               self.t + self.h / 2,
+               20 * (1 - math.random()),
+               50,
+               2, 3)
+      if media.sfx.player_propulsion:countPlayingInstances() == 0 then
+        media.sfx.player_propulsion:play()
+      end
+    end
+  else
+    media.sfx.player_propulsion:stop()
+  end
+
+  if self.achievedFullHealth then
+    media.sfx.player_full_health:play()
+  end
 end
 
 function Player:changeVelocityByBeingOnGround()
@@ -107,13 +139,15 @@ function Player:collide(dt)
 end
 
 function Player:updateHealth(dt)
+  self.achievedFullHealth = false
   if self.isDead then
     self.deadCounter = self.deadCounter + dt
     if self.deadCounter >= deadDuration then
       self.map:reset()
     end
-  else
-    self.health = math.min(1, self.health + dt / 10)
+  elseif self.health < 1 then
+    self.health = math.min(1, self.health + dt / 6)
+    self.achievedFullHealth = self.health == 1
   end
 end
 
@@ -121,13 +155,23 @@ function Player:update(dt)
   self:updateHealth(dt)
   self:changeVelocityByKeys(dt)
   self:changeVelocityByGravity(dt)
+  self:playEffects()
 
   self:collide(dt)
   self:changeVelocityByBeingOnGround(dt)
 end
 
 function Player:takeHit()
-  self.health = self.health - 0.5
+  if self.health == 1 then
+    for i=1,3 do
+      Debris:new(self.world,
+                 math.random(self.l, self.l + self.w),
+                 self.t + self.h / 2,
+                 255,255,255)
+
+    end
+  end
+  self.health = self.health - 0.7
   if self.health <= 0 then
     self:die()
   end
@@ -162,12 +206,21 @@ function Player:getColor()
   return r,g,b
 end
 
+function Player:canFly()
+  return self.health == 1
+end
+
 function Player:draw(drawDebug)
   local r,g,b = self:getColor()
   util.drawFilledRectangle(self.l, self.t, self.w, self.h, r,g,b)
+
+  if self:canFly() then
+    util.drawFilledRectangle(self.l - beltWidth, self.t + self.h/2 , self.w + 2 * beltWidth, beltHeight, 255,255,255)
+  end
+
   if drawDebug then
     if self.onGround then
-      util.drawFilledRectangle(self.l, self.t + self.h * 2/3, self.w, self.h/3, 255,255,255)
+      util.drawFilledRectangle(self.l, self.t + self.h - 4, self.w, 4, 255,255,255)
     end
   end
 end

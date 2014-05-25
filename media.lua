@@ -8,13 +8,20 @@ local function newSource(name)
 end
 
 media.load = function()
-  local names = {'explosion', 'grenade_wall_hit', 'guardian_death', 'guardian_shoot', 'player_jump'}
+  local names = ([[
+    explosion
+    grenade_wall_hit
+    guardian_death guardian_shoot
+    player_jump player_full_health player_propulsion
+  ]])
   media.sfx = {}
-  for _,name in ipairs(names) do
+  for name in names:gmatch('%S+') do
     media.sfx[name] = newSource(name)
   end
 
-  media.music  = love.audio.newSource('sfx/wrath_of_the_djinn.xm')
+  media.sfx.player_propulsion:setLooping(true)
+
+  media.music = love.audio.newSource('sfx/wrath_of_the_djinn.xm')
   media.music:setLooping(true)
 end
 

@@ -4,20 +4,25 @@ local Entity  = require 'entities.entity'
 
 local Puff = class('Puff', Entity)
 
-local upwardSpeed = 10
-local minSize = 2
-local maxSize = 10
+local defaultVx      = 0
+local defaultVy      = -10
+local defaultMinSize = 2
+local defaultMaxSize = 10
 
-function Puff:initialize(world, x, y)
+function Puff:initialize(world, x, y, vx, vy, minSize, maxSize)
+  vx, vy = vx or defaultVx, vy or defaultVy
+  minSize = minSize or defaultMinSize
+  maxSize = maxSize or defaultMaxSize
+
   Entity.initialize(self,
     world,
     x, y,
     math.random(minSize, maxSize),
     math.random(minSize, maxSize)
   )
-  self.lifeTime = 0.5 + math.random()
+  self.lifeTime = 0.1 + math.random()
   self.lived = 0
-  self.vx, self.vy = 0, -upwardSpeed
+  self.vx, self.vy = vx, vy
 end
 
 function Puff:update(dt)

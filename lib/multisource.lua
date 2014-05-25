@@ -44,10 +44,24 @@ function MultiSource:pause()
   end
 end
 
+function MultiSource:setLooping(looping)
+  self.source:setLooping(looping)
+end
+
 function MultiSource:resume()
   for instance in pairs(self.instances) do
     instance:resume()
   end
+end
+
+function MultiSource:countPlayingInstances()
+  local count = 0
+  for instance in pairs(self.instances) do
+    if instance:isPlaying() then
+      count = count + 1
+    end
+  end
+  return count
 end
 
 function MultiSource:countInstances()

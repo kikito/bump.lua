@@ -64,7 +64,7 @@ function Map:reset()
     end
   end
 
-  for i=1,5 do
+  for i=1,10 do
     Guardian:new( self.world,
                   self.player,
                   self.camera,
