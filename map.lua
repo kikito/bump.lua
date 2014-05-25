@@ -33,13 +33,28 @@ function Map:initialize(width, height, camera)
     Block:new(self.world, i*width/tilesOnFloor, height-32, width/tilesOnFloor, 32, true)
   end
 
-  -- random blocks
-  for i=1,500 do
-    Block:new( self.world,
-               random(100, width-200),
-               random(100, height-150),
-               random(32, 100),
-               random(32, 100) )
+  -- groups of blocks
+  local l,t,w,h, area
+  for i=1,60 do
+    w = random(100, 400)
+    h = random(100, 400)
+    area = w * h
+    l = random(100, width-w-200)
+    t = random(100, height-h-100)
+
+
+    for i=1, math.floor(area/7000) do
+      Block:new( self.world,
+                 random(l, l+w),
+                 random(t, t+h),
+                 random(32, 100),
+                 random(32, 100),
+                 random() > 0.75 )
+    end
+
+    if random() > 0.8 then
+
+    end
   end
 
   for i=1,5 do
