@@ -6,7 +6,7 @@ local media  = require 'media'
 local Entity = require 'entities.entity'
 
 local Player = class('Player', Entity)
-Player.static.updateOrder = 2
+Player.static.updateOrder = 1
 
 
 local runAccel      = 500 -- the player acceleration while going left/right

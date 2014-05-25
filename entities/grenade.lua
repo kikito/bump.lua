@@ -5,7 +5,7 @@ local media      = require 'media'
 
 local Grenade = class('Grenade', Entity)
 
-Grenade.static.updateOrder = 1
+Grenade.static.updateOrder = 2
 Grenade.static.radius = 8
 
 local width             = math.sqrt(2 * Grenade.radius * Grenade.radius)
@@ -56,6 +56,10 @@ function Grenade:collide(dt)
 
     while len > 0 do
       col = cols[1]
+      if col.other.class.name == 'Player' then
+        self:destroy()
+        return
+      end
       tl,tt,nx,ny,sl,st = col:getBounce()
 
       self:changeVelocityByCollisionNormal(nx, ny, bounciness)
