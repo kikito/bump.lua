@@ -233,7 +233,7 @@ local tl, tt, nx, ny = col:getTouch()
 ```
 Returns the coordinates to which you would have to move `item` so that it "touches" (without colliding) `other`.
 
-![touch](img/touch.svg)
+![touch](https://raw.githubusercontent.com/kikito/bump.lua/2.0/img/touch.svg)
 
 This type of collision resolution is the fastest one. It is useful for things like arrows that "get stuck" on their targets, or
 as a complement to the other resolutions.
@@ -249,7 +249,7 @@ This is the type of collision resolution used by objects that "slide" over other
 
 A prime example of this is Super Mario (he "slides" over the floor instead of "getting stuck on it", like an arrow would).
 
-![slide](img/slide.svg)
+![slide](https://raw.githubusercontent.com/kikito/bump.lua/2.0/img/slide.svg)
 
 * `tl, tt, nx, ny`: Same as in `col:getTouch()`
 * `sl, st`: The left,top coordinates of `item` after it finishes sliding over `other`.
@@ -263,7 +263,7 @@ This is the type of collision resolution used by objects that "bounce".
 
 A good example of this behavior is Arkanoid's ball.
 
-![bounce](img/bounce.svg)
+![bounce](https://raw.githubusercontent.com/kikito/bump.lua/2.0/img/slide.svg)
 
 * `tl, tt, nx, ny`: Same as in `col:getTouch()`
 * `bl, bt`: The left,top coordinates of `item` after it finishes bouncing. It is very possible that after bouncing, it doesn't touch `other` any more.
