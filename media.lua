@@ -1,3 +1,15 @@
+--[[
+-- media file
+-- This file loads and controls all the sounds of the game.
+-- * media.load() reads the sounds from the disk. It must be called before
+--   the sounds or music are used
+-- * media.music contains a source with the music
+-- * media.sfx.* contains multisources (see lib/multisource.lua)
+-- * media.cleanup liberates unused sounds.
+-- * media.countInstances counts how many sound instances are there in the
+--   system. This is used for debugging
+]]
+
 local multisource = require 'lib.multisource'
 local media = {}
 
@@ -8,12 +20,13 @@ local function newSource(name)
 end
 
 media.load = function()
-  local names = ([[
+  local names = [[
     explosion
     grenade_wall_hit
     guardian_death guardian_shoot
     player_jump player_full_health player_propulsion
-  ]])
+  ]]
+
   media.sfx = {}
   for name in names:gmatch('%S+') do
     media.sfx[name] = newSource(name)
@@ -38,8 +51,6 @@ media.countInstances = function()
   end
   return count
 end
-
-
 
 
 return media

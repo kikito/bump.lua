@@ -1,3 +1,10 @@
+--[[
+-- skakycam lib
+-- This is a small wrapper over gamera.lua that implements screen shake
+-- * camera:shake() increases the intensity of the vibration
+-- * camera:update(dt) decreases the intensity of the vibration slightly and moves the camera position according to the shake
+-- ]]
+
 local maxShake = 5
 local atenuationSpeed = 4
 

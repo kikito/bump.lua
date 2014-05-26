@@ -1,3 +1,13 @@
+--[[
+-- multisource lib
+-- A multisource is a wrapper on top of a LÖVE source. It allows
+-- creating multiple sounds easily. It uses an internal pool of
+-- resources.
+-- * multisource:play() finds a stopped resource from the pool,
+--   or creates a new one, and plays and returns it.
+-- * multisouce:cleanup() liberates the memory of old unplayed sources.
+]]
+
 local multisource = {}
 
 local MultiSource   = {}
