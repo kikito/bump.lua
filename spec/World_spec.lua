@@ -147,9 +147,9 @@ describe('World', function()
         end)
 
         describe('the filter param', function()
-          it('deactivates collisions when filter returns true', function()
+          it('deactivates collisions when filter returns false', function()
             local cols = world:check(a, 10, 0, function(obj)
-              return obj == d
+              return obj ~= d
             end)
             assert.same(#cols, 2)
           end)
@@ -207,69 +207,76 @@ describe('World', function()
     it('returns nothing when the world is empty', function()
       assert.same(bump.newWorld():queryRect(0,0,1,1), {})
     end)
-    it('returns the items inside/partially inside the given rect', function()
-      local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
-      world:add(a, 10,0, 10,10)
-      world:add(b, 70,0, 10,10)
-      world:add(c, 50,0, 10,10)
-      world:add(d, 90,0, 10,10)
-
+    describe('when the world has items', function()
+      local world, a, b, c, d
+      before_each(function()
+        world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
+        world:add(a, 10,0, 10,10)
+        world:add(b, 70,0, 10,10)
+        world:add(c, 50,0, 10,10)
+        world:add(d, 90,0, 10,10)
+      end)
       local sorted = function(tbl)
         table.sort(tbl, function(a,b) return a[1] < b[1] end)
         return tbl
       end
 
-      assert.same(sorted(world:queryRect(55, 5, 20, 20)), {b,c})
-      assert.same(sorted(world:queryRect(0, 5, 100, 20)), {a,b,c,d})
+      it('returns the items inside/partially inside the given rect', function()
+        assert.same(sorted(world:queryRect(55, 5, 20, 20)), {b,c})
+        assert.same(sorted(world:queryRect(0, 5, 100, 20)), {a,b,c,d})
+      end)
+
+      it('only returns the items for which filter returns true', function()
+        local filter = function(other) return other == a or other == b or other == d end
+        assert.same(sorted(world:queryRect(55, 5, 20, 20, filter)), {b})
+        assert.same(sorted(world:queryRect(0, 5, 100, 20, filter)), {a,b,d})
+      end)
     end)
+
   end)
 
   describe(':queryPoint', function()
     it('returns nothing when the world is empty', function()
       assert.same(bump.newWorld():queryPoint(0,0), {})
     end)
-    it('returns the items inside/partially inside the given rect', function()
-      local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
-      world:add(a, 10,0, 10,10)
-      world:add(b, 15,0, 10,10)
-      world:add(c, 20,0, 10,10)
-
+    describe('when the world has items', function()
+      local world, a, b, c, d
+      before_each(function()
+        world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
+        world:add(a, 10,0, 10,10)
+        world:add(b, 15,0, 10,10)
+        world:add(c, 20,0, 10,10)
+      end)
       local sorted = function(tbl)
         table.sort(tbl, function(a,b) return a[1] < b[1] end)
         return tbl
       end
 
-      assert.same(sorted(world:queryPoint( 4,5)), {})
-      assert.same(sorted(world:queryPoint(14,5)), {a})
-      assert.same(sorted(world:queryPoint(16,5)), {a,b})
-      assert.same(sorted(world:queryPoint(21,5)), {b,c})
-      assert.same(sorted(world:queryPoint(26,5)), {c})
-      assert.same(sorted(world:queryPoint(31,5)), {})
+      it('returns the items inside/partially inside the given rect', function()
+        assert.same(sorted(world:queryPoint( 4,5)), {})
+        assert.same(sorted(world:queryPoint(14,5)), {a})
+        assert.same(sorted(world:queryPoint(16,5)), {a,b})
+        assert.same(sorted(world:queryPoint(21,5)), {b,c})
+        assert.same(sorted(world:queryPoint(26,5)), {c})
+        assert.same(sorted(world:queryPoint(31,5)), {})
+      end)
+
+      it('the items are ignored when filter is present and returns false for them', function()
+        local filter = function(other) return other ~= b end
+        assert.same(sorted(world:queryPoint( 4,5, filter)), {})
+        assert.same(sorted(world:queryPoint(14,5, filter)), {a})
+        assert.same(sorted(world:queryPoint(16,5, filter)), {a})
+        assert.same(sorted(world:queryPoint(21,5, filter)), {c})
+        assert.same(sorted(world:queryPoint(26,5, filter)), {c})
+        assert.same(sorted(world:queryPoint(31,5, filter)), {})
+      end)
     end)
+
   end)
 
   describe(':querySegment', function()
     it('returns nothing when the world is empty', function()
       assert.same(bump.newWorld():querySegment(0,0,1,1), {})
-    end)
-
-    it('returns the items touched by the segment, sorted by touch order', function()
-      local world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
-      world:add(a,  5,0, 5,10)
-      world:add(b, 15,0, 5,10)
-      world:add(c, 25,0, 5,10)
-
-      assert.same(world:querySegment(0,5, 11,5),  {a})
-      assert.same(world:querySegment(0,5, 17,5),  {a,b})
-      assert.same(world:querySegment(0,5, 30,5),  {a,b,c})
-      assert.same(world:querySegment(17,5, 26,5), {b,c})
-      assert.same(world:querySegment(22,5, 26,5), {c})
-
-      assert.same(world:querySegment(11,5, 0,5),  {a})
-      assert.same(world:querySegment(17,5, 0,5),  {b,a})
-      assert.same(world:querySegment(30,5, 0,5),  {c,b,a})
-      assert.same(world:querySegment(26,5, 17,5), {c,b})
-      assert.same(world:querySegment(26,5, 22,5), {c})
     end)
 
     it('does not touch borders', function()
@@ -280,6 +287,47 @@ describe('World', function()
       assert.same(world:querySegment(0,5,  10,0),  {})
       assert.same(world:querySegment(15,5, 20,0),  {})
       assert.same(world:querySegment(26,5, 25,0),  {})
+    end)
+
+    describe("when the world has items", function()
+      local world, a, b, c, d
+      before_each(function()
+        world, a, b, c, d = bump.newWorld(), {'a'}, {'b'}, {'c'}, {'d'}
+        world:add(a,  5,0, 5,10)
+        world:add(b, 15,0, 5,10)
+        world:add(c, 25,0, 5,10)
+      end)
+
+      it('returns the items touched by the segment, sorted by touch order', function()
+        assert.same(world:querySegment(0,5, 11,5),  {a})
+        assert.same(world:querySegment(0,5, 17,5),  {a,b})
+        assert.same(world:querySegment(0,5, 30,5),  {a,b,c})
+        assert.same(world:querySegment(17,5, 26,5), {b,c})
+        assert.same(world:querySegment(22,5, 26,5), {c})
+
+        assert.same(world:querySegment(11,5, 0,5),  {a})
+        assert.same(world:querySegment(17,5, 0,5),  {b,a})
+        assert.same(world:querySegment(30,5, 0,5),  {c,b,a})
+        assert.same(world:querySegment(26,5, 17,5), {c,b})
+        assert.same(world:querySegment(26,5, 22,5), {c})
+      end)
+
+      it('filters out items when filter does not return true for them', function()
+        local filter = function(other) return other ~= a and other ~= c end
+
+        assert.same(world:querySegment(0,5, 11,5, filter),  {})
+        assert.same(world:querySegment(0,5, 17,5, filter),  {b})
+        assert.same(world:querySegment(0,5, 30,5, filter),  {b})
+        assert.same(world:querySegment(17,5, 26,5, filter), {b})
+        assert.same(world:querySegment(22,5, 26,5, filter), {})
+
+        assert.same(world:querySegment(11,5, 0,5, filter),  {})
+        assert.same(world:querySegment(17,5, 0,5, filter),  {b})
+        assert.same(world:querySegment(30,5, 0,5, filter),  {b})
+        assert.same(world:querySegment(26,5, 17,5, filter), {b})
+        assert.same(world:querySegment(26,5, 22,5, filter), {})
+      end)
+
     end)
   end)
 end)

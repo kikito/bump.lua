@@ -162,8 +162,8 @@ It returns an array of collisions, indicating which items collide with `item`
 * `item` is the item being checked for collisions. Must be something previously inserted in the world with `world:add(item, l,t,w,h)`, or an error will be raised.
 * `future_l` means "next left". It is an optional value. It will be explained with more detail below.
 * `future_t` means "next top". It is also optional. It will be explained later.
-* `filter` is an optional function. The function only takes one parameter, called `other`, which will be every object with which `item` collides. If `filter` returns `true`,
-  then `other` will be ignored. The order in which filter is called is not guaranteed. By default no items are filtered. It is recommended that `filter` executes fast.
+* `filter` is an optional function. The function only takes one parameter, called `other`, which will be every object with which `item` collides. If `filter` returns `false` or `nil`,
+  then `other` will be ignored. The order in which filter is called is not guaranteed. By default all items collide. It is recommended that `filter` executes fast.
 * `collisions` is an array of zero or more collisions between `item` and other objects inserted in the world. Each collision has an attribute called `.other`, which
   points to the colliding item. Only one collision per "other" object will be returned. When the item is moving (see below) the collisions will be returned "in order":
   the ones which happen "first along the movement of `item`" will be first in `collisions`.
@@ -273,7 +273,7 @@ Sometimes it is desirable to know "which items are in a certain area". This is c
 Bump allows querying the world via a point, a rectangular zone, and a straight line segment.
 
 ``` lua
-local items, len = world:queryPoint(x,y)
+local items, len = world:queryPoint(x,y, filter)
 ```
 Returns the items that touch a given point.
 
@@ -282,10 +282,12 @@ It is useful for things like clicking with the mouse.
 * `x,y` are the coordinates of the point that is being checked
 * `items` is the list items from the ones inserted on the world (like `player`) that contain the point `x,y`.
   If no items touch the point, then `items` will be an empty table. If not empty, then the order of these items is random.
+* `filter` is an optional function. It takes one parameter (an item). `queryPoint` will not return the items that return
+  `false` or `nil` on `filter(item)`. By default, all items touched by the point are returned.
 * `len` is the length of the items list. It is equivalent to `#items`, but it's slightly faster to use `len` instead.
 
 ``` lua
-local items, len = world:queryRect(l,t,w,h)
+local items, len = world:queryRect(l,t,w,h, filter)
 ```
 Returns the items that touch a given rectangle.
 
@@ -293,17 +295,21 @@ Useful for things like selecting what to display on
 the screen, or selecting a group of units with the mouse in a strategy game.
 
 * `l,t,w,h` is a rectangle. The items that intersect with it will be returned.
+* `filter` is an optional function. When provided, it is used to "filter out" which items are returned - if `filter(item)` returns
+  `false` or `nil`, that item is ignored. By default, all items are included.
 * `items` is a list of items, like in `world:queryPoint`. But instead of for a point `x,y` for a rectangle `l,t,w,h`.
 * `len` is equivalent to `#items`
 
 ``` lua
-local items, len = world:querySegment(x1,y1,x2,y2)
+local items, len = world:querySegment(x1,y1,x2,y2,filter)
 ```
 Returns the items that touch a segment.
 
 It's useful for things like line-of-sight or modelling real-life bullets.
 
 * `x1,y1,x2,y2` are the start and end coordinates of the segment.
+* `filter` is an optional function. When provided, it is used to "filter out" which items are returned - if `filter(item)` returns
+  `false` or `nil`, that item is ignored. By default, all items are included.
 * `items` is a list of items, similar to `world:queryPoint`, intersecting with the given segment. The difference is that
   in `world:querySegment` the items are sorted by proximity. The ones closest to `x1,y1` appear first, while the ones farther
   away appear later.
@@ -320,7 +326,7 @@ It is useful if you need to **actually show** the lasers/bullets or if you need 
 where a bullet hits a wall). If you don't need the actual points of contact between the segment and the bounding rectes, use
 `world:querySegment`, since it's faster.
 
-* `x1,y1,x2,y2` same as in `world:querySegment`
+* `x1,y1,x2,y2,filter` same as in `world:querySegment`
 * `itemInfo` is a list of tables. Each element in the table has the following elements: `item`, `x1`, `y1`, `x2`, `y2`, `t0` and `t1`.
   * `info.item` is the item being intersected by the segment.
   * `info.x1,info.y1` are the coordinates of the first intersection between `item` and the segment

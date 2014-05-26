@@ -349,7 +349,7 @@ local function getCellsTouchedBySegment(self, x1,y1,x2,y2)
   return cells, cellsLen
 end
 
-local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2)
+local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
   local cells, len = getCellsTouchedBySegment(self, x1,y1,x2,y2)
   local cell, rect, l,t,w,h, ti1,ti2, tii0,tii1
   local visited, itemInfo, itemInfoLen = {},{},0
@@ -358,15 +358,17 @@ local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2)
     for item in pairs(cell.items) do
       if not visited[item] then
         visited[item]  = true
-        rect            = self.rects[item]
-        l,t,w,h        = rect.l,rect.t,rect.w,rect.h
+        if (not filter or filter(item)) then
+          rect           = self.rects[item]
+          l,t,w,h        = rect.l,rect.t,rect.w,rect.h
 
-        ti1,ti2 = rect_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, 0, 1)
-        if ti1 and ((0 < ti1 and ti1 < 1) or (0 < ti2 and ti2 < 1)) then
-          -- the sorting is according to the t of an infinite line, not the segment
-          tii0,tii1      = rect_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, -math.huge, math.huge)
-          itemInfoLen  = itemInfoLen + 1
-          itemInfo[itemInfoLen] = {item = item, ti1 = ti1, ti2 = ti2, weight = min(tii0,tii1)}
+          ti1,ti2 = rect_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, 0, 1)
+          if ti1 and ((0 < ti1 and ti1 < 1) or (0 < ti2 and ti2 < 1)) then
+            -- the sorting is according to the t of an infinite line, not the segment
+            tii0,tii1    = rect_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, -math.huge, math.huge)
+            itemInfoLen  = itemInfoLen + 1
+            itemInfo[itemInfoLen] = {item = item, ti1 = ti1, ti2 = ti2, weight = min(tii0,tii1)}
+          end
         end
       end
     end
@@ -439,7 +441,7 @@ function World:check(item, future_l, future_t, filter)
   for other,_ in pairs(dictItemsInCellRect) do
     if not visited[other] then
       visited[other] = true
-      if not (filter and filter(other)) then
+      if not filter or filter(other) then
         local oRect = self.rects[other]
         local col  = bump.newCollision(item, other, rect, oRect, future_l, future_t):resolve()
         if col then
@@ -480,7 +482,7 @@ function World:toCell(x,y)
   return floor(x / cellSize) + 1, floor(y / cellSize) + 1
 end
 
-function World:queryRect(l,t,w,h)
+function World:queryRect(l,t,w,h, filter)
 
   local cl,ct,cw,ch = toCellRect(self, l,t,w,h)
   local dictItemsInCellRect = getDictItemsInCellRect(self, cl,ct,cw,ch)
@@ -490,7 +492,9 @@ function World:queryRect(l,t,w,h)
   local rect
   for item,_ in pairs(dictItemsInCellRect) do
     rect = self.rects[item]
-    if rect_isIntersecting(l,t,w,h, rect.l, rect.t, rect.w, rect.h) then
+    if (not filter or filter(item))
+    and rect_isIntersecting(l,t,w,h, rect.l, rect.t, rect.w, rect.h)
+    then
       len = len + 1
       items[len] = item
     end
@@ -499,7 +503,7 @@ function World:queryRect(l,t,w,h)
   return items, len
 end
 
-function World:queryPoint(x,y)
+function World:queryPoint(x,y, filter)
   local cx,cy = self:toCell(x,y)
   local dictItemsInCellRect = getDictItemsInCellRect(self, cx,cy,1,1)
 
@@ -508,7 +512,9 @@ function World:queryPoint(x,y)
   local rect
   for item,_ in pairs(dictItemsInCellRect) do
     rect = self.rects[item]
-    if rect_containsPoint(rect.l, rect.t, rect.w, rect.h, x, y) then
+    if (not filter or filter(item))
+    and rect_containsPoint(rect.l, rect.t, rect.w, rect.h, x, y)
+    then
       len = len + 1
       items[len] = item
     end
@@ -517,8 +523,8 @@ function World:queryPoint(x,y)
   return items, len
 end
 
-function World:querySegment(x1, y1, x2, y2)
-  local itemInfo, len = getInfoAboutItemsTouchedBySegment(self, x1, y1, x2, y2)
+function World:querySegment(x1, y1, x2, y2, filter)
+  local itemInfo, len = getInfoAboutItemsTouchedBySegment(self, x1, y1, x2, y2, filter)
   local items = {}
   for i=1, len do
     items[i] = itemInfo[i].item
@@ -526,8 +532,8 @@ function World:querySegment(x1, y1, x2, y2)
   return items, len
 end
 
-function World:querySegmentWithCoords(x1, y1, x2, y2)
-  local itemInfo, len = getInfoAboutItemsTouchedBySegment(self, x1, y1, x2, y2)
+function World:querySegmentWithCoords(x1, y1, x2, y2, filter)
+  local itemInfo, len = getInfoAboutItemsTouchedBySegment(self, x1, y1, x2, y2, filter)
   local dx, dy        = x2-x1, y2-y1
   local info, ti1, ti2
   for i=1, len do
