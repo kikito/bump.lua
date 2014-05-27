@@ -29,7 +29,9 @@ local Phi           = 0.61803398875
 local height        = 110
 local width         = height * (1 - Phi)
 local activeRadius  = 500
-local coolDown      = 2
+local fireCoolDown  = 0.75 -- how much time the guardian takes to "regenerate a grenade"
+local aimDuration   = 1.25 -- time it takes to "aim"
+local targetCoolDown = 2 -- minimum time between "target acquired" chirps
 
 function Guardian:initialize(world, target, camera, x, y)
   Entity.initialize(self, world, x, y, width, height)
@@ -37,6 +39,8 @@ function Guardian:initialize(world, target, camera, x, y)
   self.target = target
   self.camera = camera
   self.fireTimer = 0
+  self.aimTimer  = 0
+  self.timeSinceLastTargetAquired = targetCoolDown
 
   -- remove any blocks it touches on creation
   local cols, len = world:check(self)
@@ -58,16 +62,20 @@ function Guardian:draw(drawDebug)
   love.graphics.setColor(255,0,0)
   local radius = Grenade.radius
   if self.isLoading then
-    local percent = self.fireTimer / coolDown
+    local percent = self.fireTimer / fireCoolDown
     local alpha = math.floor(255 * percent)
     radius = radius * percent
 
-    love.graphics.setColor(255,0,0,alpha)
+    love.graphics.setColor(0,100,200,alpha)
     love.graphics.circle('fill', cx, cy, radius)
-    love.graphics.setColor(255,0,0)
+    love.graphics.setColor(0,100,200)
     love.graphics.circle('line', cx, cy, radius)
   else
-    love.graphics.setColor(255,0,0)
+    if self.aimTimer > 0 then
+      love.graphics.setColor(255,0,0)
+    else
+      love.graphics.setColor(0,100,200)
+    end
     love.graphics.circle('line', cx, cy, radius)
     love.graphics.circle('fill', cx, cy, radius)
 
@@ -84,7 +92,11 @@ function Guardian:draw(drawDebug)
         love.graphics.line(cx, cy, tx, ty)
       end
 
-      love.graphics.setColor(0,100,200)
+      if self.aimTimer > 0 then
+        love.graphics.setColor(255,100,100,200)
+      else
+        love.graphics.setColor(0,100,200,100)
+      end
       love.graphics.setLineWidth(2)
       love.graphics.line(cx, cy, self.laserX, self.laserY)
       love.graphics.setLineWidth(1)
@@ -98,7 +110,9 @@ function Guardian:update(dt)
   self.isLoading            = false
   self.laserX, self.laserY  = nil,nil
 
-  if self.fireTimer < coolDown then
+  self.timeSinceLastTargetAquired = self.timeSinceLastTargetAquired + dt
+
+  if self.fireTimer < fireCoolDown then
     self.fireTimer = self.fireTimer + dt
     self.isLoading = true
   else
@@ -117,9 +131,20 @@ function Guardian:update(dt)
         self.laserX = info.x1
         self.laserY = info.y1
         if info.item == self.target then
-          self:fire()
+          if self.aimTimer == 0 and self.timeSinceLastTargetAquired >= targetCoolDown then
+            media.sfx.guardian_target_acquired:play()
+            self.timeSinceLastTargetAquired = 0
+          end
+          self.aimTimer = self.aimTimer + dt
+          if self.aimTimer >= aimDuration then
+            self:fire()
+          end
+        else
+          self.aimTimer = 0
         end
       end
+    else
+      self.aimTimer = 0
     end
   end
 end
@@ -131,6 +156,7 @@ function Guardian:fire()
   media.sfx.guardian_shoot:play()
   Grenade:new(self.world, self, self.camera, cx, cy, vx, vy)
   self.fireTimer = 0
+  self.aimTimer = 0
 end
 
 function Guardian:destroy()
