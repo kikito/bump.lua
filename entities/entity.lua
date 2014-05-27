@@ -18,6 +18,7 @@ function Entity:initialize(world, l,t,w,h)
   self.world, self.l, self.t, self.w, self.h = world, l,t,w,h
   self.vx, self.vy = 0,0
   self.world:add(self, l,t,w,h)
+  self.created_at = love.timer.getTime()
 end
 
 function Entity:changeVelocityByGravity(dt)

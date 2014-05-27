@@ -21,6 +21,10 @@ local sortByUpdateOrder = function(a,b)
   return a:getUpdateOrder() < b:getUpdateOrder()
 end
 
+local sortByCreatedAt = function(a,b)
+  return a.created_at < b.created_at
+end
+
 local Map = class('Map')
 
 function Map:initialize(width, height, camera)
@@ -97,6 +101,8 @@ function Map:draw(drawDebug, l,t,w,h)
   if drawDebug then bump_debug.draw(self.world, l,t,w,h) end
 
   local visibleThings, len = self.world:queryRect(l,t,w,h)
+
+  table.sort(visibleThings, sortByCreatedAt)
 
   for i=1, len do
     visibleThings[i]:draw(drawDebug)
