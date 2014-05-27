@@ -135,6 +135,68 @@ local function rect_isIntersecting(l1,t1,w1,h1, l2,t2,w2,h2)
 end
 
 ------------------------------------------
+-- Grid functions
+------------------------------------------
+
+local function grid_toWorld(cellSize, cx, cy)
+  return (cx - 1)*cellSize, (cy-1)*cellSize
+end
+
+local function grid_toCell(cellSize, x, y)
+  return floor(x / cellSize) + 1, floor(y / cellSize) + 1
+end
+
+-- grid_traverse* functions are based on "A Fast Voxel Traversal Algorithm for Ray Tracing",
+-- by John Amanides and Andrew Woo - http://www.cse.yorku.ca/~amana/research/grid.pdf
+-- It has been modified to include both cells when the ray "touches a grid corner"
+
+local function grid_traverse_initStep(cellSize, ct, t1, t2)
+  local v = t2 - t1
+  if     v > 0 then
+    return  1,  cellSize / v, ((ct + v) * cellSize - t1) / v
+  elseif v < 0 then
+    return -1, -cellSize / v, ((ct + v - 1) * cellSize - t1) / v
+  else
+    return 0, math.huge, math.huge
+  end
+end
+
+local function grid_traverse(cellSize, x1,y1,x2,y2, f)
+  local cx1,cy1        = grid_toCell(cellSize, x1,y1)
+  local cx2,cy2        = grid_toCell(cellSize, x2,y2)
+  local stepX, dx, tx  = grid_traverse_initStep(cellSize, cx1, x1, x2)
+  local stepY, dy, ty  = grid_traverse_initStep(cellSize, cy1, y1, y2)
+  local cx,cy          = cx1,cy1
+  local ncx, ncy
+
+  f(cx, cy)
+
+  while cx ~= cx2 or cy ~= cy2 do
+    if tx < ty then
+      tx, cx = tx + dx, cx + stepX
+      f(cx, cy)
+    elseif ty < tx then
+      ty, cy = ty + dy, cy + stepY
+      f(cx, cy)
+    else -- tx == ty
+      ncx, ncy = cx + stepX, cy + stepY
+
+      f(ncx, cy)
+      f(cx, ncy)
+
+      cx, cy = ncx, ncy
+      tx, ty = tx + dx, ty + dy
+    end
+  end
+end
+
+local function grid_toCellRect(cellSize, l,t,w,h)
+  local cl,ct = grid_toCell(cellSize, l, t)
+  local cr,cb = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
+  return cl, ct, cr-cl+1, cb-ct+1
+end
+
+------------------------------------------
 -- Collision
 ------------------------------------------
 
@@ -236,12 +298,6 @@ local function getRect(self, item)
   return rect
 end
 
-local function toCellRect(self, l,t,w,h)
-  local cellSize = self.cellSize
-  local cl,ct    = self:toCell(l, t)
-  local cr,cb    = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
-  return cl, ct, cr-cl+1, cb-ct+1
-end
 
 local function addItemToCell(self, item, cx, cy)
   self.rows[cy] = self.rows[cy] or setmetatable({}, {__mode = 'v'})
@@ -287,64 +343,20 @@ local function getDictItemsInCellRect(self, cl,ct,cw,ch)
   return items_dict
 end
 
-local function getSegmentStep(cellSize, ct, t1, t2)
-  local v = t2 - t1
-  if     v > 0 then
-    return  1,  cellSize / v, ((ct + v) * cellSize - t1) / v
-  elseif v < 0 then
-    return -1, -cellSize / v, ((ct + v - 1) * cellSize - t1) / v
-  else
-    return 0, math.huge, math.huge
-  end
-end
-
 local function getCellsTouchedBySegment(self, x1,y1,x2,y2)
 
-  local cx1,cy1        = self:toCell(x1,y1)
-  local cx2,cy2        = self:toCell(x2,y2)
-  local stepX, dx, tx  = getSegmentStep(self.cellSize, cx1, x1, x2)
-  local stepY, dy, ty  = getSegmentStep(self.cellSize, cy1, y1, y2)
-  local cx,cy          = cx1,cy1
-  local coords, len = {{cx=cx,cy=cy}}, 1
+  local cells, cellsLen, visited = {}, 0, {}
 
-  while (cx~=cx2 or cy~=cy2) do
-    if tx < ty then
-      tx, cx, len = tx + dx, cx + stepX, len + 1
-      coords[len] = {cx=cx,cy=cy}
-    elseif ty < tx then
-      ty, cy, len = ty + dy, cy + stepY, len + 1
-      coords[len] = {cx=cx,cy=cy}
-    else -- tx == ty
-      local ntx,nty = tx+dx, dy+dy
-      local ncx,ncy = cx+stepX, cy+stepY
+  grid_traverse(self.cellSize, x1,y1,x2,y2, function(cx, cy)
+    local row  = self.rows[cy]
+    if not row then return end
+    local cell = row[cx]
+    if not cell or visited[cell] then return end
 
-      len = len + 1
-      coords[len] = {cx=ncx,cy=cy}
-      len = len + 1
-      coords[len] = {cx=cx,cy=ncy}
-
-      tx,ty = ntx,nty
-      cx,cy = ncx,ncy
-    end
-  end
-
-  local coord, row, cell
-  local visited = {}
-  local cells, cellsLen = {}, 0
-  for i=1,len do
-    coord = coords[i]
-    row   = self.rows[coord.cy]
-    if row then
-      cell = row[coord.cx]
-      if cell then
-        if not visited[cell] then
-          visited[cell] = true
-          cellsLen = cellsLen + 1
-          cells[cellsLen] = cell
-        end
-      end
-    end
-  end
+    visited[cell] = true
+    cellsLen = cellsLen + 1
+    cells[cellsLen] = cell
+  end)
 
   return cells, cellsLen
 end
@@ -389,7 +401,7 @@ function World:add(item, l,t,w,h)
 
   self.rects[item] = {l=l,t=t,w=w,h=h}
 
-  local cl,ct,cw,ch = toCellRect(self, l,t,w,h)
+  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, l,t,w,h)
   for cy = ct, ct+ch-1 do
     for cx = cl, cl+cw-1 do
       addItemToCell(self, item, cx, cy)
@@ -401,7 +413,7 @@ function World:remove(item)
   local rect = getRect(self, item)
 
   self.rects[item] = nil
-  local cl,ct,cw,ch = toCellRect(self, rect.l,rect.t,rect.w,rect.h)
+  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, rect.l,rect.t,rect.w,rect.h)
   for cy = ct, ct+ch-1 do
     for cx = cl, cl+cw-1 do
       removeItemFromCell(self, item, cx, cy)
@@ -434,7 +446,7 @@ function World:check(item, future_l, future_t, filter)
   local tr, tb = max(future_l + w, l+w), max(future_t + h, t+h)
   local tw, th = tr-tl, tb-tt
 
-  local cl,ct,cw,ch = toCellRect(self, tl,tt,tw,th)
+  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, tl,tt,tw,th)
 
   local dictItemsInCellRect = getDictItemsInCellRect(self, cl,ct,cw,ch)
 
@@ -473,18 +485,16 @@ function World:countCells()
 end
 
 function World:toWorld(cx, cy)
-  local cellSize = self.cellSize
-  return (cx - 1)*cellSize, (cy-1)*cellSize
+  return grid_toWorld(self.cellSize, cx, cy)
 end
 
 function World:toCell(x,y)
-  local cellSize = self.cellSize
-  return floor(x / cellSize) + 1, floor(y / cellSize) + 1
+  return grid_toCell(self.cellSize, x, y)
 end
 
 function World:queryRect(l,t,w,h, filter)
 
-  local cl,ct,cw,ch = toCellRect(self, l,t,w,h)
+  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, l,t,w,h)
   local dictItemsInCellRect = getDictItemsInCellRect(self, cl,ct,cw,ch)
 
   local items, len = {}, 0
