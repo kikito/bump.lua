@@ -175,6 +175,7 @@ function Player:update(dt)
 end
 
 function Player:takeHit()
+  if self.isDead then return end
   if self.health == 1 then
     for i=1,3 do
       Debris:new(self.world,
