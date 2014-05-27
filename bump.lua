@@ -167,6 +167,7 @@ local function grid_traverse(cellSize, x1,y1,x2,y2, f)
   local stepX, dx, tx  = grid_traverse_initStep(cellSize, cx1, x1, x2)
   local stepY, dy, ty  = grid_traverse_initStep(cellSize, cy1, y1, y2)
   local cx,cy          = cx1,cy1
+  local ncx, ncy
 
   f(cx, cy)
 
@@ -176,16 +177,15 @@ local function grid_traverse(cellSize, x1,y1,x2,y2, f)
       f(cx, cy)
     elseif ty < tx then
       ty, cy = ty + dy, cy + stepY
-      f(cx, dy)
+      f(cx, cy)
     else -- tx == ty
-      local ntx,nty = tx + dx,    dy + dy
-      local ncx,ncy = cx + stepX, cy + stepY
+      ncx, ncy = cx + stepX, cy + stepY
 
       f(ncx, cy)
       f(cx, ncy)
 
-      tx,ty = ntx,nty
-      cx,cy = ncx,ncy
+      cx, cy = ncx, ncy
+      tx, ty = tx + dx, ty + dy
     end
   end
 end
