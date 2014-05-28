@@ -148,7 +148,8 @@ end
 
 -- grid_traverse* functions are based on "A Fast Voxel Traversal Algorithm for Ray Tracing",
 -- by John Amanides and Andrew Woo - http://www.cse.yorku.ca/~amana/research/grid.pdf
--- It has been modified to include both cells when the ray "touches a grid corner"
+-- It has been modified to include both cells when the ray "touches a grid corner",
+-- and with a different exit condition
 
 local function grid_traverse_initStep(cellSize, ct, t1, t2)
   local v = t2 - t1
@@ -171,23 +172,24 @@ local function grid_traverse(cellSize, x1,y1,x2,y2, f)
 
   f(cx, cy)
 
-  while cx ~= cx2 or cy ~= cy2 do
+  -- The default implementation had an infinite loop problem when
+  -- approaching the last cell in some occassions. We finish iterating
+  -- when we are *next* to the last cell
+  while math.abs(cx - cx2) + math.abs(cy - cy2) > 1 do
     if tx < ty then
       tx, cx = tx + dx, cx + stepX
       f(cx, cy)
-    elseif ty < tx then
+    else
+      -- Addition: include both cells when going through corners
+      if tx == ty then f(cx + stepX, cy) end
       ty, cy = ty + dy, cy + stepY
       f(cx, cy)
-    else -- tx == ty
-      ncx, ncy = cx + stepX, cy + stepY
-
-      f(ncx, cy)
-      f(cx, ncy)
-
-      cx, cy = ncx, ncy
-      tx, ty = tx + dx, ty + dy
     end
   end
+
+  -- If we have not arrived to the last cell, use it
+  if cx ~= cx2 or cy ~= cy2 then f(cx2, cy2) end
+
 end
 
 local function grid_toCellRect(cellSize, l,t,w,h)
