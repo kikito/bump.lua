@@ -175,7 +175,7 @@ local function grid_traverse(cellSize, x1,y1,x2,y2, f)
   -- The default implementation had an infinite loop problem when
   -- approaching the last cell in some occassions. We finish iterating
   -- when we are *next* to the last cell
-  while math.abs(cx - cx2) + math.abs(cy - cy2) > 1 do
+  while abs(cx - cx2) + abs(cy - cy2) > 1 do
     if tx < ty then
       tx, cx = tx + dx, cx + stepX
       f(cx, cy)
