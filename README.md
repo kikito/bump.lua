@@ -197,13 +197,14 @@ detection is able to detect tunnelling (even if `item` moves "very fast", it wil
 Note that `world:check` does *not* move the item at all - you will have to move it with `world:move`.
 
 The last parameter is straightforward: any "possible candidate" to collide with `item` will be passed to this
-function if it exists. If the function returns `true`, then the candidate will be ignored.
+function if it exists. If the function returns `false` or `nil`, then the candidate will be ignored. By default, no candidates are ignored.
 
 ``` lua
 -- Check if the player would collide with anything while it moves to 100, 200
 -- Ignore enemies if the player is invincible (will still collide with the ground, walls, etc)
 local collisions, len = world:check(player, 100, 200, function(other)
-  return player.invincible and other.isEnemy
+  if player.invincible and other.isEnemy then return false end
+  return true -- collide with everything else
 end)
 ```
 
