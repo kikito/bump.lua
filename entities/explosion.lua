@@ -17,10 +17,8 @@
 -- is done in the constructor.
 --
 -- For detecting which items can be destroyed / pushed / damaged by a particular
--- explosion, this class uses bump's world:queryRect several times. It would
--- be a bit more efficient to do this with a single queryRect, but the code would
--- be uglier and a bit less flexible (you can, for example, use a bigger "push radius"
--- and a smaller "destroy radius", if you want.
+-- explosion, this class uses bump's world:queryRect several times, with different
+-- boxes (the box which destroys is smaller than the box that "pushes stuff around")
 --
 --]]
 
@@ -30,25 +28,35 @@ local Puff    = require 'entities.puff'
 
 local Explosion = class('Explosion')
 
-local width  = 150
-local height = width
-local maxPushSpeed = 300
-local minPuffs = 15
-local maxPuffs = 30
+local width         = 150
+local height        = width
+local pushRadius    = 50
+local maxPushSpeed  = 300
+local minPuffs      = 15
+local maxPuffs      = 30
 
 local clamp = function(x, a, b)
   return math.max(a, math.min(b, x))
 end
 
-local destroyFilter = function(other)
+local damageFilter = function(other)
   local cname = other.class.name
-  return cname == 'Guardian'
+  return cname == 'Player'
+      or cname == 'Guardian'
       or (cname == 'Block' and not other.indestructible)
 end
 
 local pushFilter = function(other)
   local cname = other.class.name
   return cname == 'Player' or cname == 'Grenade' or cname == 'Debris' or cname == 'Puff'
+end
+
+function Explosion:damageItem(other)
+  if other.class.name == 'Player' then
+    other:takeHit()
+  else
+    other:destroy()
+  end
 end
 
 function Explosion:pushItem(other)
@@ -67,10 +75,6 @@ function Explosion:pushItem(other)
 
   other.vx = other.vx + dx
   other.vy = other.vy + dy
-
-  if other.class.name == 'Player' then
-    other:takeHit()
-  end
 end
 
 function Explosion:initialize(world, camera, x, y)
@@ -79,12 +83,19 @@ function Explosion:initialize(world, camera, x, y)
   media.sfx.explosion:play()
   camera:shake()
 
-  local items, len = world:queryRect(self.l,self.t,self.w,self.h, destroyFilter)
+  local items, len = world:queryRect(self.l,self.t,self.w,self.h, damageFilter)
   for i=1,len do
-    items[i]:destroy()
+    self:damageItem(items[i])
   end
 
-  local items, len = world:queryRect(self.l,self.t,self.w,self.h, pushFilter)
+  local items, len = world:queryRect(
+    self.l - pushRadius,
+    self.t - pushRadius,
+    self.w + pushRadius + pushRadius,
+    self.h + pushRadius + pushRadius,
+    pushFilter
+  )
+
   for i=1,len do
     self:pushItem(items[i])
   end
