@@ -9,4 +9,6 @@ and can will "slide" over the boxes without penetrating them, similarly to some 
 
 Pressing TAB will display some debug information.
 
+![simpledemo](https://kikito.github.io/bump.lua/img/bump-simpledemo.gif)
+
 
