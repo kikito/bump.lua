@@ -74,7 +74,7 @@ repo:
 
 http://github.com/kikito/bump.lua/tree/demo
 
-You will need "LÖVE":http://love2d.org in order to try any of them.
+You will need [LÖVE](http://love2d.org) in order to try any of them.
 
 ## API
 
