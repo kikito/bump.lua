@@ -3,6 +3,8 @@
 This is a demo of [bump.lua](http://github.com/kikito/bump.lua)
 It requires [LÖVE](http://love2d.org to work properly)
 
+![demo](https://kikito.github.io/bump.lua/img/bump-demo.gif)
+
 # Other libraries used
 
 * [middleclass](https://github.com/kikito/middleclass) for object orientation
