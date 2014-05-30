@@ -74,6 +74,8 @@ repo:
 
 http://github.com/kikito/bump.lua/tree/demo
 
+![demo](https://kikito.github.io/bump.lua/img/bump-demo.gif)
+
 You will need [LÖVE](http://love2d.org) in order to try any of them.
 
 ## API
