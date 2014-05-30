@@ -49,6 +49,13 @@ function Grenade:getBounceSpeed(nx, ny)
   if nx == 0 then return math.abs(self.vy) else return math.abs(self.vx) end
 end
 
+function Grenade:emitCollisionSound(nx, ny)
+  local speed = self:getBounceSpeed(nx, ny)
+  if speed >= bounceSoundSpeed then
+    media.sfx.grenade_wall_hit:play()
+  end
+end
+
 function Grenade:moveColliding(dt)
   local world = self.world
   local isTouchingParent = false
@@ -68,7 +75,6 @@ function Grenade:moveColliding(dt)
     world:move(self, future_l, future_t)
   else
     local tl, tt, nx, ny, bl, bt
-    local speed
     local visited = {}
 
     while len > 0 do
@@ -80,10 +86,8 @@ function Grenade:moveColliding(dt)
       tl,tt,nx,ny,sl,st = col:getBounce()
 
       self:changeVelocityByCollisionNormal(nx, ny, bounciness)
-      speed = self:getBounceSpeed(nx, ny)
-      if speed >= bounceSoundSpeed then
-        media.sfx.grenade_wall_hit:play()
-      end
+      self:emitCollisionSound(nx, ny)
+
 
       self.l, self.t = tl, tt
       world:move(self, tl, tt)
