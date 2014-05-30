@@ -210,6 +210,9 @@ end)
 
 ### Collision resolution
 
+Once you have detected that a collision has taken place, often you will want to adjust the position of the `item` colliding. `bump` does not have an extensive array
+of methods for handling this situation; it only comes with three. But they are the most usual ones that you'll likely need in a 2d rectangle-based game.
+
 `world:check()` returns a list of zero or more `Collision` objects. A `Collision` object is a Lua table with at least the
 following attributes:
 
@@ -224,15 +227,26 @@ following attributes:
 * `col.vy`: the difference between `item`'s "current `top`" and `future_t`
 
 The most interesting attribute is `col.other`. In some cases it is more than enough - for example if `item` is one of those bullets
-that disappear when impacting the player, you don't need to know more - you must make the bullet disappear. But in other cases you
-need to *resolve* the collision.
+that disappear when impacting the player, you don't need to know more - you must make the bullet disappear.
 
-Bump collisions have 3 ways of resolving collisions: touch, slide and bounce.
+Very often you'll just be ok by checking `collisions[1]` (especially if you have been dilligent using `filter`).
+The reason `world:check()` returns a list instead of a single collisions is that in some cases you might want to "skip" some
+collisions, or react to several of them in a single frame.
+
+For example, imagine a player which collides on the same frame with a coin first, an enemy fireball, and the floor.
+
+* since `cols[1].other` will be a coin, you will want to make the coin disappear (maybe with a sound) and increase the player's score.
+* `cols[2].other` will be a fireball, so you will want to decrease the player's health and make the fireball disappear.
+* `cols[3].other` will be a ground tile, so you will need to stop the player from "falling down", and maybe align it with the ground.
+
+The first two can be handled just by using detection, but "aligning the player with the ground" requires *collision resolution*.
+
+The 3 methos provided by `bump` for handling resolution are called `touch`, `slide` and `bounce`.
 
 ``` lua
 local tl, tt, nx, ny = col:getTouch()
 ```
-Returns the coordinates to which you would have to move `item` so that it "touches" (without colliding) `other`.
+Returns the coordinates to which you would have to move `item` so that it "touches" (without colliding) `col.other`.
 
 ![touch](img/touch.png)
 
@@ -242,6 +256,8 @@ as a complement to the other resolutions.
 * `tl`, `tt`: The left, top coordinates to which `item` can be moved.
 * `nx`, `ny`: The "normal" of the collision. `nx` can only be `1`(right), `0`(nothing) or `-1`(left). `ny` can be `1`(down), `0`(nothing) or `-1`(up).
   `nx` and `ny` can not be 0 at the same time.
+
+`world:check(...)` returns collision by order - `cols[1]:getTouch()` will return the "touch that happened first", `cols[2]:getTouch()` will return the second one, etc.
 
 ``` lua
 local tl, tt, nx, ny, sl, st = col:getSlide()
@@ -257,8 +273,14 @@ A prime example of this is Super Mario (he "slides" over the floor instead of "g
 
 This is a slightly more complex resolution: `item` first "touches" `other`, and then uses its remaining "displacement vector" to "slide over `other`".
 
+While the touch is guaranteed to be "in order", once you start sliding you could generate new collisions with other items in the world. So it is recommended
+that you `move` the item until it "touches" the first collision, and then `check` if it can be moved to `sl` and `st` before moving it there. And if this generates
+more collisions, react accordingly.
+
+You can see an example of how this is done in [the Player class in the demo](https://github.com/kikito/bump.lua/blob/demo/entities/player.lua).
+
 ``` lua
-local tl, tt, nx, ny, bl, bt = col:getSlide()
+local tl, tt, nx, ny, bl, bt = col:getBounce()
 ```
 This is the type of collision resolution used by objects that "bounce".
 
@@ -268,6 +290,14 @@ A good example of this behavior is Arkanoid's ball.
 
 * `tl, tt, nx, ny`: Same as in `col:getTouch()`
 * `bl, bt`: The left,top coordinates of `item` after it finishes bouncing. It is very possible that after bouncing, it doesn't touch `other` any more.
+
+Similarly to sliding collisions, the "touch" is guaranteed to happen "in order", so you can move to the
+While the touch is guaranteed to be "in order", once you start sliding you could generate new collisions with other items in the world. So it is recommended
+that you `move` the item until it "touches" the first collision, and then `check` if it can be moved to `sl` and `st` before moving it there. And if this generates
+more collisions, react accordingly.
+
+The [Grenades](https://github.com/kikito/bump.lua/blob/demo/entities/grenade.lua) and the [Debris](https://github.com/kikito/bump.lua/blob/demo/entities/debris.lua) in the
+Demo use this resolution method.
 
 ### Querying the world
 
