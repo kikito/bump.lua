@@ -3,6 +3,8 @@
 -- Represents a Puff of smoke, created either by explosions or by the Player's propulsion
 -- Puffs don't interact with anything (they can be displaced by explosions)
 -- They gradually change in shape & color until they disappear (lived & lifeTime are used for that)
+-- Since puffs continuously change in size, we keep adding and removing them from the world (this is ok,
+-- it's the same thing that bump does internally to move things around)
 --]]
 
 local class   = require 'lib.middleclass'

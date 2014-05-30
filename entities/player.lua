@@ -124,8 +124,7 @@ function Player:moveColliding(dt)
 
   local cols, len = world:check(self, future_l, future_t, playerFilter)
   if len == 0 then
-    self.l, self.t = future_l, future_t
-    world:move(self, future_l, future_t)
+    self:move(future_l, future_t)
   else
     local col, tl, tt, nx, ny, sl, st
     local visited = {}
@@ -136,16 +135,14 @@ function Player:moveColliding(dt)
       self:changeVelocityByCollisionNormal(nx, ny)
       self:checkIfOnGround(ny)
 
-      self.l, self.t = tl, tt
-      world:move(self, tl, tt)
+      self:move(tl,tt)
 
       if visited[col.other] then return end -- prevent infinite loops
       visited[col.other] = true
 
       cols, len = world:check(self, sl, st, playerFilter)
       if len == 0 then
-        self.l, self.t = sl, st
-        world:move(self, sl, st)
+        self:move(sl, st)
       end
     end
   end

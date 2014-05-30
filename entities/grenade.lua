@@ -71,8 +71,7 @@ function Grenade:moveColliding(dt)
     len = len - 1
   end
   if len == 0 then
-    self.l, self.t = future_l, future_t
-    world:move(self, future_l, future_t)
+    self:move(future_l, future_t)
   else
     local tl, tt, nx, ny, bl, bt
     local visited = {}
@@ -88,17 +87,14 @@ function Grenade:moveColliding(dt)
       self:changeVelocityByCollisionNormal(nx, ny, bounciness)
       self:emitCollisionSound(nx, ny)
 
-
-      self.l, self.t = tl, tt
-      world:move(self, tl, tt)
+      self:move(tl, tt)
 
       if visited[col.other] then return end -- stop iterating when we collide with the same item twice
       visited[col.other] = true
 
       cols, len = world:check(self, sl, st, grenadeFilter)
       if len == 0 then
-        self.l, self.t = sl, st
-        world:move(self, sl, st)
+        self:move(sl, st)
       end
     end
   end
