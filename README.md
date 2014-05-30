@@ -1,15 +1,26 @@
 ## bump.lua
 
-Lua collision-detection library for axis-aligned rectes. Its main features are:
+Lua collision-detection library for axis-aligned rectangles. Its main features are:
 
-* Bump only does axis-aligned bounding-box (AABB) collisions. If you need anything more complicated than that (circles, polygons, etc.) give HardonCollider a look.
+* bump.lua only does axis-aligned bounding-box (AABB) collisions. If you need anything more complicated than that (circles, polygons, etc.) give HardonCollider a look.
 * Handles tunnelling - all items are treated as "bullets". The fact that we only use AABBs allows doing this fast.
-* Strives to be fast and have a small memory footprint
-* It's centered on *detection*, but it also offers *minimal collision resolution*
+* Strives to be fast while being economic in memory
+* It's centered on *detection*, but it also offers some (minimal) *collision resolution*
 * Can also return the items that touch a point, a segment or a rectangular zone.
 * bump.lua is _gameistic_ instead of realistic.
 
-Feel free to poke around!
+The demos are LÖVE based, but this library can be used in any Lua-compatible environment.
+
+`bump` is ideal for:
+
+* Tile-based games, and games where most entities can be represented as axis-aligned rectangles.
+* Games which require some physics, but not a full realistic simulation - like a platformer.
+* Examples of genres: top-down games (Zelda), Shoot-them-ups, fighting games (Street Fighter), platformers (Super Mario).
+
+`bump` is not ideal for:
+
+* Games that require polygons for the collision detection
+* Games that require highly realistic simulations of physics - things "stacking up", or "rolling over slides", for example.
 
 ## Example
 
@@ -219,7 +230,7 @@ following attributes:
 * `col.item`: the item that was being tested for collisions (the first parameter passed to `world:check(item, ...)`)
 * `col.other`: the item that has been found colliding with `item`
 * `col.future_l` & `col.future_t`: the `future_l` and `future_t` parameters passed to `world:check`.
-* `col.itemRect` & `col.otherRect`: the bounding rectes of the items, in the form `{l=...,t=...,w=...,h=...}`.
+* `col.itemRect` & `col.otherRect`: the bounding rectangles of the items, in the form `{l=...,t=...,w=...,h=...}`.
 * `col.is_intersection`: `true` if `item` and `other` are currently intersecting in the world. `false` if the collision
   is a "tunnelling collision" - `item` will collides with `other` when it travels from its current position to `{future_l, future_t}`,
   but it is not presently intersecting with `other`.
@@ -277,6 +288,9 @@ While the touch is guaranteed to be "in order", once you start sliding you could
 that you `move` the item until it "touches" the first collision, and then `check` if it can be moved to `sl` and `st` before moving it there. And if this generates
 more collisions, react accordingly.
 
+Since it is possible that you bounce with the same item more than once in the same frame while sliding, it is recommended that you keep track of which objects have
+"already been visited", so you don't get into an infinite loop (colliding with one item, sliding back, colliding with another, sliding forward, colliding with the first item, etc).
+
 You can see an example of how this is done in [the Player class in the demo](https://github.com/kikito/bump.lua/blob/demo/entities/player.lua).
 
 ``` lua
@@ -296,8 +310,10 @@ While the touch is guaranteed to be "in order", once you start sliding you could
 that you `move` the item until it "touches" the first collision, and then `check` if it can be moved to `sl` and `st` before moving it there. And if this generates
 more collisions, react accordingly.
 
+As with in the case of sliding, keeping tabs of which objects have been "already visited" is important in order to avoid infinite loops.
+
 The [Grenades](https://github.com/kikito/bump.lua/blob/demo/entities/grenade.lua) and the [Debris](https://github.com/kikito/bump.lua/blob/demo/entities/debris.lua) in the
-Demo use this resolution method.
+Demo use `:getBounce()` to resolve their collisions, and also display a possible way to mark objects as `visited`.
 
 ### Querying the world
 
@@ -356,7 +372,7 @@ An extended version of `world:querySegment` which returns the collision points o
 in addition to the items.
 
 It is useful if you need to **actually show** the lasers/bullets or if you need to show some impact effects (i.e. spawning some particles
-where a bullet hits a wall). If you don't need the actual points of contact between the segment and the bounding rectes, use
+where a bullet hits a wall). If you don't need the actual points of contact between the segment and the bounding rectangles, use
 `world:querySegment`, since it's faster.
 
 * `x1,y1,x2,y2,filter` same as in `world:querySegment`
