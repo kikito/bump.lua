@@ -65,9 +65,11 @@ world:remove(B)
 
 ## Demos
 
-There is a demo showing movement, collision detection and basic touch-based resolution in this branch:
+There is a demo showing movement, collision detection and basic slide-based resolution in this branch:
 
 http://github.com/kikito/bump.lua/tree/simpledemo
+
+![simpledemo](https://kikito.github.io/bump.lua/img/bump-simpledemo.gif)
 
 There's a more complex demo showing more advanced movement mechanics (i.e. acceleration, bouncing) in this other
 repo:
