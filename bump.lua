@@ -1,386 +1,591 @@
--- bump.lua - v1.2 (2012-08)
--- Copyright (c) 2012 Enrique García Cota
--- Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
--- The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
--- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+local bump = {
+  _VERSION     = 'bump v2.0.0',
+  _URL         = 'https://github.com/kikito/bump.lua',
+  _DESCRIPTION = 'A collision detection library for Lua',
+  _LICENSE     = [[
+    MIT LICENSE
 
-local bump = {}
+    Copyright (c) 2013 Enrique García Cota
 
-local _weakKeys   = {__mode = 'k'}
-local _weakValues = {__mode = 'v'}
-local _defaultCellSize = 128
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to
+    the following conditions:
 
-local abs, floor, ceil = math.abs, math.floor, math.ceil
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
 
-local function newWeakTable(t, mt)
-  return setmetatable(t or {}, mt or _weakKeys)
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+    OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  ]]
+}
+
+------------------------------------------
+-- Auxiliary functions
+------------------------------------------
+
+local abs, floor, ceil, min, max = math.abs, math.floor, math.ceil, math.min, math.max
+
+local function clamp(x, lower, upper)
+  return max(lower, min(upper, x))
 end
 
--- a bit faster than math.min
-local function min(a,b) return a < b and a or b end
-
--- private bump properties
-local  __cellSize, __cells, __occupiedCells, __items, __collisions, __prevCollisions, __tested
-
--- given a table, return its keys organized as an array (values are ignored)
-local function _getKeys(t)
-  local keys, length = {},0
-  for k,_ in pairs(t) do
-    length = length + 1
-    keys[length] = k
-  end
-  return keys, length
+local function sign(x)
+  if x > 0 then return 1 end
+  if x == 0 then return 0 end
+  return -1
 end
 
--- fast check that returns true if 2 boxes are intersecting
-local function _boxesIntersect(l1,t1,w1,h1, l2,t2,w2,h2)
-  return l1 < l2+w2 and l1+w1 > l2 and t1 < t2+h2 and t1+h1 > t2
+local function nearest(x, a, b)
+  if abs(a - x) < abs(b - x) then return a else return b end
 end
 
--- returns the area & minimum displacement vector given two intersecting boxes
-local function _getOverlapAndDisplacementVector(l1,t1,w1,h1,c1x,c1y, l2,t2,w2,h2,c2x,c2y)
-  local dx = l2 - l1 + (c1x < c2x and -w1 or w2)
-  local dy = t2 - t1 + (c1y < c2y and -h1 or h2)
-  local ax, ay = abs(dx), abs(dy)
-  local area = ax * ay
+local function sortByTi(a,b)    return a.ti < b.ti end
+local function sortByWeight(a,b) return a.weight < b.weight end
 
-  if ax < ay then return area, dx, 0 end
-  return area, 0, dy
-end
-
--- given a world coordinate, return the coordinates of the cell that would contain it
-local function _toGrid(wx, wy)
-  return floor(wx / __cellSize) + 1, floor(wy / __cellSize) + 1
-end
-
--- Same as _toGrid, but useful for calculating the right/bottom borders of a rectangle (so they are still inside the cell when touching borders)
-local function _toGridFromInside(wx,wy)
-  return ceil(wx / __cellSize), ceil(wy / __cellSize)
-end
-
--- given a box in world coordinates, return a box in grid coordinates that contains it
--- returns the x,y coordinates of the top-left cell, the number of cells to the right and the number of cells down.
-local function _toGridBox(l, t, w, h)
-  if not (l and t and w and h) then return nil end
-  local gl,gt = _toGrid(l, t)
-  local gr,gb = _toGridFromInside(l+w, t+h)
-  return gl, gt, gr-gl, gb-gt
-end
-
--- returns, given its coordinates (on grid terms)
--- If createIfNil is true, it creates the cells if they don't exist
-local function _getCell(gx, gy, createIfNil)
-  if not createIfNil then return __cells[gy] and __cells[gy][gx] end
-  __cells[gy]     = __cells[gy]     or newWeakTable({}, _weakValues)
-  __cells[gy][gx] = __cells[gy][gx] or newWeakTable({itemCount = 0, items = newWeakTable()})
-  return __cells[gy][gx]
-end
-
--- applies a function to all cells in a given region. The region must be given in the form of gl,gt,gw,gh
--- (if the region desired is on world coordinates, it must be transformed in grid coords with _toGridBox)
--- if the last parameter is true, the function will also create the cells as it moves
-local function _eachCellInRegion(f, gl,gt,gw,gh, createIfNil)
-  local cell
-  for y=gt, gt+gh do
-    for x=gl, gl+gw do
-      cell = _getCell(x,y, createIfNil)
-      if cell then f(cell, x, y) end
-    end
+local function assertType(desiredType, value, name)
+  if type(value) ~= desiredType then
+    error(name .. ' must be a ' .. desiredType .. ', but was ' .. tostring(value) .. '(a ' .. type(value) .. ')')
   end
 end
 
--- applies a function to all cells in bump
-local function _eachCell(f)
-  for _,row in pairs(__cells) do
-    for _,cell in pairs(row) do
-      f(cell)
-    end
+local function assertIsPositiveNumber(value, name)
+  if type(value) ~= 'number' or value <= 0 then
+    error(name .. ' must be a positive integer, but was ' .. tostring(value) .. '(' .. type(value) .. ')')
   end
 end
 
--- returns the items in a region, as keys in a table
--- if no region is specified, returns all items in bump
-local function _collectItemsInRegion(gl,gt,gw,gh)
-  if not (gl and gt and gw and gh) then return __items end
-  local items = {}
-  _eachCellInRegion(function(cell)
-    if cell.itemCount > 0 then
-      for item,_ in pairs(cell.items) do
-        items[item] = true
-      end
-    end
-  end, gl,gt,gw,gh)
-  return items
+local function assertIsRect(l,t,w,h)
+  assertType('number', l, 'l')
+  assertType('number', t, 'w')
+  assertIsPositiveNumber(w, 'w')
+  assertIsPositiveNumber(h, 'h')
 end
 
--- applies f to all the items in the specified region
--- if no region is specified, apply to all items in bump
-local function _eachInRegion(f, gl,gt,gw,gh)
-  for item,_ in pairs(_collectItemsInRegion(gl,gt,gw,gh)) do f(item) end
+------------------------------------------
+-- Axis-aligned bounding box functions
+------------------------------------------
+
+local function rect_getNearestCorner(l,t,w,h, x, y)
+  return nearest(x, l, l+w), nearest(y, t, t+h)
 end
 
--- parses the cells touching one item, and removes the item from their list of items
--- does not create new cells
-local function _unregisterItem(item)
-  local info = __items[item]
-  if info and info.gl then
-    info.unregister = info.unregister or function(cell)
-      cell.items[item] = nil
-      cell.itemCount = cell.itemCount - 1
-      if cell.itemCount == 0 then
-        __occupiedCells[cell] = nil
-      end
-    end
-    _eachCellInRegion(info.unregister, info.gl, info.gt, info.gw, info.gh)
-  end
-end
+-- This is a generalized implementation of the liang-barsky algorithm, which also returns
+-- the normals of the sides where the segment intersects.
+-- Returns nil if the segment never touches the rect
+-- Notice that normals are only guaranteed to be accurate when initially ti1, ti2 == -math.huge, math.huge
+local function rect_getSegmentIntersectionIndices(l,t,w,h, x1,y1,x2,y2, ti1,ti2)
+  ti1, ti2 = ti1 or 0, ti2 or 1
+  local dx, dy = x2-x1, y2-y1
+  local nx, ny
+  local nx1, ny1, nx2, ny2 = 0,0,0,0
+  local p, q, r
 
--- parses all the cells that touch one item, adding the item to their list of items
--- creates cells if they don't exist
-local function _registerItem(item, gl, gt, gw, gh)
-  local info = __items[item]
-  info.register = info.register or function(cell)
-    cell.items[item] = true
-    cell.itemCount = cell.itemCount + 1
-    __occupiedCells[cell] = true
-  end
-  _eachCellInRegion(info.register, info.gl, info.gt, info.gw, info.gh, true)
-end
-
--- updates the information bump has about one item - its boundingbox, and containing region, center
-local function _updateItem(item)
-  local info = __items[item]
-  if not info or info.static then return end
-
-  -- if the new bounding box is different from the stored one
-  local l,t,w,h = bump.getBBox(item)
-  if l ~= info.l or t ~= info.t or w ~= info.w or h ~= info.h then
-
-    local gl, gt, gw, gh = _toGridBox(l, t, w, h)
-    if gl ~= info.gl or gt ~= info.gt or gw ~= info.gw or gh ~= info.gh then
-      -- remove this item from all the cells that used to contain it
-      _unregisterItem(item)
-      -- update the grid info
-      info.gl, info.gt, info.gw, info.gh = gl, gt, gw, gh
-      -- then add it to the new cells
-      _registerItem(item)
+  for side = 1,4 do
+    if     side == 1 then nx,ny,p,q = -1,  0, -dx, x1 - l     -- left
+    elseif side == 2 then nx,ny,p,q =  1,  0,  dx, l + w - x1 -- right
+    elseif side == 3 then nx,ny,p,q =  0, -1, -dy, y1 - t     -- top
+    else                  nx,ny,p,q =  0,  1,  dy, t + h - y1 -- bottom
     end
 
-    info.l, info.t, info.w, info.h = l, t, w, h
-    info.cx, info.cy = l+w*.5, t+h*0.5
-  end
-end
-
--- given an item and the neighbor which is colliding with it the most,
--- store the result in the collisions and tested tables
--- invoke the bump collision callback and mark the collision as "still happening"
-local function _collideItemWithNeighbor(item, neighbor, dx, dy)
-  -- store the collision
-  __collisions[item] = __collisions[item] or newWeakTable()
-  __collisions[item][neighbor] = true
-
-  -- invoke the collision callback
-  bump.collision(item, neighbor, dx, dy)
-
-  -- remove the collison from the "previous collisions" list. The collisions that remain there will trigger the "endCollision" callback
-  if __prevCollisions[item] then __prevCollisions[item][neighbor] = nil end
-
-  -- recalculate the item & neighbor (in case they have moved)
-  _updateItem(item)
-  _updateItem(neighbor)
-
-  -- mark the couple item-neighbor as tested, so the inverse is not calculated
-  __tested[item] = __tested[item] or newWeakTable()
-  __tested[item][neighbor] = true
-end
-
-
--- Obtain the list of neighbors (list of items touching the cells touched by item)
--- minus the already visited ones
--- The neighbors are returned as keys in a table
-local function _getNeighbors(item, visited)
-  local info = __items[item]
-  local neighbors = _collectItemsInRegion(info.gl, info.gt, info.gw, info.gh)
-  neighbors[item] = nil
-  for n,_ in pairs(visited) do neighbors[n] = nil end
-  return neighbors
-end
-
--- Given an item and a list of neighbors,
--- find the overlaps between the item and each neighbor. The resulting table has this structure:
--- { {neighbor=n1, area=1, dx=1, dy=1}, {neighbor=n2, ...} }
-local function _getOverlaps(item, neighbors)
-  local overlaps, overlapsLength = {},0
-  local info = __items[item]
-  local area, dx, dy, ninfo
-  for neighbor,_ in pairs(neighbors) do
-    ninfo = __items[neighbor]
-    if ninfo
-    and not (__tested[neighbor] and __tested[neighbor][item])
-    and _boxesIntersect(info.l, info.t, info.w, info.h, ninfo.l, ninfo.t, ninfo.w, ninfo.h)
-    and bump.shouldCollide(item, neighbor)
-    then
-      area, dx, dy = _getOverlapAndDisplacementVector(info.l, info.t, info.w, info.h, info.cx, info.cy,
-                                                      ninfo.l, ninfo.t, ninfo.w, ninfo.h, ninfo.cx, ninfo.cy)
-      overlapsLength = overlapsLength + 1
-      overlaps[overlapsLength] = {neighbor=neighbor, area=area, dx=dx, dy=dy}
-    end
-  end
-  return overlaps, overlapsLength
-end
-
--- Given a table of overlaps in the form { {area=1, ...}, {area=2, ...} } and its length,
--- find the element with the biggest area, and return element.neighbor, element.dx, element.dy
--- returns nil if the table is empty
-local function _getMaximumAreaOverlap(overlaps, overlapsLength)
-  if overlapsLength == 0 then return nil end
-  local maxOverlap = overlaps[1]
-  local overlap
-  for i=2,overlapsLength do
-    overlap = overlaps[i]
-    if maxOverlap.area < overlap.area then
-      maxOverlap = overlap
-    end
-  end
-  return maxOverlap.neighbor, maxOverlap.dx, maxOverlap.dy
-end
-
--- Given an item and a list of items to ignore (already visited),
--- find the neighbor (if any) which is colliding with it the most
--- (the one who occludes more surface)
--- returns neighbor, dx, dy or nil if no collisions happen
-local function _getNextCollisionForItem(item, visited)
-  return _getMaximumAreaOverlap(_getOverlaps(item, _getNeighbors(item, visited)))
-end
-
--- given an item, parse all its neighbors, updating the collisions & tested tables, and invoking the collision callback
--- if there is a collision, the list of neighbors is recalculated. However, the same
--- neighbor is not checked for collisions twice
--- static items are ignored
-local function _collideItemWithNeighbors(item)
-  local info = __items[item]
-  if not info or info.static then return end
-
-  local visited  = {}
-  local finished = false
-  local neighbor, dx, dy
-  while __items[item] and not finished do
-    neighbor, dx, dy = _getNextCollisionForItem(item, visited)
-    if neighbor then
-      visited[neighbor] = true
-      _collideItemWithNeighbor(item, neighbor, dx, dy)
+    if p == 0 then
+      if q <= 0 then return nil end
     else
-      finished = true
-    end
-  end
-end
-
--- fires bump.endCollision with the appropiate parameters
-local function _invokeEndCollision()
-  for item,neighbors in pairs(__prevCollisions) do
-    if __items[item] then
-      for neighbor, d in pairs(neighbors) do
-        if __items[neighbor] then
-          bump.endCollision(item, neighbor)
+      r = q / p
+      if p < 0 then
+        if     r > ti2 then return nil
+        elseif r > ti1 then ti1,nx1,ny1 = r,nx,ny
+        end
+      else -- p > 0
+        if     r < ti1 then return nil
+        elseif r < ti2 then ti2,nx2,ny2 = r,nx,ny
         end
       end
     end
   end
+
+  return ti1,ti2, nx1,ny1, nx2,ny2
 end
 
--- public interface
-
--- (Optional) Initializes the lib with a cell size (see detault at the begining of file)
-function bump.initialize(cellSize)
-  __cellSize       = cellSize or _defaultCellSize
-  __cells          = newWeakTable()
-  __occupiedCells  = {} -- stores strong references to cells so that they are not gc'ed
-  __items          = newWeakTable()
-  __prevCollisions = newWeakTable()
-  bump.items = __items
+-- Calculates the minkowsky difference between 2 rects, which is another rect
+local function rect_getDiff(l1,t1,w1,h1, l2,t2,w2,h2)
+  return l2 - l1 - w1,
+         t2 - t1 - h1,
+         w1 + w2,
+         h1 + h2
 end
 
--- (Overridable). Called when two objects start colliding
--- dx, dy is how much you have to move item1 so it doesn't
--- collide any more
-function bump.collision(item1, item2, dx, dy)
+local delta = 0.00001 -- floating-point-safe comparisons here, otherwise bugs
+local function rect_containsPoint(l,t,w,h, x,y)
+  return x - l > delta     and y - t > delta and
+         l + w - x > delta and t + h - y > delta
 end
 
--- (Overridable) Called when two objects stop colliding
-function bump.endCollision(item1, item2)
+local function rect_isIntersecting(l1,t1,w1,h1, l2,t2,w2,h2)
+  return l1 < l2+w2 and l2 < l1+w1 and
+         t1 < t2+h2 and t2 < t1+h1
 end
 
--- (Overridable) Returns true if two objects can collide, false otherwise
--- Useful for making categories, and groups of objects that don't collide
--- Between each other
-function bump.shouldCollide(item1, item2)
-  return true
+------------------------------------------
+-- Grid functions
+------------------------------------------
+
+local function grid_toWorld(cellSize, cx, cy)
+  return (cx - 1)*cellSize, (cy-1)*cellSize
 end
 
--- (Overridable) Given an item, return its bounding box (l,t,w,h)
-function bump.getBBox(item)
-  return item:getBBox()
+local function grid_toCell(cellSize, x, y)
+  return floor(x / cellSize) + 1, floor(y / cellSize) + 1
 end
 
--- Adds an item to bump
-function bump.add(item)
-  __items[item] = __items[item] or {}
-  _updateItem(item)
-end
+-- grid_traverse* functions are based on "A Fast Voxel Traversal Algorithm for Ray Tracing",
+-- by John Amanides and Andrew Woo - http://www.cse.yorku.ca/~amana/research/grid.pdf
+-- It has been modified to include both cells when the ray "touches a grid corner",
+-- and with a different exit condition
 
--- Adds a static item to bump. Static items never change their bounding box, and never
--- receive collision checks (other items can collision with them, but they don't collide with
--- others)
-function bump.addStatic(item)
-  bump.add(item)
-  __items[item].static = true
-end
-
--- Removes an item from bump
-function bump.remove(item)
-  _unregisterItem(item)
-  __items[item] = nil
-end
-
--- Performs collisions and invokes bump.collision and bump.endCollision callbacks
--- If a world region is specified, only the items in that region are updated. Else all items are updated
-function bump.collide(l,t,w,h)
-  bump.each(_updateItem, l,t,w,h)
-
-  __collisions, __tested = newWeakTable(), newWeakTable()
-  bump.each(_collideItemWithNeighbors, l,t,w,h)
-
-  _invokeEndCollision()
-
-  __prevCollisions = __collisions
-end
-
--- Applies a function (signature: function(cell) end) to all the cells that "touch"
--- the specified rectangle. If no rectangle is specified, use all cells instead
-function bump.eachCell(f, l,t,w,h)
-  if l and t and w and h then
-    _eachCellInRegion(f, _toGridBox(l,t,w,h))
+local function grid_traverse_initStep(cellSize, ct, t1, t2)
+  local v = t2 - t1
+  if     v > 0 then
+    return  1,  cellSize / v, ((ct + v) * cellSize - t1) / v
+  elseif v < 0 then
+    return -1, -cellSize / v, ((ct + v - 1) * cellSize - t1) / v
   else
-    _eachCell(f)
+    return 0, math.huge, math.huge
   end
 end
 
--- Applies a function (signature: function(item) end) to all the items that "touch"
--- the cells specified by a rectangle. If no rectangle is given, the function
--- is applied to all items
-function bump.each(f, l,t,w,h)
-  _eachInRegion(f, _toGridBox(l,t,w,h))
+local function grid_traverse(cellSize, x1,y1,x2,y2, f)
+  local cx1,cy1        = grid_toCell(cellSize, x1,y1)
+  local cx2,cy2        = grid_toCell(cellSize, x2,y2)
+  local stepX, dx, tx  = grid_traverse_initStep(cellSize, cx1, x1, x2)
+  local stepY, dy, ty  = grid_traverse_initStep(cellSize, cy1, y1, y2)
+  local cx,cy          = cx1,cy1
+  local ncx, ncy
+
+  f(cx, cy)
+
+  -- The default implementation had an infinite loop problem when
+  -- approaching the last cell in some occassions. We finish iterating
+  -- when we are *next* to the last cell
+  while abs(cx - cx2) + abs(cy - cy2) > 1 do
+    if tx < ty then
+      tx, cx = tx + dx, cx + stepX
+      f(cx, cy)
+    else
+      -- Addition: include both cells when going through corners
+      if tx == ty then f(cx + stepX, cy) end
+      ty, cy = ty + dy, cy + stepY
+      f(cx, cy)
+    end
+  end
+
+  -- If we have not arrived to the last cell, use it
+  if cx ~= cx2 or cy ~= cy2 then f(cx2, cy2) end
+
 end
 
-function bump.collect(l,t,w,h)
-  return _getKeys(_collectItemsInRegion(_toGridBox(l,t,w,h)))
+local function grid_toCellRect(cellSize, l,t,w,h)
+  local cl,ct = grid_toCell(cellSize, l, t)
+  local cr,cb = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
+  return cl, ct, cr-cl+1, cb-ct+1
 end
 
--- returns the size of the cell that bump is using
-function bump.getCellSize()
-  return __cellSize
+------------------------------------------
+-- Collision
+------------------------------------------
+
+local Collision = {}
+local Collision_mt = {__index = Collision}
+
+function Collision:resolve()
+  local b1, b2          = self.itemRect, self.otherRect
+  local vx, vy          = self.vx, self.vy
+  local l1,t1,w1,h1     = b1.l, b1.t, b1.w, b1.h
+  local l2,t2,w2,h2     = b2.l, b2.t, b2.w, b2.h
+  local l,t,w,h         = rect_getDiff(l1,t1,w1,h1, l2,t2,w2,h2)
+
+  if rect_containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
+    self.is_intersection = true
+    local px, py = rect_getNearestCorner(l,t,w,h, 0, 0)
+    local wi, hi = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
+    self.ti      = -wi * hi -- ti is the negative area of intersection
+    self.nx, self.ny = 0,0
+    self.ml, self.mt, self.mw, self.mh = l,t,w,h
+    return self
+  else
+    local ti1,ti2,nx,ny = rect_getSegmentIntersectionIndices(l,t,w,h, 0,0,vx,vy, -math.huge, math.huge)
+    -- b1 tunnels into b2 while it travels
+    if ti1 and ti1 < 1 and (0 < ti1 or 0 == ti1 and ti2 > 0) then
+      -- local dx, dy = vx*ti-vx, vy*ti-vy
+      self.is_intersection = false
+      self.ti, self.nx, self.ny          = ti1, nx, ny
+      self.ml, self.mt, self.mw, self.mh = l,t,w,h
+      return self
+    end
+  end
 end
 
-bump.initialize()
+function Collision:getTouch()
+  local vx,vy = self.vx, self.vy
+  local itemRect = self.itemRect
+  assert(self.is_intersection ~= nil, 'unknown collision kind. Have you called :resolve()?')
+
+  local tl, tt, nx, ny
+
+  if self.is_intersection then
+
+    if vx == 0 and vy == 0 then
+      -- intersecting and not moving - use minimum displacement vector
+      local px,py = rect_getNearestCorner(self.ml, self.mt, self.mw, self.mh, 0,0)
+      if abs(px) < abs(py) then py = 0 else px = 0 end
+      tl, tt, nx, ny = itemRect.l + px, itemRect.t + py, sign(px), sign(py)
+    else
+      -- intersecting and moving - move in the opposite direction
+      local ti,_,nx2,ny2 = rect_getSegmentIntersectionIndices(self.ml,self.mt,self.mw,self.mh, 0,0,vx,vy, -math.huge, 1)
+      tl, tt, nx, ny = itemRect.l + vx * ti, itemRect.t + vy * ti, nx2, ny2
+    end
+
+  else -- tunnel
+    tl, tt, nx, ny = itemRect.l + vx * self.ti, itemRect.t + vy * self.ti, self.nx, self.ny
+  end
+
+  return tl, tt, nx, ny
+end
+
+function Collision:getSlide()
+  local tl, tt, nx, ny  = self:getTouch()
+  local sl, st = tl, tt
+
+  if self.vx ~= 0 or self.vy ~= 0 then
+    if nx == 0 then
+      sl = self.future_l
+    else
+      st = self.future_t
+    end
+  end
+
+  return tl, tt, nx, ny, sl, st
+end
+
+function Collision:getBounce()
+  local tl, tt, nx, ny  = self:getTouch()
+  local bl, bt, bx,by = tl, tt, 0,0
+
+  if self.vx ~= 0 or self.vy ~= 0 then
+    bx, by = self.future_l - tl, self.future_t - tt
+    if nx == 0 then by = -by else bx = -bx end
+    bl, bt = tl + bx, tt + by
+  end
+
+  return tl, tt, nx, ny, bl, bt
+end
+
+------------------------------------------
+-- World
+------------------------------------------
+
+local function getRect(self, item)
+  local rect = self.rects[item]
+  if not rect then
+    error('Item ' .. tostring(item) .. ' must be added to the world before getting its rect. Use world:add(item, l,t,w,h) to add it first.')
+  end
+  return rect
+end
+
+
+local function addItemToCell(self, item, cx, cy)
+  self.rows[cy] = self.rows[cy] or setmetatable({}, {__mode = 'v'})
+  local row = self.rows[cy]
+  row[cx] = row[cx] or {itemCount = 0, x = cx, y = cy, items = setmetatable({}, {__mode = 'k'})}
+  local cell = row[cx]
+  self.nonEmptyCells[cell] = true
+  if not cell.items[item] then
+    cell.items[item] = true
+    cell.itemCount = cell.itemCount + 1
+  end
+end
+
+local function removeItemFromCell(self, item, cx, cy)
+  local row = self.rows[cy]
+  if not row or not row[cx] or not row[cx].items[item] then return false end
+
+  local cell = row[cx]
+  cell.items[item] = nil
+  cell.itemCount = cell.itemCount - 1
+  if cell.itemCount == 0 then
+    self.nonEmptyCells[cell] = nil
+  end
+  return true
+end
+
+local function getDictItemsInCellRect(self, cl,ct,cw,ch)
+  local items_dict = {}
+  for cy=ct,ct+ch-1 do
+    local row = self.rows[cy]
+    if row then
+      for cx=cl,cl+cw-1 do
+        local cell = row[cx]
+        if cell and cell.itemCount > 0 then -- no cell.itemCount > 1 because tunneling
+          for item,_ in pairs(cell.items) do
+            items_dict[item] = true
+          end
+        end
+      end
+    end
+  end
+
+  return items_dict
+end
+
+local function getCellsTouchedBySegment(self, x1,y1,x2,y2)
+
+  local cells, cellsLen, visited = {}, 0, {}
+
+  grid_traverse(self.cellSize, x1,y1,x2,y2, function(cx, cy)
+    local row  = self.rows[cy]
+    if not row then return end
+    local cell = row[cx]
+    if not cell or visited[cell] then return end
+
+    visited[cell] = true
+    cellsLen = cellsLen + 1
+    cells[cellsLen] = cell
+  end)
+
+  return cells, cellsLen
+end
+
+local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
+  local cells, len = getCellsTouchedBySegment(self, x1,y1,x2,y2)
+  local cell, rect, l,t,w,h, ti1,ti2, tii0,tii1
+  local visited, itemInfo, itemInfoLen = {},{},0
+  for i=1,len do
+    cell = cells[i]
+    for item in pairs(cell.items) do
+      if not visited[item] then
+        visited[item]  = true
+        if (not filter or filter(item)) then
+          rect           = self.rects[item]
+          l,t,w,h        = rect.l,rect.t,rect.w,rect.h
+
+          ti1,ti2 = rect_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, 0, 1)
+          if ti1 and ((0 < ti1 and ti1 < 1) or (0 < ti2 and ti2 < 1)) then
+            -- the sorting is according to the t of an infinite line, not the segment
+            tii0,tii1    = rect_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, -math.huge, math.huge)
+            itemInfoLen  = itemInfoLen + 1
+            itemInfo[itemInfoLen] = {item = item, ti1 = ti1, ti2 = ti2, weight = min(tii0,tii1)}
+          end
+        end
+      end
+    end
+  end
+  table.sort(itemInfo, sortByWeight)
+  return itemInfo, itemInfoLen
+end
+
+local World = {}
+local World_mt = {__index = World}
+
+function World:add(item, l,t,w,h)
+  local rect = self.rects[item]
+  if rect then
+    error('Item ' .. tostring(item) .. ' added to the world twice.')
+  end
+  assertIsRect(l,t,w,h)
+
+  self.rects[item] = {l=l,t=t,w=w,h=h}
+
+  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, l,t,w,h)
+  for cy = ct, ct+ch-1 do
+    for cx = cl, cl+cw-1 do
+      addItemToCell(self, item, cx, cy)
+    end
+  end
+end
+
+function World:remove(item)
+  local rect = getRect(self, item)
+
+  self.rects[item] = nil
+  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, rect.l,rect.t,rect.w,rect.h)
+  for cy = ct, ct+ch-1 do
+    for cx = cl, cl+cw-1 do
+      removeItemFromCell(self, item, cx, cy)
+    end
+  end
+end
+
+function World:move(item, l,t,w,h)
+  local rect = getRect(self, item)
+  w,h = w or rect.w, h or rect.h
+  assertIsRect(l,t,w,h)
+  if rect.l ~= l or rect.t ~= t or rect.w ~= w or rect.h ~= h then
+    self:remove(item)
+    self:add(item, l,t,w,h)
+  end
+end
+
+function World:check(item, future_l, future_t, filter)
+  local rect = getRect(self, item)
+  local collisions, len = {}, 0
+
+  local visited = { [item] = true }
+
+  local l,t,w,h = rect.l, rect.t, rect.w, rect.h
+  future_l, future_t = future_l or l, future_t or t
+
+  -- TODO this could probably be done with less cells using a polygon raster over the cells instead of a
+  -- bounding rect of the whole movement. Conditional to building a queryPolygon method
+  local tl, tt = min(future_l, l),       min(future_t, t)
+  local tr, tb = max(future_l + w, l+w), max(future_t + h, t+h)
+  local tw, th = tr-tl, tb-tt
+
+  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, tl,tt,tw,th)
+
+  local dictItemsInCellRect = getDictItemsInCellRect(self, cl,ct,cw,ch)
+
+  for other,_ in pairs(dictItemsInCellRect) do
+    if not visited[other] then
+      visited[other] = true
+      if not filter or filter(other) then
+        local oRect = self.rects[other]
+        local col  = bump.newCollision(item, other, rect, oRect, future_l, future_t):resolve()
+        if col then
+          len = len + 1
+          collisions[len] = col
+        end
+      end
+    end
+  end
+
+  table.sort(collisions, sortByTi)
+
+  return collisions, len
+end
+
+function World:getRect(item)
+  local rect = getRect(self, item)
+  return { l = rect.l, t = rect.t, w = rect.w, h = rect.h }
+end
+
+function World:countCells()
+  local count = 0
+  for _,row in pairs(self.rows) do
+    for _,_ in pairs(row) do
+      count = count + 1
+    end
+  end
+  return count
+end
+
+function World:toWorld(cx, cy)
+  return grid_toWorld(self.cellSize, cx, cy)
+end
+
+function World:toCell(x,y)
+  return grid_toCell(self.cellSize, x, y)
+end
+
+function World:queryRect(l,t,w,h, filter)
+
+  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, l,t,w,h)
+  local dictItemsInCellRect = getDictItemsInCellRect(self, cl,ct,cw,ch)
+
+  local items, len = {}, 0
+
+  local rect
+  for item,_ in pairs(dictItemsInCellRect) do
+    rect = self.rects[item]
+    if (not filter or filter(item))
+    and rect_isIntersecting(l,t,w,h, rect.l, rect.t, rect.w, rect.h)
+    then
+      len = len + 1
+      items[len] = item
+    end
+  end
+
+  return items, len
+end
+
+function World:queryPoint(x,y, filter)
+  local cx,cy = self:toCell(x,y)
+  local dictItemsInCellRect = getDictItemsInCellRect(self, cx,cy,1,1)
+
+  local items, len = {}, 0
+
+  local rect
+  for item,_ in pairs(dictItemsInCellRect) do
+    rect = self.rects[item]
+    if (not filter or filter(item))
+    and rect_containsPoint(rect.l, rect.t, rect.w, rect.h, x, y)
+    then
+      len = len + 1
+      items[len] = item
+    end
+  end
+
+  return items, len
+end
+
+function World:querySegment(x1, y1, x2, y2, filter)
+  local itemInfo, len = getInfoAboutItemsTouchedBySegment(self, x1, y1, x2, y2, filter)
+  local items = {}
+  for i=1, len do
+    items[i] = itemInfo[i].item
+  end
+  return items, len
+end
+
+function World:querySegmentWithCoords(x1, y1, x2, y2, filter)
+  local itemInfo, len = getInfoAboutItemsTouchedBySegment(self, x1, y1, x2, y2, filter)
+  local dx, dy        = x2-x1, y2-y1
+  local info, ti1, ti2
+  for i=1, len do
+    info  = itemInfo[i]
+    ti1   = info.ti1
+    ti2   = info.ti2
+
+    info.weight  = nil
+    info.x1      = x1 + dx * ti1
+    info.y1      = y1 + dy * ti1
+    info.x2      = x1 + dx * ti2
+    info.y2      = y1 + dy * ti2
+  end
+  return itemInfo, len
+end
+
+bump.newWorld = function(cellSize)
+  cellSize = cellSize or 64
+  assertIsPositiveNumber(cellSize, 'cellSize')
+  return setmetatable(
+    { cellSize       = cellSize,
+      rects          = {},
+      rows           = {},
+      nonEmptyCells  = {}
+    },
+    World_mt
+  )
+end
+
+bump.newCollision = function(item, other, itemRect, otherRect, future_l, future_t)
+  return setmetatable({
+    item      = item,
+    other     = other,
+    itemRect  = itemRect,
+    otherRect = otherRect,
+    future_l  = future_l,
+    future_t  = future_t,
+    vx        = future_l - itemRect.l,
+    vy        = future_t - itemRect.t
+  }, Collision_mt)
+end
 
 return bump
