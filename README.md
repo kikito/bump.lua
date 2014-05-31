@@ -91,21 +91,19 @@ local bump = require 'bump'
 ### Creating a world
 
 ``` lua
-local world = bump.newWorld()
+local world = bump.newWorld(cellSize)
 ```
 
 The first thing to do with bump is creating a world. That is done with `bump.newWorld`.
 
- `bump.newWorld` has one optional parameter, called `cellSize`. It must be a number. It represents the size of the sides
- of the (squared) cells that will be used internally to provide the data. In tile based games, it's usually a multiple of
- the tile side size. So in a game where tiles are 32x32, `cellSize` will be 32, 64 or 128. In more sparse games, it can be
- higher.
+* `cellSize`. Is an optional number. It defaults to 64. It represents the size of the sides
+  of the (squared) cells that will be used internally to provide the data. In tile based games, it's usually a multiple of
+  the tile side size. So in a game where tiles are 32x32, `cellSize` will be 32, 64 or 128. In more sparse games, it can be
+  higher.
 
- Don't worry too much about that number at the beginning, you can tweak it later on to see if bigger/smaller numbers
- give you better results (you can't change the value of cellSize in runtime, but you can create as many worlds as you need,
- each one with a different cellsize, if the need arises.)
-
-`cellSize`'s default value is 64.
+Don't worry too much about `cellSize` at the beginning, you can tweak it later on to see if bigger/smaller numbers
+give you better results (you can't change the value of cellSize in runtime, but you can create as many worlds as you want,
+each one with a different cellsize, if the need arises.)
 
 The rest of the methods we have are for the worlds that we create.
 
