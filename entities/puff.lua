@@ -52,8 +52,7 @@ function Puff:move(dt)
   self.l = self.l + self.vx * dt
   self.t = self.t + self.vy * dt
 
-  self.world:remove(self)
-  self.world:add(self, self.l, self.t, self.w, self.h)
+  self.world:move(self, self.l, self.t, self.w, self.h)
 end
 
 function Puff:update(dt)
