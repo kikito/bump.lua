@@ -428,8 +428,15 @@ function World:move(item, l,t,w,h)
   w,h = w or rect.w, h or rect.h
   assertIsRect(l,t,w,h)
   if rect.l ~= l or rect.t ~= t or rect.w ~= w or rect.h ~= h then
-    self:remove(item)
-    self:add(item, l,t,w,h)
+    local cellSize = self.cellSize
+    local cl1,ct1,cw1,ch1 = grid_toCellRect(cellSize, rect.l,rect.t,rect.w,rect.h)
+    local cl2,ct2,cw2,ch2 = grid_toCellRect(cellSize, l,t,w,h)
+    if cl1==cl2 and ct1==ct2 and cw1==cw2 and ch1==ch2 then
+      rect.l, rect.t, rect.w, rect.h = l,t,w,h
+    else
+      self:remove(item)
+      self:add(item, l,t,w,h)
+    end
   end
 end
 
