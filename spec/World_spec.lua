@@ -69,6 +69,22 @@ describe('World', function()
         assert.same({l=5,t=5,w=10,h=10}, world:getRect(a))
       end)
     end)
+
+    describe('when the object stays in the same group of cells', function()
+      it('does not invoke remove and add', function()
+        local world, a = bump.newWorld(), {}
+
+        world:add(a, 0,0,10,10)
+
+        spy.on(world, 'remove')
+        spy.on(world, 'add')
+
+        world:move(a, 1,1, 11,11)
+
+        assert.spy(world.remove).was.called(0)
+        assert.spy(world.add).was.called(0)
+      end)
+    end)
   end)
 
   describe(':check', function()
