@@ -40,9 +40,10 @@ function Entity:changeVelocityByCollisionNormal(nx, ny, bounciness)
   self.vx, self.vy = vx, vy
 end
 
-function Entity:move(l,t)
+function Entity:move(l,t,w,h)
+  w,h = w or self.w, h or self.h
   self.l, self.t = l,t
-  self.world:move(self, l, t)
+  self.world:move(self, l,t,w,h)
 end
 
 function Entity:getCenter()

@@ -48,13 +48,6 @@ function Puff:expand(dt)
   self.t = cy - self.h / 2
 end
 
-function Puff:move(dt)
-  self.l = self.l + self.vx * dt
-  self.t = self.t + self.vy * dt
-
-  self.world:move(self, self.l, self.t, self.w, self.h)
-end
-
 function Puff:update(dt)
   self.lived = self.lived + dt
 
@@ -62,7 +55,8 @@ function Puff:update(dt)
     self:destroy()
   else
     self:expand(dt)
-    self:move(dt)
+    self:move(self.l + self.vx * dt,
+              self.t + self.vy * dt)
   end
 end
 
