@@ -307,7 +307,6 @@ A good example of this behavior is Arkanoid's ball.
 * `tl, tt, nx, ny`: Same as in `col:getTouch()`
 * `bl, bt`: The left,top coordinates of `item` after it finishes bouncing. It is very possible that after bouncing, it doesn't touch `other` any more.
 
-Similarly to sliding collisions, the "touch" is guaranteed to happen "in order", so you can move to the
 While the touch is guaranteed to be "in order", once you start sliding you could generate new collisions with other items in the world. So it is recommended
 that you `move` the item until it "touches" the first collision, and then `check` if it can be moved to `sl` and `st` before moving it there. And if this generates
 more collisions, react accordingly.
