@@ -46,9 +46,9 @@ assert(len == 0)
 -- check whether moving B to 100, 100 would make it collide with A
 local collisions, len = world:check(B, 50, 0, 100, 100)
 
--- prints "Collision with A."
+-- prints "B collision with A."
 for _,col in ipairs(collision) do -- If more than one simultaneous collision, they are sorted out by proximity
-  print(("Collision with %s"):format(col.item.name)
+  print(("%s collision with %s"):format(col.item.name, col.other.name)
 end
 
 -- Move B only until it starts touching A on its way to 100, 100
