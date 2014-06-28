@@ -391,6 +391,17 @@ calculating the intensity of a shooting that becomes weaker with distance.
 ### Misc functions
 
 ``` lua
+local result = world:hasItem(item)
+```
+
+Returns wether the world contains the given item or not.
+
+* `item` can be any Lua object.
+* `result` is `true` if `item` is one of the items inside `world`, and `false` otherwise.
+
+This function does not throw an error if `item` is not included in `world`; it just returns `false`.
+
+``` lua
 local rect = world:getRect(item)
 ```
 
@@ -446,5 +457,19 @@ bump.lua is licensed under the MIT license.
 ## Specs
 
 Specs for this project can be run using [busted](http://olivinelabs.com/busted).
+
+
+## Changelog
+
+### v2.0.1
+
+* Added `world:hasItem(item)`
+
+### v2.0.0
+
+* Massive interface change:
+  * moved the state to worlds
+  * Only 1 element can be "moved" at the same time
+  * Introduced the concept of "Collision methods"
 
 

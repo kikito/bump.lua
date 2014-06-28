@@ -1,5 +1,5 @@
 local bump = {
-  _VERSION     = 'bump v2.0.0',
+  _VERSION     = 'bump v2.0.1',
   _URL         = 'https://github.com/kikito/bump.lua',
   _DESCRIPTION = 'A collision detection library for Lua',
   _LICENSE     = [[
@@ -499,6 +499,10 @@ end
 
 function World:toCell(x,y)
   return grid_toCell(self.cellSize, x, y)
+end
+
+function World:hasItem(item)
+  return not not self.rects[item]
 end
 
 function World:queryRect(l,t,w,h, filter)
