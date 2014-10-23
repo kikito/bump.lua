@@ -122,6 +122,7 @@ describe('World', function()
           world:add(b, 1,1, 2,2)
           assert.same(#world:check(b, 1, 1), 1)
         end)
+
         it('detects and tags tunneling correctly', function()
           local world, a, b = bump.newWorld(), {'a'}, {'b'}
 
@@ -129,6 +130,7 @@ describe('World', function()
           world:add(b, -5,0, 4,1)
           assert.same(#world:check(b, 5, 0), 1)
         end)
+
         it('detects the case where an object was touching another without intersecting, and then penetrates', function()
           local world, a, b = bump.newWorld(), {'a'}, {'b'}
 

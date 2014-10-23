@@ -199,93 +199,107 @@ local function grid_toCellRect(cellSize, l,t,w,h)
 end
 
 ------------------------------------------
--- Collision
+-- Collision functions
 ------------------------------------------
 
-local Collision = {}
-local Collision_mt = {__index = Collision}
+local function collision_base(itemRect, otherRect, future_l, future_t)
+  local b1, b2      = itemRect, otherRect
+  local l1,t1,w1,h1 = b1.l, b1.t, b1.w, b1.h
+  local l2,t2,w2,h2 = b2.l, b2.t, b2.w, b2.h
+  local dx, dy      = future_l - b1.l, future_t - b1.t
+  local l,t,w,h     = rect_getDiff(l1,t1,w1,h1, l2,t2,w2,h2)
 
-function Collision:resolve()
-  local b1, b2          = self.itemRect, self.otherRect
-  local vx, vy          = self.vx, self.vy
-  local l1,t1,w1,h1     = b1.l, b1.t, b1.w, b1.h
-  local l2,t2,w2,h2     = b2.l, b2.t, b2.w, b2.h
-  local l,t,w,h         = rect_getDiff(l1,t1,w1,h1, l2,t2,w2,h2)
+  local overlaps, ti, nx, ny
 
   if rect_containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
-    self.is_intersection = true
-    local px, py = rect_getNearestCorner(l,t,w,h, 0, 0)
-    local wi, hi = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
-    self.ti      = -wi * hi -- ti is the negative area of intersection
-    self.nx, self.ny = 0,0
-    self.ml, self.mt, self.mw, self.mh = l,t,w,h
-    return self
+    local px, py    = rect_getNearestCorner(l,t,w,h, 0, 0)
+    local wi, hi    = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
+    ti              = -wi * hi -- ti is the negative area of intersection
+    nx, ny          = 0,0
+    overlaps = true
   else
-    local ti1,ti2,nx,ny = rect_getSegmentIntersectionIndices(l,t,w,h, 0,0,vx,vy, -math.huge, math.huge)
+    local ti1,ti2,nx1,ny1 = rect_getSegmentIntersectionIndices(l,t,w,h, 0,0,dx,dy, -math.huge, math.huge)
+
     -- b1 tunnels into b2 while it travels
     if ti1 and ti1 < 1 and (0 < ti1 or 0 == ti1 and ti2 > 0) then
-      -- local dx, dy = vx*ti-vx, vy*ti-vy
-      self.is_intersection = false
-      self.ti, self.nx, self.ny          = ti1, nx, ny
-      self.ml, self.mt, self.mw, self.mh = l,t,w,h
-      return self
-    end
-  end
-end
-
-function Collision:getTouch()
-  local vx,vy = self.vx, self.vy
-  local itemRect = self.itemRect
-  assert(self.is_intersection ~= nil, 'unknown collision kind. Have you called :resolve()?')
-
-  local tl, tt, nx, ny
-
-  if self.is_intersection then
-
-    if vx == 0 and vy == 0 then
-      -- intersecting and not moving - use minimum displacement vector
-      local px,py = rect_getNearestCorner(self.ml, self.mt, self.mw, self.mh, 0,0)
-      if abs(px) < abs(py) then py = 0 else px = 0 end
-      tl, tt, nx, ny = itemRect.l + px, itemRect.t + py, sign(px), sign(py)
-    else
-      -- intersecting and moving - move in the opposite direction
-      local ti,_,nx2,ny2 = rect_getSegmentIntersectionIndices(self.ml,self.mt,self.mw,self.mh, 0,0,vx,vy, -math.huge, 1)
-      tl, tt, nx, ny = itemRect.l + vx * ti, itemRect.t + vy * ti, nx2, ny2
-    end
-
-  else -- tunnel
-    tl, tt, nx, ny = itemRect.l + vx * self.ti, itemRect.t + vy * self.ti, self.nx, self.ny
-  end
-
-  return tl, tt, nx, ny
-end
-
-function Collision:getSlide()
-  local tl, tt, nx, ny  = self:getTouch()
-  local sl, st = tl, tt
-
-  if self.vx ~= 0 or self.vy ~= 0 then
-    if nx == 0 then
-      sl = self.future_l
-    else
-      st = self.future_t
+      ti, nx, ny = ti1, nx1, ny1
+      overlaps   = false
     end
   end
 
-  return tl, tt, nx, ny, sl, st
+  if ti then
+    return {
+      overlaps  = overlaps,
+      ti        = ti,
+      move      = {x = dx, y = dy},
+      normal    = {x = nx, y = ny},
+      diffRect  = {l = l,  t = t,  w = w,  h = h},
+      itemRect  = {l = l1, t = t1, w = w1, h = h1},
+      otherRect = {l = l2, t = t2, w = w2, h = h2}
+    }
+  end
 end
 
-function Collision:getBounce()
-  local tl, tt, nx, ny  = self:getTouch()
-  local bl, bt, bx,by = tl, tt, 0,0
+function collision_touch(itemRect, otherRect, future_l, future_t)
+  local col = collision_base(itemRect, otherRect, future_l, future_t)
 
-  if self.vx ~= 0 or self.vy ~= 0 then
-    bx, by = self.future_l - tl, self.future_t - tt
-    if nx == 0 then by = -by else bx = -bx end
-    bl, bt = tl + bx, tt + by
+  if col then
+    local move = col.move
+    if col.overlaps then
+      local diff = col.diffRect
+      if move.x == 0 and move.y == 0 then
+        -- intersecting and not moving - use minimum displacement vector
+        local px,py = rect_getNearestCorner(diff.l, diff.t, diff.w, diff.h, 0,0)
+        if abs(px) < abs(py) then py = 0 else px = 0 end
+        col.touch  = { l = itemRect.l + px, t = itemRect.t + py }
+        col.normal = { x = sign(px), y = sign(py) }
+      else
+        -- intersecting and moving - move in the opposite direction
+        local ti,_,nx2,ny2 = rect_getSegmentIntersectionIndices(diff.l,diff.t,diff.w,diff.h, 0,0,move.x,move.y, -math.huge, 1)
+        col.touch  = { l = itemRect.l + move.x * ti, t = itemRect.t + move.y * ti }
+        col.normal = { x = nx2, y = ny2 }
+      end
+    else -- tunnel
+      local ti = col.ti
+      col.touch = { l = itemRect.l + move.x * ti, t = itemRect.t + move.y * ti }
+    end
+    return col
   end
+end
 
-  return tl, tt, nx, ny, bl, bt
+function collision_slide(self, itemRect, otherRect, future_l, future_t)
+  local col = collision_touch(self, itemRect, otherRect, future_l, future_t)
+  if col then
+    col.sl, col.st = col.tl, col.tt
+    local move = col.move
+    if move.x ~= 0 or move.y ~= 0 then
+      if col.normal.x == 0 then
+        col.sl = col.future_l
+      else
+        col.st = col.future_t
+      end
+    end
+    return col
+  end
+end
+
+function collision_bounce(self, itemRect, other, future_l, future_t)
+  local col = collision_touch(self, itemRect, other, future_l, future_t)
+
+  if col then
+
+    local bl, bt, bx,by = col.tl, col.tt, 0,0
+
+    local move = col.move
+    if move.x ~= 0 or move.y ~= 0 then
+      bx, by = future_l - tl, future_t - tt
+      if col.normal.x == 0 then by = -by else bx = -bx end
+      bl, bt = tl + bx, tt + by
+    end
+    col.bl, col.bt, col.bx, col.by = bl, bt, bx, by
+
+    return col
+  end
 end
 
 ------------------------------------------
@@ -585,6 +599,13 @@ bump.newWorld = function(cellSize)
     World_mt
   )
 end
+
+bump.collision = {
+  base   = collision_base,
+  touch  = collision_touch,
+  slide  = collision_slide,
+  bounce = collision_bounce
+}
 
 bump.newCollision = function(item, other, itemRect, otherRect, future_l, future_t)
   return setmetatable({
