@@ -19,8 +19,6 @@ local bounce = function(itemRect, otherRect, future_l, future_t)
   return {col.touch.l, col.touch.t, col.normal.x, col.normal.y, col.bounce.l, col.bounce.t }
 end
 
-
-
 describe('collision.base', function()
   describe('when item is static', function()
     describe('when itemRect does not intersect otherRect', function()
