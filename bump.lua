@@ -203,6 +203,9 @@ end
 ------------------------------------------
 
 local function collision_base(itemRect, otherRect, future_l, future_t)
+  future_l = future_l or itemRect.l
+  future_t = future_t or itemRect.t
+
   local b1, b2      = itemRect, otherRect
   local l1,t1,w1,h1 = b1.l, b1.t, b1.w, b1.h
   local l2,t2,w2,h2 = b2.l, b2.t, b2.w, b2.h
@@ -241,6 +244,9 @@ local function collision_base(itemRect, otherRect, future_l, future_t)
 end
 
 function collision_touch(itemRect, otherRect, future_l, future_t)
+  future_l = future_l or itemRect.l
+  future_t = future_t or itemRect.t
+
   local col = collision_base(itemRect, otherRect, future_l, future_t)
 
   if col then
@@ -267,24 +273,32 @@ function collision_touch(itemRect, otherRect, future_l, future_t)
   end
 end
 
-function collision_slide(self, itemRect, otherRect, future_l, future_t)
-  local col = collision_touch(self, itemRect, otherRect, future_l, future_t)
+function collision_slide(itemRect, otherRect, future_l, future_t)
+  future_l = future_l or itemRect.l
+  future_t = future_t or itemRect.t
+
+  local col = collision_touch(itemRect, otherRect, future_l, future_t)
+
   if col then
-    col.sl, col.st = col.tl, col.tt
+    local sl, st = col.touch.l, col.touch.t
     local move = col.move
     if move.x ~= 0 or move.y ~= 0 then
       if col.normal.x == 0 then
-        col.sl = col.future_l
+        sl = future_l
       else
-        col.st = col.future_t
+        st = future_t
       end
     end
+    col.slide = {l = sl, t = st}
     return col
   end
 end
 
-function collision_bounce(self, itemRect, other, future_l, future_t)
-  local col = collision_touch(self, itemRect, other, future_l, future_t)
+function collision_bounce(itemRect, other, future_l, future_t)
+  future_l = future_l or itemRect.l
+  future_t = future_t or itemRect.t
+
+  local col = collision_touch(itemRect, other, future_l, future_t)
 
   if col then
 
