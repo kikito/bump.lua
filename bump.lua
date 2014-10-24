@@ -206,7 +206,7 @@ end
 -- Collision functions
 ------------------------------------------
 
-local function collision_base(itemRect, otherRect, future_l, future_t)
+local function resolve_base(itemRect, otherRect, future_l, future_t)
   future_l = future_l or itemRect.l
   future_t = future_t or itemRect.t
 
@@ -247,11 +247,11 @@ local function collision_base(itemRect, otherRect, future_l, future_t)
   end
 end
 
-function collision_touch(itemRect, otherRect, future_l, future_t)
+function resolve_touch(itemRect, otherRect, future_l, future_t)
   future_l = future_l or itemRect.l
   future_t = future_t or itemRect.t
 
-  local col = collision_base(itemRect, otherRect, future_l, future_t)
+  local col = resolve_base(itemRect, otherRect, future_l, future_t)
 
   if col then
     local move = col.move
@@ -277,11 +277,11 @@ function collision_touch(itemRect, otherRect, future_l, future_t)
   end
 end
 
-function collision_slide(itemRect, otherRect, future_l, future_t)
+function resolve_slide(itemRect, otherRect, future_l, future_t)
   future_l = future_l or itemRect.l
   future_t = future_t or itemRect.t
 
-  local col = collision_touch(itemRect, otherRect, future_l, future_t)
+  local col = resolve_touch(itemRect, otherRect, future_l, future_t)
 
   if col then
     local sl, st = col.touch.l, col.touch.t
@@ -298,11 +298,11 @@ function collision_slide(itemRect, otherRect, future_l, future_t)
   end
 end
 
-function collision_bounce(itemRect, other, future_l, future_t)
+function resolve_bounce(itemRect, other, future_l, future_t)
   future_l = future_l or itemRect.l
   future_t = future_t or itemRect.t
 
-  local col = collision_touch(itemRect, other, future_l, future_t)
+  local col = resolve_touch(itemRect, other, future_l, future_t)
 
   if col then
     local touch = col.touch
@@ -642,18 +642,18 @@ bump.newWorld = function(cellSize)
     resolvers      = {}
   }, World_mt)
 
-  world:addResolver('touch', collision_touch)
-  world:addResolver('slide', collision_slide)
-  world:addResolver('bounce', collision_bounce)
+  world:addResolver('touch', resolve_touch)
+  world:addResolver('slide', resolve_slide)
+  world:addResolver('bounce', resolve_bounce)
 
   return world
 end
 
-bump.collision = {
-  base   = collision_base,
-  touch  = collision_touch,
-  slide  = collision_slide,
-  bounce = collision_bounce
+bump.resolvers = {
+  base   = resolve_base,
+  touch  = resolve_touch,
+  slide  = resolve_slide,
+  bounce = resolve_bounce
 }
 
 bump.newCollision = function(item, other, itemRect, otherRect, future_l, future_t)
@@ -666,7 +666,7 @@ bump.newCollision = function(item, other, itemRect, otherRect, future_l, future_
     future_t  = future_t,
     vx        = future_l - itemRect.l,
     vy        = future_t - itemRect.t
-  }, Collision_mt)
+  }, resolve_mt)
 end
 
 return bump

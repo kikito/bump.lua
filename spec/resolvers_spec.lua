@@ -1,35 +1,35 @@
-local collision = require('bump').collision
+local resolvers = require('bump').resolvers
 
 local function rect(l,t,w,h)
   return {l=l,t=t,w=w,h=h}
 end
 
 local touch = function(itemRect, otherRect, future_l, future_t)
-  local col = collision.touch(itemRect, otherRect, future_l, future_t)
+  local col = resolvers.touch(itemRect, otherRect, future_l, future_t)
   return {col.touch.l, col.touch.t, col.normal.x, col.normal.y}
 end
 
 local slide = function(itemRect, otherRect, future_l, future_t)
-  local col = collision.slide(itemRect, otherRect, future_l, future_t)
+  local col = resolvers.slide(itemRect, otherRect, future_l, future_t)
   return {col.touch.l, col.touch.t, col.normal.x, col.normal.y, col.slide.l, col.slide.t}
 end
 
 local bounce = function(itemRect, otherRect, future_l, future_t)
-  local col = collision.bounce(itemRect, otherRect, future_l, future_t)
+  local col = resolvers.bounce(itemRect, otherRect, future_l, future_t)
   return {col.touch.l, col.touch.t, col.normal.x, col.normal.y, col.bounce.l, col.bounce.t }
 end
 
-describe('collision.base', function()
+describe('resolvers.base', function()
   describe('when item is static', function()
     describe('when itemRect does not intersect otherRect', function()
       it('returns nil', function()
-        local c = collision.base(rect(0,0,1,1), rect(5,5,1,1), 0,0)
+        local c = resolvers.base(rect(0,0,1,1), rect(5,5,1,1), 0,0)
         assert.is_nil(c)
       end)
     end)
     describe('when itemRect overlaps otherRect', function()
       it('returns overlaps, normal, move, ti, diff, itemRect, otherRect', function()
-        local c = collision.base(rect(0,0,7,6), rect(5,5,1,1), 0, 0)
+        local c = resolvers.base(rect(0,0,7,6), rect(5,5,1,1), 0, 0)
 
         assert.is_true(c.overlaps)
         assert.equals(c.ti, -2)
@@ -46,30 +46,30 @@ describe('collision.base', function()
   describe('when item is moving', function()
     describe('when itemRect does not intersect otherRect', function()
       it('returns nil', function()
-        local c = collision.base(rect(0,0,1,1), rect(5,5,1,1), 0,1)
+        local c = resolvers.base(rect(0,0,1,1), rect(5,5,1,1), 0,1)
         assert.is_nil(c)
       end)
     end)
     describe('when itemRect intersects otherRect', function()
       it('detects collisions from the left', function()
-        local c = collision.base(rect(1,1,1,1), rect(5,0,1,1), 6,0)
+        local c = resolvers.base(rect(1,1,1,1), rect(5,0,1,1), 6,0)
         assert.equal(c.ti, 0.6)
         assert.same(c.normal, {x=-1, y=0})
       end)
       it('detects collisions from the right', function()
-        local c = collision.base(rect(6,0,1,1), rect(1,0,1,1), 1,1)
+        local c = resolvers.base(rect(6,0,1,1), rect(1,0,1,1), 1,1)
         assert.is_false(c.overlaps)
         assert.equal(c.ti, 0.8)
         assert.same(c.normal, {x=1, y=0})
       end)
       it('detects collisions from the top', function()
-        local c = collision.base(rect(0,0,1,1), rect(0,4,1,1), 0,5)
+        local c = resolvers.base(rect(0,0,1,1), rect(0,4,1,1), 0,5)
         assert.is_false(c.overlaps)
         assert.equal(c.ti, 0.6)
         assert.same(c.normal, {x=0, y=-1})
       end)
       it('detects collisions from the bottom', function()
-        local c = collision.base(rect(0,4,1,1), rect(0,0,1,1), 0,-1)
+        local c = resolvers.base(rect(0,4,1,1), rect(0,0,1,1), 0,-1)
         assert.is_false(c.overlaps)
         assert.equal(c.ti, 0.6)
         assert.same(c.normal, {x=0, y=1})
@@ -78,7 +78,7 @@ describe('collision.base', function()
   end)
 end)
 
-describe('collision.touch', function()
+describe('resolvers.touch', function()
   local other = rect(0,0,8,8)
 
   describe('on overlaps', function()
@@ -134,13 +134,13 @@ describe('collision.touch', function()
   end)
 end)
 
-describe('collision.slide', function()
+describe('resolvers.slide', function()
   local other = rect(0,0,8,8)
 
   describe('when there is no movement', function()
     it('behaves like touch, plus safe info', function()
-      local ct = collision.touch(rect(3,3,2,2), other)
-      local cs = collision.slide(rect(3,3,2,2), other)
+      local ct = resolvers.touch(rect(3,3,2,2), other)
+      local cs = resolvers.slide(rect(3,3,2,2), other)
       local slide = cs.slide
       cs.slide = nil
       assert.same(ct, cs)
@@ -166,13 +166,13 @@ describe('collision.slide', function()
   end)
 end)
 
-describe('collision.bounce', function()
+describe('resolvers.bounce', function()
   local other = rect(0,0,8,8)
 
   describe('when there is no movement', function()
     it('behaves like :getTouch(), plus safe info', function()
-      local ct = collision.touch(rect(3,3,2,2), other)
-      local cb = collision.bounce(rect(3,3,2,2), other)
+      local ct = resolvers.touch(rect(3,3,2,2), other)
+      local cb = resolvers.bounce(rect(3,3,2,2), other)
       local bounce, bounceNormal = cb.bounce, cb.bounceNormal
       cb.bounce, cb.bounceNormal = nil, nil
       assert.same(ct, cb)
