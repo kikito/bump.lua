@@ -70,6 +70,10 @@ local function assertIsRect(l,t,w,h)
   assertIsPositiveNumber(h, 'h')
 end
 
+local default_filter = function()
+  return 'touch'
+end
+
 ------------------------------------------
 -- Axis-aligned bounding box functions
 ------------------------------------------
@@ -473,6 +477,8 @@ function World:move(item, l,t,w,h)
 end
 
 function World:check(item, future_l, future_t, filter)
+  filter = filter or default_filter
+
   local rect = getRect(self, item)
   local collisions, len = {}, 0
 
@@ -494,13 +500,10 @@ function World:check(item, future_l, future_t, filter)
   for other,_ in pairs(dictItemsInCellRect) do
     if not visited[other] then
       visited[other] = true
-      if not filter or filter(other) then
-        local oRect = self.rects[other]
-        local col  = bump.newCollision(item, other, rect, oRect, future_l, future_t):resolve()
-        if col then
-          len = len + 1
-          collisions[len] = col
-        end
+      local col = self:collide(item, other, future_l, future_t, filter)
+      if col then
+        len = len + 1
+        collisions[len] = col
       end
     end
   end
@@ -508,6 +511,25 @@ function World:check(item, future_l, future_t, filter)
   table.sort(collisions, sortByTi)
 
   return collisions, len
+end
+
+function World:collide(item, other, future_l, future_t, filter)
+  local collisionType = filter(other)
+  if not collisionType then return end
+
+  local resolver = self.resolvers[collisionType]
+
+  if not resolver then error('Unknown collision type: ' .. tostring(collisionType)) end
+
+  local iRect, oRect = self.rects[item], self.rects[other]
+  local col = resolver(iRect, oRect, future_l, future_t)
+
+  if not col then return end
+
+  col.item  = item
+  col.other = other
+
+  return col
 end
 
 function World:getRect(item)
@@ -605,17 +627,26 @@ function World:querySegmentWithCoords(x1, y1, x2, y2, filter)
   return itemInfo, len
 end
 
+function World:addResolver(resolver_name, resolver)
+  self.resolvers[resolver_name] = resolver
+end
+
 bump.newWorld = function(cellSize)
   cellSize = cellSize or 64
   assertIsPositiveNumber(cellSize, 'cellSize')
-  return setmetatable(
-    { cellSize       = cellSize,
-      rects          = {},
-      rows           = {},
-      nonEmptyCells  = {}
-    },
-    World_mt
-  )
+  local world = setmetatable({
+    cellSize       = cellSize,
+    rects          = {},
+    rows           = {},
+    nonEmptyCells  = {},
+    resolvers      = {}
+  }, World_mt)
+
+  world:addResolver('touch', collision_touch)
+  world:addResolver('slide', collision_slide)
+  world:addResolver('bounce', collision_bounce)
+
+  return world
 end
 
 bump.collision = {

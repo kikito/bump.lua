@@ -167,7 +167,7 @@ describe('World', function()
         describe('the filter param', function()
           it('deactivates collisions when filter returns false', function()
             local cols = world:check(a, 10, 0, function(obj)
-              return obj ~= d
+              return obj ~= d and "touch"
             end)
             assert.same(#cols, 2)
           end)
