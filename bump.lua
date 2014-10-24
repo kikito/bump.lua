@@ -301,8 +301,10 @@ function collision_bounce(itemRect, other, future_l, future_t)
   local col = collision_touch(itemRect, other, future_l, future_t)
 
   if col then
+    local touch = col.touch
+    local tl, tt = touch.l, touch.t
 
-    local bl, bt, bx,by = col.tl, col.tt, 0,0
+    local bl, bt, bx,by = tl, tt, 0,0
 
     local move = col.move
     if move.x ~= 0 or move.y ~= 0 then
@@ -310,7 +312,9 @@ function collision_bounce(itemRect, other, future_l, future_t)
       if col.normal.x == 0 then by = -by else bx = -bx end
       bl, bt = tl + bx, tt + by
     end
-    col.bl, col.bt, col.bx, col.by = bl, bt, bx, by
+
+    col.bounce = {l = bl, t = bt}
+    col.bounceNormal = {x = bx, y = by}
 
     return col
   end

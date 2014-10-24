@@ -15,7 +15,8 @@ local slide = function(itemRect, otherRect, future_l, future_t)
 end
 
 local bounce = function(itemRect, otherRect, future_l, future_t)
-  return collision.bounce(itemRect, otherRect, future_l, future_t)
+  local col = collision.bounce(itemRect, otherRect, future_l, future_t)
+  return {col.touch.l, col.touch.t, col.normal.x, col.normal.y, col.bounce.l, col.bounce.t }
 end
 
 
@@ -142,12 +143,10 @@ describe('collision.slide', function()
     it('behaves like touch, plus safe info', function()
       local ct = collision.touch(rect(3,3,2,2), other)
       local cs = collision.slide(rect(3,3,2,2), other)
-      local slide, move = cs.slide, cs.move
+      local slide = cs.slide
       cs.slide = nil
-      cs.move = ct.move
       assert.same(ct, cs)
       assert.same(slide, {l = 3, t = 8})
-      assert.same(move, {x = 0, y = 0})
     end)
   end)
 
@@ -169,29 +168,34 @@ describe('collision.slide', function()
   end)
 end)
 
-describe(':getBounce', function()
+describe('collision.bounce', function()
   local other = rect(0,0,8,8)
 
   describe('when there is no movement', function()
     it('behaves like :getTouch(), plus safe info', function()
-      local c = resolve(rect(3,3,2,2), other)
-      assert.same({c:getBounce()}, {3,8, 0,1, 3,8})
+      local ct = collision.touch(rect(3,3,2,2), other)
+      local cb = collision.bounce(rect(3,3,2,2), other)
+      local bounce, bounceNormal = cb.bounce, cb.bounceNormal
+      cb.bounce, cb.bounceNormal = nil, nil
+      assert.same(ct, cb)
+      assert.same(bounce, {l=3, t=8})
+      assert.same(bounceNormal, {x=0,y=0})
     end)
   end)
   describe('when there is movement, it bounces', function()
     it('bounces on overlaps', function()
-      assert.same({resolve(rect( 3, 3,2,2), other, 4, 5):getBounce()}, { 0.5, -2, 0,-1, 4, -9})
-      assert.same({resolve(rect( 3, 3,2,2), other, 5, 4):getBounce()}, { -2, 0.5, -1,0, -9, 4})
-      assert.same({resolve(rect( 3, 3,2,2), other, 2, 1):getBounce()}, { 5.5, 8, 0,1, 2, 15})
-      assert.same({resolve(rect( 3, 3,2,2), other, 1, 2):getBounce()}, { 8, 5.5, 1,0, 15,2})
+      assert.same(bounce(rect( 3, 3,2,2), other, 4, 5), { 0.5, -2, 0,-1, 4, -9})
+      assert.same(bounce(rect( 3, 3,2,2), other, 5, 4), { -2, 0.5, -1,0, -9, 4})
+      assert.same(bounce(rect( 3, 3,2,2), other, 2, 1), { 5.5, 8, 0,1, 2, 15})
+      assert.same(bounce(rect( 3, 3,2,2), other, 1, 2), { 8, 5.5, 1,0, 15,2})
     end)
 
     it('bounces over tunnels', function()
-      assert.same({resolve(rect(10,10,2,2), other, 1, 4):getBounce()}, { 7, 8, 0, 1, 1, 12})
-      assert.same({resolve(rect(10,10,2,2), other, 4, 1):getBounce()}, { 8, 7, 1, 0, 12, 1})
+      assert.same(bounce(rect(10,10,2,2), other, 1, 4), { 7, 8, 0, 1, 1, 12})
+      assert.same(bounce(rect(10,10,2,2), other, 4, 1), { 8, 7, 1, 0, 12, 1})
 
       -- perfect corner case:
-      assert.same({resolve(rect(10,10,2,2), other, 1, 1):getBounce()}, { 8, 8, 1, 0, 15, 1})
+      assert.same(bounce(rect(10,10,2,2), other, 1, 1), { 8, 8, 1, 0, 15, 1})
     end)
   end)
 end)
