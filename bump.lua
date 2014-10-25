@@ -206,7 +206,7 @@ end
 -- Collision functions
 ------------------------------------------
 
-local function resolve_base(itemRect, otherRect, future_l, future_t)
+local function resolve_touch(itemRect, otherRect, future_l, future_t)
   future_l = future_l or itemRect.l
   future_t = future_t or itemRect.t
 
@@ -222,7 +222,6 @@ local function resolve_base(itemRect, otherRect, future_l, future_t)
     local px, py    = rect_getNearestCorner(l,t,w,h, 0, 0)
     local wi, hi    = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
     ti              = -wi * hi -- ti is the negative area of intersection
-    nx, ny          = 0,0
     overlaps = true
   else
     local ti1,ti2,nx1,ny1 = rect_getSegmentIntersectionIndices(l,t,w,h, 0,0,dx,dy, -math.huge, math.huge)
@@ -234,47 +233,37 @@ local function resolve_base(itemRect, otherRect, future_l, future_t)
     end
   end
 
-  if ti then
-    return {
-      overlaps  = overlaps,
-      ti        = ti,
-      move      = {x = dx, y = dy},
-      normal    = {x = nx, y = ny},
-      diffRect  = {l = l,  t = t,  w = w,  h = h},
-      itemRect  = {l = l1, t = t1, w = w1, h = h1},
-      otherRect = {l = l2, t = t2, w = w2, h = h2}
-    }
-  end
-end
+  if not ti then return end
 
-function resolve_touch(itemRect, otherRect, future_l, future_t)
-  future_l = future_l or itemRect.l
-  future_t = future_t or itemRect.t
+  local tl, tt
 
-  local col = resolve_base(itemRect, otherRect, future_l, future_t)
-
-  if col then
-    local move = col.move
-    if col.overlaps then
-      local diff = col.diffRect
-      if move.x == 0 and move.y == 0 then
-        -- intersecting and not moving - use minimum displacement vector
-        local px,py = rect_getNearestCorner(diff.l, diff.t, diff.w, diff.h, 0,0)
-        if abs(px) < abs(py) then py = 0 else px = 0 end
-        col.touch  = { l = itemRect.l + px, t = itemRect.t + py }
-        col.normal = { x = sign(px), y = sign(py) }
-      else
-        -- intersecting and moving - move in the opposite direction
-        local ti,_,nx2,ny2 = rect_getSegmentIntersectionIndices(diff.l,diff.t,diff.w,diff.h, 0,0,move.x,move.y, -math.huge, 1)
-        col.touch  = { l = itemRect.l + move.x * ti, t = itemRect.t + move.y * ti }
-        col.normal = { x = nx2, y = ny2 }
-      end
-    else -- tunnel
-      local ti = col.ti
-      col.touch = { l = itemRect.l + move.x * ti, t = itemRect.t + move.y * ti }
+  if overlaps then
+    if dx == 0 and dy == 0 then
+      -- intersecting and not moving - use minimum displacement vector
+      local px, py = rect_getNearestCorner(l,t,w,h, 0,0)
+      if abs(px) < abs(py) then py = 0 else px = 0 end
+      nx, ny = sign(px), sign(py)
+      tl, tt = l1 + px, t1 + py
+    else
+      -- intersecting and moving - move in the opposite direction
+      local ti1
+      ti1,_,nx,ny = rect_getSegmentIntersectionIndices(l,t,w,h, 0,0,dx,dy, -math.huge, 1)
+      tl, tt = l1 + dx * ti1, t1 + dy * ti1
     end
-    return col
+  else -- tunnel
+    tl, tt = l1 + dx * ti, t1 + dy * ti
   end
+
+  return {
+    overlaps  = overlaps,
+    ti        = ti,
+    move      = {x = dx, y = dy},
+    normal    = {x = nx, y = ny},
+    touch     = {l = tl, t = tt},
+    diffRect  = {l = l,  t = t,  w = w,  h = h},
+    itemRect  = {l = l1, t = t1, w = w1, h = h1},
+    otherRect = {l = l2, t = t2, w = w2, h = h2}
+  }
 end
 
 function resolve_slide(itemRect, otherRect, future_l, future_t)
@@ -650,7 +639,6 @@ bump.newWorld = function(cellSize)
 end
 
 bump.resolvers = {
-  base   = resolve_base,
   touch  = resolve_touch,
   slide  = resolve_slide,
   bounce = resolve_bounce
