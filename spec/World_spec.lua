@@ -250,7 +250,6 @@ describe('World', function()
         assert.same(sorted(world:queryRect(0, 5, 100, 20, filter)), {a,b,d})
       end)
     end)
-
   end)
 
   describe(':queryPoint', function()
@@ -289,7 +288,6 @@ describe('World', function()
         assert.same(sorted(world:queryPoint(31,5, filter)), {})
       end)
     end)
-
   end)
 
   describe(':querySegment', function()
@@ -345,7 +343,6 @@ describe('World', function()
         assert.same(world:querySegment(26,5, 17,5, filter), {b})
         assert.same(world:querySegment(26,5, 22,5, filter), {})
       end)
-
     end)
   end)
 
