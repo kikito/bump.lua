@@ -37,7 +37,6 @@ describe('resolvers.touch', function()
           assert.same(c.move, {x = 0, y = 0})
           assert.same(c.itemRect, {l=0,t=0,w=7,h=6})
           assert.same(c.otherRect, {l=5,t=5,w=1,h=1})
-          assert.same(c.diffRect, {l=-2,t=-1,w=8,h=7})
           assert.same(c.normal, {x=0, y=-1})
 
         end)

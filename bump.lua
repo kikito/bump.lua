@@ -260,7 +260,6 @@ local function resolve_touch(itemRect, otherRect, future_x, future_y)
     move      = {x = dx, y = dy},
     normal    = {x = nx, y = ny},
     touch     = {l = tl, t = tt},
-    diffRect  = {l = l,  t = t,  w = w,  h = h},
     itemRect  = {l = l1, t = t1, w = w1, h = h1},
     otherRect = {l = l2, t = t2, w = w2, h = h2}
   }
