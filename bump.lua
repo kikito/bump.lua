@@ -206,14 +206,14 @@ end
 -- Collision functions
 ------------------------------------------
 
-local function resolve_touch(itemRect, otherRect, future_l, future_t)
-  future_l = future_l or itemRect.l
-  future_t = future_t or itemRect.t
+local function resolve_touch(itemRect, otherRect, future_x, future_y)
+  future_x = future_x or itemRect.l
+  future_y = future_y or itemRect.t
 
   local b1, b2      = itemRect, otherRect
   local l1,t1,w1,h1 = b1.l, b1.t, b1.w, b1.h
   local l2,t2,w2,h2 = b2.l, b2.t, b2.w, b2.h
-  local dx, dy      = future_l - b1.l, future_t - b1.t
+  local dx, dy      = future_x - b1.l, future_y - b1.t
   local l,t,w,h     = rect_getDiff(l1,t1,w1,h1, l2,t2,w2,h2)
 
   local overlaps, ti, nx, ny
@@ -266,20 +266,20 @@ local function resolve_touch(itemRect, otherRect, future_l, future_t)
   }
 end
 
-function resolve_slide(itemRect, otherRect, future_l, future_t)
-  future_l = future_l or itemRect.l
-  future_t = future_t or itemRect.t
+function resolve_slide(itemRect, otherRect, future_x, future_y)
+  future_x = future_x or itemRect.l
+  future_y = future_y or itemRect.t
 
-  local col = resolve_touch(itemRect, otherRect, future_l, future_t)
+  local col = resolve_touch(itemRect, otherRect, future_x, future_y)
 
   if col then
     local sl, st = col.touch.l, col.touch.t
     local move = col.move
     if move.x ~= 0 or move.y ~= 0 then
       if col.normal.x == 0 then
-        sl = future_l
+        sl = future_x
       else
-        st = future_t
+        st = future_y
       end
     end
     col.slide = {l = sl, t = st}
@@ -287,11 +287,11 @@ function resolve_slide(itemRect, otherRect, future_l, future_t)
   end
 end
 
-function resolve_bounce(itemRect, other, future_l, future_t)
-  future_l = future_l or itemRect.l
-  future_t = future_t or itemRect.t
+function resolve_bounce(itemRect, other, future_x, future_y)
+  future_x = future_x or itemRect.l
+  future_y = future_y or itemRect.t
 
-  local col = resolve_touch(itemRect, other, future_l, future_t)
+  local col = resolve_touch(itemRect, other, future_x, future_y)
 
   if col then
     local touch = col.touch
@@ -301,7 +301,7 @@ function resolve_bounce(itemRect, other, future_l, future_t)
 
     local move = col.move
     if move.x ~= 0 or move.y ~= 0 then
-      bx, by = future_l - tl, future_t - tt
+      bx, by = future_x - tl, future_y - tt
       if col.normal.x == 0 then by = -by else bx = -bx end
       bl, bt = tl + bx, tt + by
     end
@@ -465,7 +465,7 @@ function World:move(item, l,t,w,h)
   end
 end
 
-function World:check(item, future_l, future_t, filter)
+function World:check(item, future_x, future_y, filter)
   filter = filter or default_filter
 
   local rect = getRect(self, item)
@@ -474,12 +474,12 @@ function World:check(item, future_l, future_t, filter)
   local visited = { [item] = true }
 
   local l,t,w,h = rect.l, rect.t, rect.w, rect.h
-  future_l, future_t = future_l or l, future_t or t
+  future_x, future_y = future_x or l, future_y or t
 
   -- TODO this could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding rect of the whole movement. Conditional to building a queryPolygon method
-  local tl, tt = min(future_l, l),       min(future_t, t)
-  local tr, tb = max(future_l + w, l+w), max(future_t + h, t+h)
+  local tl, tt = min(future_x, l),       min(future_y, t)
+  local tr, tb = max(future_x + w, l+w), max(future_y + h, t+h)
   local tw, th = tr-tl, tb-tt
 
   local cl,ct,cw,ch = grid_toCellRect(self.cellSize, tl,tt,tw,th)
@@ -489,7 +489,7 @@ function World:check(item, future_l, future_t, filter)
   for other,_ in pairs(dictItemsInCellRect) do
     if not visited[other] then
       visited[other] = true
-      local col = self:collide(item, other, future_l, future_t, filter)
+      local col = self:collide(item, other, future_x, future_y, filter)
       if col then
         len = len + 1
         collisions[len] = col
@@ -502,7 +502,7 @@ function World:check(item, future_l, future_t, filter)
   return collisions, len
 end
 
-function World:collide(item, other, future_l, future_t, filter)
+function World:collide(item, other, future_x, future_y, filter)
   local collisionType = filter(other)
   if not collisionType then return end
 
@@ -511,7 +511,7 @@ function World:collide(item, other, future_l, future_t, filter)
   if not resolver then error('Unknown collision type: ' .. tostring(collisionType)) end
 
   local iRect, oRect = self.rects[item], self.rects[other]
-  local col = resolver(iRect, oRect, future_l, future_t)
+  local col = resolver(iRect, oRect, future_x, future_y)
 
   if not col then return end
 
@@ -644,16 +644,16 @@ bump.resolvers = {
   bounce = resolve_bounce
 }
 
-bump.newCollision = function(item, other, itemRect, otherRect, future_l, future_t)
+bump.newCollision = function(item, other, itemRect, otherRect, future_x, future_y)
   return setmetatable({
     item      = item,
     other     = other,
     itemRect  = itemRect,
     otherRect = otherRect,
-    future_l  = future_l,
-    future_t  = future_t,
-    vx        = future_l - itemRect.l,
-    vy        = future_t - itemRect.t
+    future_x  = future_x,
+    future_y  = future_y,
+    vx        = future_x - itemRect.l,
+    vy        = future_y - itemRect.t
   }, resolve_mt)
 end
 

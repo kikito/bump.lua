@@ -4,18 +4,18 @@ local function rect(l,t,w,h)
   return {l=l,t=t,w=w,h=h}
 end
 
-local touch = function(itemRect, otherRect, future_l, future_t)
-  local col = resolvers.touch(itemRect, otherRect, future_l, future_t)
+local touch = function(itemRect, otherRect, future_x, future_y)
+  local col = resolvers.touch(itemRect, otherRect, future_x, future_y)
   return {col.touch.l, col.touch.t, col.normal.x, col.normal.y}
 end
 
-local slide = function(itemRect, otherRect, future_l, future_t)
-  local col = resolvers.slide(itemRect, otherRect, future_l, future_t)
+local slide = function(itemRect, otherRect, future_x, future_y)
+  local col = resolvers.slide(itemRect, otherRect, future_x, future_y)
   return {col.touch.l, col.touch.t, col.normal.x, col.normal.y, col.slide.l, col.slide.t}
 end
 
-local bounce = function(itemRect, otherRect, future_l, future_t)
-  local col = resolvers.bounce(itemRect, otherRect, future_l, future_t)
+local bounce = function(itemRect, otherRect, future_x, future_y)
+  local col = resolvers.bounce(itemRect, otherRect, future_x, future_y)
   return {col.touch.l, col.touch.t, col.normal.x, col.normal.y, col.bounce.l, col.bounce.t }
 end
 
