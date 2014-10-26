@@ -78,15 +78,15 @@ end
 -- Axis-aligned bounding box functions
 ------------------------------------------
 
-local function rect_getNearestCorner(l,t,w,h, x, y)
-  return nearest(x, l, l+w), nearest(y, t, t+h)
+local function rect_getNearestCorner(x,y,w,h, px, py)
+  return nearest(px, x, x+w), nearest(py, y, y+h)
 end
 
 -- This is a generalized implementation of the liang-barsky algorithm, which also returns
 -- the normals of the sides where the segment intersects.
 -- Returns nil if the segment never touches the rect
 -- Notice that normals are only guaranteed to be accurate when initially ti1, ti2 == -math.huge, math.huge
-local function rect_getSegmentIntersectionIndices(l,t,w,h, x1,y1,x2,y2, ti1,ti2)
+local function rect_getSegmentIntersectionIndices(x,y,w,h, x1,y1,x2,y2, ti1,ti2)
   ti1, ti2 = ti1 or 0, ti2 or 1
   local dx, dy = x2-x1, y2-y1
   local nx, ny
@@ -94,10 +94,10 @@ local function rect_getSegmentIntersectionIndices(l,t,w,h, x1,y1,x2,y2, ti1,ti2)
   local p, q, r
 
   for side = 1,4 do
-    if     side == 1 then nx,ny,p,q = -1,  0, -dx, x1 - l     -- left
-    elseif side == 2 then nx,ny,p,q =  1,  0,  dx, l + w - x1 -- right
-    elseif side == 3 then nx,ny,p,q =  0, -1, -dy, y1 - t     -- top
-    else                  nx,ny,p,q =  0,  1,  dy, t + h - y1 -- bottom
+    if     side == 1 then nx,ny,p,q = -1,  0, -dx, x1 - x     -- left
+    elseif side == 2 then nx,ny,p,q =  1,  0,  dx, x + w - x1 -- right
+    elseif side == 3 then nx,ny,p,q =  0, -1, -dy, y1 - y     -- top
+    else                  nx,ny,p,q =  0,  1,  dy, y + h - y1 -- bottom
     end
 
     if p == 0 then
@@ -120,22 +120,22 @@ local function rect_getSegmentIntersectionIndices(l,t,w,h, x1,y1,x2,y2, ti1,ti2)
 end
 
 -- Calculates the minkowsky difference between 2 rects, which is another rect
-local function rect_getDiff(l1,t1,w1,h1, l2,t2,w2,h2)
-  return l2 - l1 - w1,
-         t2 - t1 - h1,
+local function rect_getDiff(x1,y1,w1,h1, x2,y2,w2,h2)
+  return x2 - x1 - w1,
+         y2 - y1 - h1,
          w1 + w2,
          h1 + h2
 end
 
 local delta = 0.00001 -- floating-point-safe comparisons here, otherwise bugs
-local function rect_containsPoint(l,t,w,h, x,y)
-  return x - l > delta     and y - t > delta and
-         l + w - x > delta and t + h - y > delta
+local function rect_containsPoint(x,y,w,h, px,py)
+  return px - x > delta      and py - y > delta and
+         x + w - px > delta  and y + h - py > delta
 end
 
-local function rect_isIntersecting(l1,t1,w1,h1, l2,t2,w2,h2)
-  return l1 < l2+w2 and l2 < l1+w1 and
-         t1 < t2+h2 and t2 < t1+h1
+local function rect_isIntersecting(x1,y1,w1,h1, x2,y2,w2,h2)
+  return x1 < x2+w2 and x2 < x1+w1 and
+         y1 < y2+h2 and y2 < y1+h1
 end
 
 ------------------------------------------
