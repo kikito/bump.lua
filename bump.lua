@@ -235,7 +235,7 @@ local function resolve_touch(itemRect, otherRect, future_x, future_y)
 
   if not ti then return end
 
-  local tl, tt
+  local tx, ty
 
   if overlaps then
     if dx == 0 and dy == 0 then
@@ -243,15 +243,15 @@ local function resolve_touch(itemRect, otherRect, future_x, future_y)
       local px, py = rect_getNearestCorner(l,t,w,h, 0,0)
       if abs(px) < abs(py) then py = 0 else px = 0 end
       nx, ny = sign(px), sign(py)
-      tl, tt = l1 + px, t1 + py
+      tx, ty = l1 + px, t1 + py
     else
       -- intersecting and moving - move in the opposite direction
       local ti1
       ti1,_,nx,ny = rect_getSegmentIntersectionIndices(l,t,w,h, 0,0,dx,dy, -math.huge, 1)
-      tl, tt = l1 + dx * ti1, t1 + dy * ti1
+      tx, ty = l1 + dx * ti1, t1 + dy * ti1
     end
   else -- tunnel
-    tl, tt = l1 + dx * ti, t1 + dy * ti
+    tx, ty = l1 + dx * ti, t1 + dy * ti
   end
 
   return {
@@ -259,7 +259,7 @@ local function resolve_touch(itemRect, otherRect, future_x, future_y)
     ti        = ti,
     move      = {x = dx, y = dy},
     normal    = {x = nx, y = ny},
-    touch     = {l = tl, t = tt},
+    touch     = {x = tx, y = ty},
     itemRect  = {l = l1, t = t1, w = w1, h = h1},
     otherRect = {l = l2, t = t2, w = w2, h = h2}
   }
@@ -272,16 +272,16 @@ function resolve_slide(itemRect, otherRect, future_x, future_y)
   local col = resolve_touch(itemRect, otherRect, future_x, future_y)
 
   if col then
-    local sl, st = col.touch.l, col.touch.t
+    local sx, sy = col.touch.x, col.touch.y
     local move = col.move
     if move.x ~= 0 or move.y ~= 0 then
       if col.normal.x == 0 then
-        sl = future_x
+        sx = future_x
       else
-        st = future_y
+        sy = future_y
       end
     end
-    col.slide = {l = sl, t = st}
+    col.slide = {x = sx, y = sy}
     return col
   end
 end
@@ -294,19 +294,19 @@ function resolve_bounce(itemRect, other, future_x, future_y)
 
   if col then
     local touch = col.touch
-    local tl, tt = touch.l, touch.t
+    local tx, ty = touch.x, touch.y
 
-    local bl, bt, bx,by = tl, tt, 0,0
+    local bx, by, bnx, bny = tx, ty, 0,0
 
     local move = col.move
     if move.x ~= 0 or move.y ~= 0 then
-      bx, by = future_x - tl, future_y - tt
-      if col.normal.x == 0 then by = -by else bx = -bx end
-      bl, bt = tl + bx, tt + by
+      bnx, bny = future_x - tx, future_y - ty
+      if col.normal.x == 0 then bny = -bny else bnx = -bnx end
+      bx, by = tx + bnx, ty + bny
     end
 
-    col.bounce = {l = bl, t = bt}
-    col.bounceNormal = {x = bx, y = by}
+    col.bounce = {x = bx, y = by}
+    col.bounceNormal = {x = bnx, y = bny}
 
     return col
   end

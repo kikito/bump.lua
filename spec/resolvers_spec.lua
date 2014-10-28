@@ -6,17 +6,17 @@ end
 
 local touch = function(itemRect, otherRect, future_x, future_y)
   local col = resolvers.touch(itemRect, otherRect, future_x, future_y)
-  return {col.touch.l, col.touch.t, col.normal.x, col.normal.y}
+  return {col.touch.x, col.touch.y, col.normal.x, col.normal.y}
 end
 
 local slide = function(itemRect, otherRect, future_x, future_y)
   local col = resolvers.slide(itemRect, otherRect, future_x, future_y)
-  return {col.touch.l, col.touch.t, col.normal.x, col.normal.y, col.slide.l, col.slide.t}
+  return {col.touch.x, col.touch.y, col.normal.x, col.normal.y, col.slide.x, col.slide.y}
 end
 
 local bounce = function(itemRect, otherRect, future_x, future_y)
   local col = resolvers.bounce(itemRect, otherRect, future_x, future_y)
-  return {col.touch.l, col.touch.t, col.normal.x, col.normal.y, col.bounce.l, col.bounce.t }
+  return {col.touch.x, col.touch.y, col.normal.x, col.normal.y, col.bounce.x, col.bounce.y }
 end
 
 describe('resolvers.touch', function()
@@ -146,7 +146,7 @@ describe('resolvers.slide', function()
       local slide = cs.slide
       cs.slide = nil
       assert.same(ct, cs)
-      assert.same(slide, {l = 3, t = 8})
+      assert.same(slide, {x = 3, y = 8})
     end)
   end)
 
@@ -178,7 +178,7 @@ describe('resolvers.bounce', function()
       local bounce, bounceNormal = cb.bounce, cb.bounceNormal
       cb.bounce, cb.bounceNormal = nil, nil
       assert.same(ct, cb)
-      assert.same(bounce, {l=3, t=8})
+      assert.same(bounce, {x=3, y=8})
       assert.same(bounceNormal, {x=0,y=0})
     end)
   end)
