@@ -58,7 +58,7 @@ describe('World', function()
       local world, a = bump.newWorld(), {}
       world:add(a, 0,0,10,10)
       world:move(a, 40,40, 20,20)
-      assert.same(world:getRect(a), {l=40,t=40,w=20,h=20})
+      assert.same(world:getRect(a), {x=40,y=40,w=20,h=20})
     end)
 
     describe('when no width or height is given', function()
@@ -66,7 +66,7 @@ describe('World', function()
         local world, a = bump.newWorld(), {'a'}
         world:add(a, 0,0, 10,10)
         world:move(a, 5,5)
-        assert.same({l=5,t=5,w=10,h=10}, world:getRect(a))
+        assert.same({x=5,y=5,w=10,h=10}, world:getRect(a))
       end)
     end)
 

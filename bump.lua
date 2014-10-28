@@ -63,9 +63,9 @@ local function assertIsPositiveNumber(value, name)
   end
 end
 
-local function assertIsRect(l,t,w,h)
-  assertType('number', l, 'l')
-  assertType('number', t, 'w')
+local function assertIsRect(x,y,w,h)
+  assertType('number', x, 'x')
+  assertType('number', y, 'y')
   assertIsPositiveNumber(w, 'w')
   assertIsPositiveNumber(h, 'h')
 end
@@ -196,10 +196,10 @@ local function grid_traverse(cellSize, x1,y1,x2,y2, f)
 
 end
 
-local function grid_toCellRect(cellSize, l,t,w,h)
-  local cl,ct = grid_toCell(cellSize, l, t)
-  local cr,cb = ceil((l+w) / cellSize), ceil((t+h) / cellSize)
-  return cl, ct, cr-cl+1, cb-ct+1
+local function grid_toCellRect(cellSize, x,y,w,h)
+  local cx,cy = grid_toCell(cellSize, x, y)
+  local cr,cb = ceil((x+w) / cellSize), ceil((y+h) / cellSize)
+  return cx, cy, cr - cx + 1, cb - cy + 1
 end
 
 ------------------------------------------
@@ -207,26 +207,25 @@ end
 ------------------------------------------
 
 local function resolve_touch(itemRect, otherRect, future_x, future_y)
-  future_x = future_x or itemRect.l
-  future_y = future_y or itemRect.t
+  future_x = future_x or itemRect.x
+  future_y = future_y or itemRect.y
 
-  local b1, b2      = itemRect, otherRect
-  local l1,t1,w1,h1 = b1.l, b1.t, b1.w, b1.h
-  local l2,t2,w2,h2 = b2.l, b2.t, b2.w, b2.h
-  local dx, dy      = future_x - b1.l, future_y - b1.t
-  local l,t,w,h     = rect_getDiff(l1,t1,w1,h1, l2,t2,w2,h2)
+  local x1,y1,w1,h1 = itemRect.x, itemRect.y, itemRect.w, itemRect.h
+  local x2,y2,w2,h2 = otherRect.x, otherRect.y, otherRect.w, otherRect.h
+  local dx, dy      = future_x - x1, future_y - y1
+  local x,y,w,h     = rect_getDiff(x1,y1,w1,h1, x2,y2,w2,h2)
 
   local overlaps, ti, nx, ny
 
-  if rect_containsPoint(l,t,w,h, 0,0) then -- b1 was intersecting b2
-    local px, py    = rect_getNearestCorner(l,t,w,h, 0, 0)
+  if rect_containsPoint(x,y,w,h, 0,0) then -- itemRect was intersecting otherRect
+    local px, py    = rect_getNearestCorner(x,y,w,h, 0, 0)
     local wi, hi    = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
     ti              = -wi * hi -- ti is the negative area of intersection
     overlaps = true
   else
-    local ti1,ti2,nx1,ny1 = rect_getSegmentIntersectionIndices(l,t,w,h, 0,0,dx,dy, -math.huge, math.huge)
+    local ti1,ti2,nx1,ny1 = rect_getSegmentIntersectionIndices(x,y,w,h, 0,0,dx,dy, -math.huge, math.huge)
 
-    -- b1 tunnels into b2 while it travels
+    -- itemRect tunnels into otherRect while it travels
     if ti1 and ti1 < 1 and (0 < ti1 or 0 == ti1 and ti2 > 0) then
       ti, nx, ny = ti1, nx1, ny1
       overlaps   = false
@@ -240,18 +239,18 @@ local function resolve_touch(itemRect, otherRect, future_x, future_y)
   if overlaps then
     if dx == 0 and dy == 0 then
       -- intersecting and not moving - use minimum displacement vector
-      local px, py = rect_getNearestCorner(l,t,w,h, 0,0)
+      local px, py = rect_getNearestCorner(x,y,w,h, 0,0)
       if abs(px) < abs(py) then py = 0 else px = 0 end
       nx, ny = sign(px), sign(py)
-      tx, ty = l1 + px, t1 + py
+      tx, ty = x1 + px, y1 + py
     else
       -- intersecting and moving - move in the opposite direction
       local ti1
-      ti1,_,nx,ny = rect_getSegmentIntersectionIndices(l,t,w,h, 0,0,dx,dy, -math.huge, 1)
-      tx, ty = l1 + dx * ti1, t1 + dy * ti1
+      ti1,_,nx,ny = rect_getSegmentIntersectionIndices(x,y,w,h, 0,0,dx,dy, -math.huge, 1)
+      tx, ty = x1 + dx * ti1, y1 + dy * ti1
     end
   else -- tunnel
-    tx, ty = l1 + dx * ti, t1 + dy * ti
+    tx, ty = x1 + dx * ti, y1 + dy * ti
   end
 
   return {
@@ -260,14 +259,14 @@ local function resolve_touch(itemRect, otherRect, future_x, future_y)
     move      = {x = dx, y = dy},
     normal    = {x = nx, y = ny},
     touch     = {x = tx, y = ty},
-    itemRect  = {l = l1, t = t1, w = w1, h = h1},
-    otherRect = {l = l2, t = t2, w = w2, h = h2}
+    itemRect  = {x = x1, y = y1, w = w1, h = h1},
+    otherRect = {x = x2, y = y2, w = w2, h = h2}
   }
 end
 
 function resolve_slide(itemRect, otherRect, future_x, future_y)
-  future_x = future_x or itemRect.l
-  future_y = future_y or itemRect.t
+  future_x = future_x or itemRect.x
+  future_y = future_y or itemRect.y
 
   local col = resolve_touch(itemRect, otherRect, future_x, future_y)
 
@@ -287,8 +286,8 @@ function resolve_slide(itemRect, otherRect, future_x, future_y)
 end
 
 function resolve_bounce(itemRect, other, future_x, future_y)
-  future_x = future_x or itemRect.l
-  future_y = future_y or itemRect.t
+  future_x = future_x or itemRect.x
+  future_y = future_y or itemRect.y
 
   local col = resolve_touch(itemRect, other, future_x, future_y)
 
@@ -319,7 +318,7 @@ end
 local function getRect(self, item)
   local rect = self.rects[item]
   if not rect then
-    error('Item ' .. tostring(item) .. ' must be added to the world before getting its rect. Use world:add(item, l,t,w,h) to add it first.')
+    error('Item ' .. tostring(item) .. ' must be added to the world before getting its rect. Use world:add(item, x,y,w,h) to add it first.')
   end
   return rect
 end
@@ -398,7 +397,7 @@ local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
         visited[item]  = true
         if (not filter or filter(item)) then
           rect           = self.rects[item]
-          l,t,w,h        = rect.l,rect.t,rect.w,rect.h
+          l,t,w,h        = rect.x,rect.y,rect.w,rect.h
 
           ti1,ti2 = rect_getSegmentIntersectionIndices(l,t,w,h, x1,y1, x2,y2, 0, 1)
           if ti1 and ((0 < ti1 and ti1 < 1) or (0 < ti2 and ti2 < 1)) then
@@ -418,16 +417,16 @@ end
 local World = {}
 local World_mt = {__index = World}
 
-function World:add(item, l,t,w,h)
+function World:add(item, x,y,w,h)
   local rect = self.rects[item]
   if rect then
     error('Item ' .. tostring(item) .. ' added to the world twice.')
   end
-  assertIsRect(l,t,w,h)
+  assertIsRect(x,y,w,h)
 
-  self.rects[item] = {l=l,t=t,w=w,h=h}
+  self.rects[item] = {x=x,y=y,w=w,h=h}
 
-  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, l,t,w,h)
+  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, x,y,w,h)
   for cy = ct, ct+ch-1 do
     for cx = cl, cl+cw-1 do
       addItemToCell(self, item, cx, cy)
@@ -439,7 +438,7 @@ function World:remove(item)
   local rect = getRect(self, item)
 
   self.rects[item] = nil
-  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, rect.l,rect.t,rect.w,rect.h)
+  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, rect.x,rect.y,rect.w,rect.h)
   for cy = ct, ct+ch-1 do
     for cx = cl, cl+cw-1 do
       removeItemFromCell(self, item, cx, cy)
@@ -447,19 +446,19 @@ function World:remove(item)
   end
 end
 
-function World:move(item, l,t,w,h)
+function World:move(item, x,y,w,h)
   local rect = getRect(self, item)
   w,h = w or rect.w, h or rect.h
-  assertIsRect(l,t,w,h)
-  if rect.l ~= l or rect.t ~= t or rect.w ~= w or rect.h ~= h then
+  assertIsRect(x,y,w,h)
+  if rect.x ~= x or rect.y ~= y or rect.w ~= w or rect.h ~= h then
     local cellSize = self.cellSize
-    local cl1,ct1,cw1,ch1 = grid_toCellRect(cellSize, rect.l,rect.t,rect.w,rect.h)
-    local cl2,ct2,cw2,ch2 = grid_toCellRect(cellSize, l,t,w,h)
+    local cl1,ct1,cw1,ch1 = grid_toCellRect(cellSize, rect.x,rect.y,rect.w,rect.h)
+    local cl2,ct2,cw2,ch2 = grid_toCellRect(cellSize, x,y,w,h)
     if cl1==cl2 and ct1==ct2 and cw1==cw2 and ch1==ch2 then
-      rect.l, rect.t, rect.w, rect.h = l,t,w,h
+      rect.x, rect.y, rect.w, rect.h = x,y,w,h
     else
       self:remove(item)
-      self:add(item, l,t,w,h)
+      self:add(item, x,y,w,h)
     end
   end
 end
@@ -472,13 +471,13 @@ function World:check(item, future_x, future_y, filter)
 
   local visited = { [item] = true }
 
-  local l,t,w,h = rect.l, rect.t, rect.w, rect.h
-  future_x, future_y = future_x or l, future_y or t
+  local x,y,w,h = rect.x, rect.y, rect.w, rect.h
+  future_x, future_y = future_x or x, future_y or y
 
   -- TODO this could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding rect of the whole movement. Conditional to building a queryPolygon method
-  local tl, tt = min(future_x, l),       min(future_y, t)
-  local tr, tb = max(future_x + w, l+w), max(future_y + h, t+h)
+  local tl, tt = min(future_x, x),       min(future_y, y)
+  local tr, tb = max(future_x + w, x+w), max(future_y + h, y+h)
   local tw, th = tr-tl, tb-tt
 
   local cl,ct,cw,ch = grid_toCellRect(self.cellSize, tl,tt,tw,th)
@@ -522,7 +521,7 @@ end
 
 function World:getRect(item)
   local rect = getRect(self, item)
-  return { l = rect.l, t = rect.t, w = rect.w, h = rect.h }
+  return { x = rect.x, y = rect.y, w = rect.w, h = rect.h }
 end
 
 function World:countCells()
@@ -547,9 +546,9 @@ function World:hasItem(item)
   return not not self.rects[item]
 end
 
-function World:queryRect(l,t,w,h, filter)
+function World:queryRect(x,y,w,h, filter)
 
-  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, l,t,w,h)
+  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, x,y,w,h)
   local dictItemsInCellRect = getDictItemsInCellRect(self, cl,ct,cw,ch)
 
   local items, len = {}, 0
@@ -558,7 +557,7 @@ function World:queryRect(l,t,w,h, filter)
   for item,_ in pairs(dictItemsInCellRect) do
     rect = self.rects[item]
     if (not filter or filter(item))
-    and rect_isIntersecting(l,t,w,h, rect.l, rect.t, rect.w, rect.h)
+    and rect_isIntersecting(x,y,w,h, rect.x, rect.y, rect.w, rect.h)
     then
       len = len + 1
       items[len] = item
@@ -578,7 +577,7 @@ function World:queryPoint(x,y, filter)
   for item,_ in pairs(dictItemsInCellRect) do
     rect = self.rects[item]
     if (not filter or filter(item))
-    and rect_containsPoint(rect.l, rect.t, rect.w, rect.h, x, y)
+    and rect_containsPoint(rect.x, rect.y, rect.w, rect.h, x, y)
     then
       len = len + 1
       items[len] = item
@@ -651,8 +650,8 @@ bump.newCollision = function(item, other, itemRect, otherRect, future_x, future_
     otherRect = otherRect,
     future_x  = future_x,
     future_y  = future_y,
-    vx        = future_x - itemRect.l,
-    vy        = future_y - itemRect.t
+    vx        = future_x - itemRect.x,
+    vy        = future_y - itemRect.y
   }, resolve_mt)
 end
 

@@ -1,7 +1,7 @@
 local resolvers = require('bump').resolvers
 
-local function rect(l,t,w,h)
-  return {l=l,t=t,w=w,h=h}
+local function rect(x,y,w,h)
+  return {x=x,y=y,w=w,h=h}
 end
 
 local touch = function(itemRect, otherRect, future_x, future_y)
@@ -35,8 +35,8 @@ describe('resolvers.touch', function()
           assert.is_true(c.overlaps)
           assert.equals(c.ti, -2)
           assert.same(c.move, {x = 0, y = 0})
-          assert.same(c.itemRect, {l=0,t=0,w=7,h=6})
-          assert.same(c.otherRect, {l=5,t=5,w=1,h=1})
+          assert.same(c.itemRect, {x=0,y=0,w=7,h=6})
+          assert.same(c.otherRect, {x=5,y=5,w=1,h=1})
           assert.same(c.normal, {x=0, y=-1})
 
         end)
