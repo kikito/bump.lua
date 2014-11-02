@@ -414,6 +414,27 @@ local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
   return itemInfo, itemInfoLen
 end
 
+local collide = function(self, item, other, future_x, future_y, filter)
+  local responseKind = filter(other)
+  if not responseKind then return end
+
+  local resolver = self.resolvers[responseKind]
+  if not resolver then error('Unknown collision type: ' .. tostring(responseKind)) end
+
+  local iRect, oRect = self.rects[item], self.rects[other]
+  local col = resolver(iRect, oRect, future_x, future_y)
+
+  if not col then return end
+
+  col.item  = item
+  col.other = other
+  col.kind  = responseKind
+
+  return col
+end
+
+--------------------------
+
 local World = {}
 local World_mt = {__index = World}
 
@@ -489,7 +510,7 @@ function World:check(item, future_x, future_y, filter)
   for other,_ in pairs(dictItemsInCellRect) do
     if not visited[other] then
       visited[other] = true
-      local col = self:collide(item, other, future_x, future_y, filter)
+      local col = collide(self, item, other, future_x, future_y, filter)
       if col then
         len = len + 1
         collisions[len] = col
@@ -502,24 +523,7 @@ function World:check(item, future_x, future_y, filter)
   return collisions, len
 end
 
-function World:collide(item, other, future_x, future_y, filter)
-  local collisionType = filter(other)
-  if not collisionType then return end
 
-  local resolver = self.resolvers[collisionType]
-
-  if not resolver then error('Unknown collision type: ' .. tostring(collisionType)) end
-
-  local iRect, oRect = self.rects[item], self.rects[other]
-  local col = resolver(iRect, oRect, future_x, future_y)
-
-  if not col then return end
-
-  col.item  = item
-  col.other = other
-
-  return col
-end
 
 function World:getRect(item)
   local rect = getRect(self, item)
