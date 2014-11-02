@@ -432,6 +432,8 @@ function World:add(item, x,y,w,h)
       addItemToCell(self, item, cx, cy)
     end
   end
+
+  return item
 end
 
 function World:remove(item)

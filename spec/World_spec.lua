@@ -16,6 +16,12 @@ describe('World', function()
       assert.error(function() world:add() end)
     end)
 
+    it('returns the added item', function()
+      local item = {}
+      local world = bump.newWorld()
+      assert.equals(item, world:add(item, 1,1,1,1))
+    end)
+
     it('throws an error if the object was already added', function()
       local world = bump.newWorld()
       local obj = {}
