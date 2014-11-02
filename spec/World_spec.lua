@@ -13,6 +13,11 @@ describe('World', function()
     return res
   end
 
+  local sorted = function(array)
+    table.sort(array)
+    return array
+  end
+
   describe(':add', function()
     it('requires something + 4 numbers', function()
       assert.error(function() world:add({}) end)
@@ -217,15 +222,11 @@ describe('World', function()
     describe('when the world has items', function()
       local a, b, c, d
       before_each(function()
-        a = world:add({'a'}, 10,0, 10,10)
-        b = world:add({'b'}, 70,0, 10,10)
-        c = world:add({'c'}, 50,0, 10,10)
-        d = world:add({'d'}, 90,0, 10,10)
+        a = world:add('a', 10,0, 10,10)
+        b = world:add('b', 70,0, 10,10)
+        c = world:add('c', 50,0, 10,10)
+        d = world:add('d', 90,0, 10,10)
       end)
-      local sorted = function(tbl)
-        table.sort(tbl, function(a,b) return a[1] < b[1] end)
-        return tbl
-      end
 
       it('returns the items inside/partially inside the given rect', function()
         assert.same(sorted(world:queryRect(55, 5, 20, 20)), {b,c})
@@ -247,14 +248,10 @@ describe('World', function()
     describe('when the world has items', function()
       local a, b, c
       before_each(function()
-        a = world:add({'a'}, 10,0, 10,10)
-        b = world:add({'b'}, 15,0, 10,10)
-        c = world:add({'c'}, 20,0, 10,10)
+        a = world:add('a', 10,0, 10,10)
+        b = world:add('b', 15,0, 10,10)
+        c = world:add('c', 20,0, 10,10)
       end)
-      local sorted = function(tbl)
-        table.sort(tbl, function(a,b) return a[1] < b[1] end)
-        return tbl
-      end
 
       it('returns the items inside/partially inside the given rect', function()
         assert.same(sorted(world:queryPoint( 4,5)), {})
@@ -294,9 +291,9 @@ describe('World', function()
     describe("when the world has items", function()
       local a, b, c, d
       before_each(function()
-        a = world:add({'a'},  5,0, 5,10)
-        b = world:add({'b'}, 15,0, 5,10)
-        c = world:add({'c'}, 25,0, 5,10)
+        a = world:add('a',  5,0, 5,10)
+        b = world:add('b', 15,0, 5,10)
+        c = world:add('c', 25,0, 5,10)
       end)
 
       it('returns the items touched by the segment, sorted by touch order', function()
