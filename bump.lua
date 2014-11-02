@@ -624,6 +624,29 @@ function World:addResolver(resolver_name, resolver)
   self.resolvers[resolver_name] = resolver
 end
 
+function World:resolve(item, future_x, future_y, filter)
+
+  local cols, len = self:check(item, future_x, future_y, filter)
+
+  if len == 0 then
+    self:move(item, future_x, future_y, filter)
+  else
+    local first = cols[1]
+    local ti, touch = first.ti, first.touch
+    future_x, future_y = touch.x, touch.y
+    local touchCols, touchLen = {first}, 1
+    for i=2,len do
+      if cols[i].ti > ti then break end
+      touchLen = touchLen + 1
+      touchCols[touchLen] = cols[i]
+    end
+    cols, len = touchCols, touchLen
+  end
+
+  return future_x, future_y, cols, len
+
+end
+
 bump.newWorld = function(cellSize)
   cellSize = cellSize or 64
   assertIsPositiveNumber(cellSize, 'cellSize')
