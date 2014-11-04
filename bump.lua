@@ -631,24 +631,31 @@ end
 
 function World:resolve(item, future_x, future_y, filter)
 
+  local res, res_len = {}, 0
+
   local cols, len = self:check(item, future_x, future_y, filter)
 
-  if len == 0 then
-    self:move(item, future_x, future_y, filter)
-  else
+  while len > 0 do
     local first = cols[1]
+    res_len = res_len + 1
+    res[res_len] = first
+
     local ti, touch = first.ti, first.touch
-    future_x, future_y = touch.x, touch.y
-    local touchCols, touchLen = {first}, 1
-    for i=2,len do
-      if cols[i].ti > ti then break end
-      touchLen = touchLen + 1
-      touchCols[touchLen] = cols[i]
+    if first.kind == 'touch' then
+      future_x, future_y = touch.x, touch.y
+      break
+
+    elseif first.kind == 'slide' then
+      self:move(item, touch.x, touch.y)
+
+      future_x, future_y = first.slide.x, first.slide.y
+      cols, len = self:check(item, future_x, future_y, filter)
     end
-    cols, len = touchCols, touchLen
   end
 
-  return future_x, future_y, cols, len
+  self:move(item, future_x, future_y)
+
+  return future_x, future_y, res, res_len
 
 end
 
