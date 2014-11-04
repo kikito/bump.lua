@@ -48,7 +48,10 @@ local function nearest(x, a, b)
   if abs(a - x) < abs(b - x) then return a else return b end
 end
 
-local function sortByTi(a,b)    return a.ti < b.ti end
+local function sortByTiAndId(a,b)
+  return a.ti == b.ti and a.id < b.id or a.ti < b.ti
+end
+
 local function sortByWeight(a,b) return a.weight < b.weight end
 
 local function assertType(desiredType, value, name)
@@ -428,6 +431,7 @@ local collide = function(self, item, other, future_x, future_y, filter)
 
   col.item  = item
   col.other = other
+  col.id    = oRect.id
   col.kind  = responseKind
 
   return col
@@ -445,7 +449,8 @@ function World:add(item, x,y,w,h)
   end
   assertIsRect(x,y,w,h)
 
-  self.rects[item] = {x=x,y=y,w=w,h=h}
+  self.lastId = self.lastId + 1
+  self.rects[item] = {x=x,y=y,w=w,h=h,id=self.lastId}
 
   local cl,ct,cw,ch = grid_toCellRect(self.cellSize, x,y,w,h)
   for cy = ct, ct+ch-1 do
@@ -518,7 +523,7 @@ function World:check(item, future_x, future_y, filter)
     end
   end
 
-  table.sort(collisions, sortByTi)
+  table.sort(collisions, sortByTiAndId)
 
   return collisions, len
 end
@@ -655,6 +660,7 @@ bump.newWorld = function(cellSize)
     rects          = {},
     rows           = {},
     nonEmptyCells  = {},
+    lastId         = 0,
     resolvers      = {}
   }, World_mt)
 
