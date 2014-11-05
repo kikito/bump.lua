@@ -209,7 +209,7 @@ end
 -- Collision functions
 ------------------------------------------
 
-local function response_touch(itemRect, otherRect, future_x, future_y)
+local function collision_touch(itemRect, otherRect, future_x, future_y)
   future_x = future_x or itemRect.x
   future_y = future_y or itemRect.y
 
@@ -267,11 +267,11 @@ local function response_touch(itemRect, otherRect, future_x, future_y)
   }
 end
 
-function response_slide(itemRect, otherRect, future_x, future_y)
+function collision_slide(itemRect, otherRect, future_x, future_y)
   future_x = future_x or itemRect.x
   future_y = future_y or itemRect.y
 
-  local col = response_touch(itemRect, otherRect, future_x, future_y)
+  local col = collision_touch(itemRect, otherRect, future_x, future_y)
 
   if col then
     local sx, sy = col.touch.x, col.touch.y
@@ -288,11 +288,11 @@ function response_slide(itemRect, otherRect, future_x, future_y)
   end
 end
 
-function response_bounce(itemRect, other, future_x, future_y)
+function collision_bounce(itemRect, other, future_x, future_y)
   future_x = future_x or itemRect.x
   future_y = future_y or itemRect.y
 
-  local col = response_touch(itemRect, other, future_x, future_y)
+  local col = collision_touch(itemRect, other, future_x, future_y)
 
   if col then
     local touch = col.touch
@@ -693,18 +693,18 @@ bump.newWorld = function(cellSize)
     resolvers      = {}
   }, World_mt)
 
-  world:addResolver('touch', response_touch)
-  world:addResolver('cross', response_touch)
-  world:addResolver('slide', response_slide)
-  world:addResolver('bounce', response_bounce)
+  world:addResolver('touch', collision_touch)
+  world:addResolver('cross', collision_touch)
+  world:addResolver('slide', collision_slide)
+  world:addResolver('bounce', collision_bounce)
 
   return world
 end
 
-bump.responses = {
-  touch  = response_touch,
-  slide  = response_slide,
-  bounce = response_bounce
+bump.collisions = {
+  touch  = collision_touch,
+  slide  = collision_slide,
+  bounce = collision_bounce
 }
 
 return bump
