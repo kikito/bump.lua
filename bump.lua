@@ -209,7 +209,7 @@ end
 -- Collision functions
 ------------------------------------------
 
-local function resolve_touch(itemRect, otherRect, future_x, future_y)
+local function response_touch(itemRect, otherRect, future_x, future_y)
   future_x = future_x or itemRect.x
   future_y = future_y or itemRect.y
 
@@ -267,11 +267,11 @@ local function resolve_touch(itemRect, otherRect, future_x, future_y)
   }
 end
 
-function resolve_slide(itemRect, otherRect, future_x, future_y)
+function response_slide(itemRect, otherRect, future_x, future_y)
   future_x = future_x or itemRect.x
   future_y = future_y or itemRect.y
 
-  local col = resolve_touch(itemRect, otherRect, future_x, future_y)
+  local col = response_touch(itemRect, otherRect, future_x, future_y)
 
   if col then
     local sx, sy = col.touch.x, col.touch.y
@@ -288,11 +288,11 @@ function resolve_slide(itemRect, otherRect, future_x, future_y)
   end
 end
 
-function resolve_bounce(itemRect, other, future_x, future_y)
+function response_bounce(itemRect, other, future_x, future_y)
   future_x = future_x or itemRect.x
   future_y = future_y or itemRect.y
 
-  local col = resolve_touch(itemRect, other, future_x, future_y)
+  local col = response_touch(itemRect, other, future_x, future_y)
 
   if col then
     local touch = col.touch
@@ -625,8 +625,8 @@ function World:querySegmentWithCoords(x1, y1, x2, y2, filter)
   return itemInfo, len
 end
 
-function World:addResolver(resolver_name, resolver)
-  self.resolvers[resolver_name] = resolver
+function World:addResolver(resolver_name, response)
+  self.resolvers[resolver_name] = response
 end
 
 function World:resolve(item, future_x, future_y, filter)
@@ -693,18 +693,18 @@ bump.newWorld = function(cellSize)
     resolvers      = {}
   }, World_mt)
 
-  world:addResolver('touch', resolve_touch)
-  world:addResolver('cross', resolve_touch)
-  world:addResolver('slide', resolve_slide)
-  world:addResolver('bounce', resolve_bounce)
+  world:addResolver('touch', response_touch)
+  world:addResolver('cross', response_touch)
+  world:addResolver('slide', response_slide)
+  world:addResolver('bounce', response_bounce)
 
   return world
 end
 
-bump.resolvers = {
-  touch  = resolve_touch,
-  slide  = resolve_slide,
-  bounce = resolve_bounce
+bump.responses = {
+  touch  = response_touch,
+  slide  = response_slide,
+  bounce = response_bounce
 }
 
 return bump
