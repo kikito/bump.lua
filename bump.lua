@@ -315,6 +315,39 @@ function collision_bounce(itemRect, other, future_x, future_y)
 end
 
 ------------------------------------------
+-- Response functions
+------------------------------------------
+
+
+local response_touch = function(world, col, future_x, future_y, filter)
+  local touch = col.touch
+  return touch.x, touch.y, {}, 0
+end
+
+local response_cross = function(world, col, future_x, future_y, filter)
+  local item, touch = col.item, col.touch
+  world:move(item, touch.x, touch.y)
+  local cols, len = world:check(item, future_x, future_y, filter)
+  return future_x, future_y, cols, len
+end
+
+local response_slide = function(world, col, future_x, future_y, filter)
+  local item, touch, slide = col.item, col.touch, col.slide
+  world:move(item, touch.x, touch.y)
+  future_x, future_y = slide.x, slide.y
+  cols, len = world:check(item, future_x, future_y, filter)
+  return future_x, future_y, cols, len
+end
+
+local response_bounce = function(world, col, future_x, future_y, filter)
+  local item, touch, bounce = col.item, col.touch, col.bounce
+  world:move(item, touch.x, touch.y)
+  future_x, future_y = bounce.x, bounce.y
+  cols, len = world:check(item, future_x, future_y, filter)
+  return future_x, future_y, cols, len
+end
+
+------------------------------------------
 -- World
 ------------------------------------------
 
@@ -418,21 +451,21 @@ local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
 end
 
 local collide = function(self, item, other, future_x, future_y, filter)
-  local responseKind = filter(other)
-  if not responseKind then return end
+  local resolverKind = filter(other)
+  if not resolverKind then return end
 
-  local resolver = self.resolvers[responseKind]
-  if not resolver then error('Unknown collision type: ' .. tostring(responseKind)) end
+  local resolver = self.resolvers[resolverKind]
+  if not resolver then error('Unknown resolver kind: ' .. tostring(resolverKind)) end
 
   local iRect, oRect = self.rects[item], self.rects[other]
-  local col = resolver(iRect, oRect, future_x, future_y)
+  local col = resolver.collide(iRect, oRect, future_x, future_y)
 
   if not col then return end
 
   col.item  = item
   col.other = other
   col.id    = oRect.id
-  col.kind  = responseKind
+  col.kind  = resolverKind
 
   return col
 end
@@ -625,8 +658,8 @@ function World:querySegmentWithCoords(x1, y1, x2, y2, filter)
   return itemInfo, len
 end
 
-function World:addResolver(resolver_name, response)
-  self.resolvers[resolver_name] = response
+function World:addResolver(resolver_name, collide, respond)
+  self.resolvers[resolver_name] = { collide = collide, respond = respond }
 end
 
 function World:resolve(item, future_x, future_y, filter)
@@ -642,36 +675,18 @@ function World:resolve(item, future_x, future_y, filter)
   local cols, len = self:check(item, future_x, future_y, filter)
 
   while len > 0 do
-    local first = cols[1]
-    res_len = res_len + 1
-    res[res_len] = first
-    visited[first.other] = true
+    local col  = cols[1]
 
-    local ti, touch = first.ti, first.touch
-    if first.kind == 'touch' then
+    res_len      = res_len + 1
+    res[res_len] = col
 
-      future_x, future_y = touch.x, touch.y
-      break
+    visited[col.other] = true
 
-    elseif first.kind == 'cross' then
-
-      self:move(item, touch.x, touch.y)
-      cols, len = self:check(item, future_x, future_y, visitedFilter)
-
-    elseif first.kind == 'slide' then
-
-      self:move(item, touch.x, touch.y)
-      future_x, future_y = first.slide.x, first.slide.y
-      cols, len = self:check(item, future_x, future_y, visitedFilter)
-
-    elseif first.kind == 'bounce' then
-
-      self:move(item, touch.x, touch.y)
-      future_x, future_y = first.bounce.x, first.bounce.y
-      cols, len = self:check(item, future_x, future_y, visitedFilter)
-
+    local resolver = self.resolvers[col.kind]
+    if resolver then
+      future_x, future_y, cols, len = resolver.respond(self, col, future_x, future_y, visitedFilter)
     else
-      error('unknown response kind: ' .. first.kind)
+      error('unknown resolver kind: ' .. col.kind)
     end
   end
 
@@ -693,10 +708,10 @@ bump.newWorld = function(cellSize)
     resolvers      = {}
   }, World_mt)
 
-  world:addResolver('touch', collision_touch)
-  world:addResolver('cross', collision_touch)
-  world:addResolver('slide', collision_slide)
-  world:addResolver('bounce', collision_bounce)
+  world:addResolver('touch', collision_touch, response_touch)
+  world:addResolver('cross', collision_touch, response_cross)
+  world:addResolver('slide', collision_slide, response_slide)
+  world:addResolver('bounce', collision_bounce, response_bounce)
 
   return world
 end
