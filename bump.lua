@@ -633,12 +633,19 @@ function World:resolve(item, future_x, future_y, filter)
 
   local res, res_len = {}, 0
 
+  local visited = {}
+  local visitedFilter = function(item)
+    if visited[item] then return false end
+    return filter(item)
+  end
+
   local cols, len = self:check(item, future_x, future_y, filter)
 
   while len > 0 do
     local first = cols[1]
     res_len = res_len + 1
     res[res_len] = first
+    visited[first.other] = true
 
     local ti, touch = first.ti, first.touch
     if first.kind == 'touch' then
@@ -646,17 +653,22 @@ function World:resolve(item, future_x, future_y, filter)
       future_x, future_y = touch.x, touch.y
       break
 
+    elseif first.kind == 'cross' then
+
+      self:move(item, touch.x, touch.y)
+      cols, len = self:check(item, future_x, future_y, visitedFilter)
+
     elseif first.kind == 'slide' then
 
       self:move(item, touch.x, touch.y)
       future_x, future_y = first.slide.x, first.slide.y
-      cols, len = self:check(item, future_x, future_y, filter)
+      cols, len = self:check(item, future_x, future_y, visitedFilter)
 
     elseif first.kind == 'bounce' then
 
       self:move(item, touch.x, touch.y)
       future_x, future_y = first.bounce.x, first.bounce.y
-      cols, len = self:check(item, future_x, future_y, filter)
+      cols, len = self:check(item, future_x, future_y, visitedFilter)
 
     else
       error('unknown response kind: ' .. first.kind)
@@ -682,6 +694,7 @@ bump.newWorld = function(cellSize)
   }, World_mt)
 
   world:addResolver('touch', resolve_touch)
+  world:addResolver('cross', resolve_touch)
   world:addResolver('slide', resolve_slide)
   world:addResolver('bounce', resolve_bounce)
 
