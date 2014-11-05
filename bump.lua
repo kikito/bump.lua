@@ -642,14 +642,24 @@ function World:resolve(item, future_x, future_y, filter)
 
     local ti, touch = first.ti, first.touch
     if first.kind == 'touch' then
+
       future_x, future_y = touch.x, touch.y
       break
 
     elseif first.kind == 'slide' then
-      self:move(item, touch.x, touch.y)
 
+      self:move(item, touch.x, touch.y)
       future_x, future_y = first.slide.x, first.slide.y
       cols, len = self:check(item, future_x, future_y, filter)
+
+    elseif first.kind == 'bounce' then
+
+      self:move(item, touch.x, touch.y)
+      future_x, future_y = first.bounce.x, first.bounce.y
+      cols, len = self:check(item, future_x, future_y, filter)
+
+    else
+      error('unknown response kind: ' .. first.kind)
     end
   end
 
@@ -683,18 +693,5 @@ bump.resolvers = {
   slide  = resolve_slide,
   bounce = resolve_bounce
 }
-
-bump.newCollision = function(item, other, itemRect, otherRect, future_x, future_y)
-  return setmetatable({
-    item      = item,
-    other     = other,
-    itemRect  = itemRect,
-    otherRect = otherRect,
-    future_x  = future_x,
-    future_y  = future_y,
-    vx        = future_x - itemRect.x,
-    vy        = future_y - itemRect.y
-  }, resolve_mt)
-end
 
 return bump
