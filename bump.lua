@@ -278,7 +278,7 @@ local cross = {
   detect = touch.detect,
   respond = function(world, col, futureX, futureY, filter)
     local item, touch = col.item, col.touch
-    world:move(item, touch.x, touch.y)
+    world:update(item, touch.x, touch.y)
     local cols, len = world:check(item, futureX, futureY, filter)
     return futureX, futureY, cols, len
   end
@@ -308,7 +308,7 @@ local slide = {
 
   respond = function(world, col, futureX, futureY, filter)
     local item, touch, slide = col.item, col.touch, col.slide
-    world:move(item, touch.x, touch.y)
+    world:update(item, touch.x, touch.y)
     futureX, futureY = slide.x, slide.y
     cols, len = world:check(item, futureX, futureY, filter)
     return futureX, futureY, cols, len
@@ -344,7 +344,7 @@ local bounce = {
 
   respond = function(world, col, futureX, futureY, filter)
     local item, touch, bounce = col.item, col.touch, col.bounce
-    world:move(item, touch.x, touch.y)
+    world:update(item, touch.x, touch.y)
     futureX, futureY = bounce.x, bounce.y
     cols, len = world:check(item, futureX, futureY, filter)
     return futureX, futureY, cols, len
@@ -511,7 +511,7 @@ function World:remove(item)
   end
 end
 
-function World:move(item, x,y,w,h)
+function World:update(item, x,y,w,h)
   local rect = getRect(self, item)
   w,h = w or rect.w, h or rect.h
   assertIsRect(x,y,w,h)
@@ -674,7 +674,7 @@ function World:getCollisionType(name)
   return collisionType
 end
 
-function World:resolve(item, futureX, futureY, filter)
+function World:move(item, futureX, futureY, filter)
 
   local res, res_len = {}, 0
 
@@ -698,7 +698,7 @@ function World:resolve(item, futureX, futureY, filter)
     futureX, futureY, cols, len = collisionType.respond(self, col, futureX, futureY, visitedFilter)
   end
 
-  self:move(item, futureX, futureY)
+  self:update(item, futureX, futureY)
 
   return futureX, futureY, res, res_len
 
