@@ -9,12 +9,14 @@ local instructions = [[
     delete: run garbage collector
 ]]
 
+local col_len = 0 -- how many collisions are happening
+
 -- helper function
 local function drawBox(box, r,g,b)
   love.graphics.setColor(r,g,b,70)
-  love.graphics.rectangle("fill", box.l, box.t, box.w, box.h)
+  love.graphics.rectangle("fill", box.x, box.y, box.w, box.h)
   love.graphics.setColor(r,g,b)
-  love.graphics.rectangle("line", box.l, box.t, box.w, box.h)
+  love.graphics.rectangle("line", box.x, box.y, box.w, box.h)
 end
 
 -- World creation
@@ -22,7 +24,9 @@ local world = bump.newWorld()
 
 
 -- Player functions
-local player = { l=50,t=50,w=20,h=20, speed = 80 }
+local player = { x=50,y=50,w=20,h=20, speed = 80 }
+
+local filter = function() return 'slide' end
 
 local function updatePlayer(dt)
   local speed = player.speed
@@ -39,26 +43,9 @@ local function updatePlayer(dt)
     dy = -speed * dt
   end
 
+  col_len = 0
   if dx ~= 0 or dy ~= 0 then
-    local future_l, future_t = player.l + dx, player.t + dy
-    local cols, len = world:check(player, future_l, future_t)
-    if len == 0 then
-      player.l, player.t = future_l, future_t
-      world:move(player, future_l, future_t)
-    else
-      local col, tl, tt, sl, st
-      while len > 0 do
-        col = cols[1]
-        tl,tt,_,_,sl,st = col:getSlide()
-        player.l, player.t = tl, tt
-        world:move(player, tl, tt)
-        cols, len = world:check(player, sl, st)
-        if len == 0 then
-          player.l, player.t = sl, st
-          world:move(player, sl, st)
-        end
-      end
-    end
+    player.x, player.y, _, col_len = world:resolve(player, player.x + dx, player.y + dy, filter)
   end
 end
 
@@ -70,10 +57,10 @@ end
 
 local blocks = {}
 
-local function addBlock(l,t,w,h)
-  local block = {l=l,t=t,w=w,h=h}
+local function addBlock(x,y,w,h)
+  local block = {x=x,y=y,w=w,h=h}
   blocks[#blocks+1] = block
-  world:add(block, l,t,w,h)
+  world:add(block, x,y,w,h)
 end
 
 local function drawBlocks()
@@ -92,14 +79,14 @@ end
 local function drawDebug()
   bump_debug.draw(world)
 
-  local statistics = ("fps: %d, mem: %dKB"):format(love.timer.getFPS(), collectgarbage("count"))
+  local statistics = ("fps: %d, mem: %dKB, collisions: %d"):format(love.timer.getFPS(), collectgarbage("count"), col_len)
   love.graphics.setColor(255, 255, 255)
-  love.graphics.print(statistics, 630, 580 )
+  love.graphics.printf(statistics, 0, 580, 790, 'right')
 end
 
 
 function love.load()
-  world:add(player, player.l, player.t, player.w, player.h)
+  world:add(player, player.x, player.y, player.w, player.h)
 
   addBlock(0,       0,     800, 32)
   addBlock(0,      32,      32, 600-32*2)
