@@ -48,11 +48,8 @@ local function nearest(x, a, b)
   if abs(a - x) < abs(b - x) then return a else return b end
 end
 
-local function sortByTiAndOtherId(a,b)
-  return a.ti == b.ti and a.other_id < b.other_id or a.ti < b.ti
-end
 
-local function sortByWeight(a,b) return a.weight < b.weight end
+
 
 local function assertType(desiredType, value, name)
   if type(value) ~= desiredType then
@@ -139,6 +136,12 @@ end
 local function rect_isIntersecting(x1,y1,w1,h1, x2,y2,w2,h2)
   return x1 < x2+w2 and x2 < x1+w1 and
          y1 < y2+h2 and y2 < y1+h1
+end
+
+local function rect_getSquareDistance(x1,y1,w1,h1, x2,y2,w2,h2)
+  local dx = x1 - x2 + (w1 - w2)/2
+  local dy = y1 - y2 + (h1 - h2)/2
+  return dx*dx + dy*dy
 end
 
 ------------------------------------------
@@ -356,6 +359,21 @@ local bounce = {
 -- World
 ------------------------------------------
 
+local function sortByWeight(a,b) return a.weight < b.weight end
+
+local function sortByTiAndDistance(a,b)
+  if a.ti == b.ti then
+    local ir, ar, br = a.itemRect, a.otherRect, b.otherRect
+    local ad = rect_getSquareDistance(ir.x,ir.y,ir.w,ir.h, ar.x,ar.y,ar.w,ar.h)
+    local bd = rect_getSquareDistance(ir.x,ir.y,ir.w,ir.h, br.x,br.y,br.w,br.h)
+    if ad == bd then
+      return a.other_id < b.other_id
+    end
+    return ad < bd
+  end
+  return a.ti < b.ti
+end
+
 local function getRect(self, item)
   local rect = self.rects[item]
   if not rect then
@@ -363,7 +381,6 @@ local function getRect(self, item)
   end
   return rect
 end
-
 
 local function addItemToCell(self, item, cx, cy)
   self.rows[cy] = self.rows[cy] or setmetatable({}, {__mode = 'v'})
@@ -560,7 +577,7 @@ function World:check(item, futureX, futureY, filter)
     end
   end
 
-  table.sort(collisions, sortByTiAndOtherId)
+  table.sort(collisions, sortByTiAndDistance)
 
   return collisions, len
 end
