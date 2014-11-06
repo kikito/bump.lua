@@ -45,7 +45,7 @@ local function updatePlayer(dt)
 
   col_len = 0
   if dx ~= 0 or dy ~= 0 then
-    player.x, player.y, _, col_len = world:resolve(player, player.x + dx, player.y + dy, filter)
+    player.x, player.y, _, col_len = world:move(player, player.x + dx, player.y + dy, filter)
   end
 end
 
