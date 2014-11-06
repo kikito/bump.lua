@@ -48,8 +48,8 @@ local function nearest(x, a, b)
   if abs(a - x) < abs(b - x) then return a else return b end
 end
 
-local function sortByTiAndId(a,b)
-  return a.ti == b.ti and a.id < b.id or a.ti < b.ti
+local function sortByTiAndOtherId(a,b)
+  return a.ti == b.ti and a.other_id < b.other_id or a.ti < b.ti
 end
 
 local function sortByWeight(a,b) return a.weight < b.weight end
@@ -206,146 +206,151 @@ local function grid_toCellRect(cellSize, x,y,w,h)
 end
 
 ------------------------------------------
--- Collision functions
+-- Collision Types
 ------------------------------------------
 
-local function collision_touch(itemRect, otherRect, futureX, futureY)
-  futureX = futureX or itemRect.x
-  futureY = futureY or itemRect.y
+local touch = {
+  detect = function(itemRect, otherRect, futureX, futureY)
+    futureX = futureX or itemRect.x
+    futureY = futureY or itemRect.y
 
-  local x1,y1,w1,h1 = itemRect.x, itemRect.y, itemRect.w, itemRect.h
-  local x2,y2,w2,h2 = otherRect.x, otherRect.y, otherRect.w, otherRect.h
-  local dx, dy      = futureX - x1, futureY - y1
-  local x,y,w,h     = rect_getDiff(x1,y1,w1,h1, x2,y2,w2,h2)
+    local x1,y1,w1,h1 = itemRect.x, itemRect.y, itemRect.w, itemRect.h
+    local x2,y2,w2,h2 = otherRect.x, otherRect.y, otherRect.w, otherRect.h
+    local dx, dy      = futureX - x1, futureY - y1
+    local x,y,w,h     = rect_getDiff(x1,y1,w1,h1, x2,y2,w2,h2)
 
-  local overlaps, ti, nx, ny
+    local overlaps, ti, nx, ny
 
-  if rect_containsPoint(x,y,w,h, 0,0) then -- itemRect was intersecting otherRect
-    local px, py    = rect_getNearestCorner(x,y,w,h, 0, 0)
-    local wi, hi    = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
-    ti              = -wi * hi -- ti is the negative area of intersection
-    overlaps = true
-  else
-    local ti1,ti2,nx1,ny1 = rect_getSegmentIntersectionIndices(x,y,w,h, 0,0,dx,dy, -math.huge, math.huge)
-
-    -- itemRect tunnels into otherRect while it travels
-    if ti1 and ti1 < 1 and (0 < ti1 or 0 == ti1 and ti2 > 0) then
-      ti, nx, ny = ti1, nx1, ny1
-      overlaps   = false
-    end
-  end
-
-  if not ti then return end
-
-  local tx, ty
-
-  if overlaps then
-    if dx == 0 and dy == 0 then
-      -- intersecting and not moving - use minimum displacement vector
-      local px, py = rect_getNearestCorner(x,y,w,h, 0,0)
-      if abs(px) < abs(py) then py = 0 else px = 0 end
-      nx, ny = sign(px), sign(py)
-      tx, ty = x1 + px, y1 + py
+    if rect_containsPoint(x,y,w,h, 0,0) then -- itemRect was intersecting otherRect
+      local px, py    = rect_getNearestCorner(x,y,w,h, 0, 0)
+      local wi, hi    = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
+      ti              = -wi * hi -- ti is the negative area of intersection
+      overlaps = true
     else
-      -- intersecting and moving - move in the opposite direction
-      local ti1
-      ti1,_,nx,ny = rect_getSegmentIntersectionIndices(x,y,w,h, 0,0,dx,dy, -math.huge, 1)
-      tx, ty = x1 + dx * ti1, y1 + dy * ti1
-    end
-  else -- tunnel
-    tx, ty = x1 + dx * ti, y1 + dy * ti
-  end
+      local ti1,ti2,nx1,ny1 = rect_getSegmentIntersectionIndices(x,y,w,h, 0,0,dx,dy, -math.huge, math.huge)
 
-  return {
-    overlaps  = overlaps,
-    ti        = ti,
-    move      = {x = dx, y = dy},
-    normal    = {x = nx, y = ny},
-    touch     = {x = tx, y = ty},
-    itemRect  = {x = x1, y = y1, w = w1, h = h1},
-    otherRect = {x = x2, y = y2, w = w2, h = h2}
-  }
-end
-
-function collision_slide(itemRect, otherRect, futureX, futureY)
-  futureX = futureX or itemRect.x
-  futureY = futureY or itemRect.y
-
-  local col = collision_touch(itemRect, otherRect, futureX, futureY)
-
-  if col then
-    local sx, sy = col.touch.x, col.touch.y
-    local move = col.move
-    if move.x ~= 0 or move.y ~= 0 then
-      if col.normal.x == 0 then
-        sx = futureX
-      else
-        sy = futureY
+      -- itemRect tunnels into otherRect while it travels
+      if ti1 and ti1 < 1 and (0 < ti1 or 0 == ti1 and ti2 > 0) then
+        ti, nx, ny = ti1, nx1, ny1
+        overlaps   = false
       end
     end
-    col.slide = {x = sx, y = sy}
-    return col
-  end
-end
 
-function collision_bounce(itemRect, other, futureX, futureY)
-  futureX = futureX or itemRect.x
-  futureY = futureY or itemRect.y
+    if not ti then return end
 
-  local col = collision_touch(itemRect, other, futureX, futureY)
+    local tx, ty
 
-  if col then
-    local touch = col.touch
-    local tx, ty = touch.x, touch.y
-
-    local bx, by, bnx, bny = tx, ty, 0,0
-
-    local move = col.move
-    if move.x ~= 0 or move.y ~= 0 then
-      bnx, bny = futureX - tx, futureY - ty
-      if col.normal.x == 0 then bny = -bny else bnx = -bnx end
-      bx, by = tx + bnx, ty + bny
+    if overlaps then
+      if dx == 0 and dy == 0 then
+        -- intersecting and not moving - use minimum displacement vector
+        local px, py = rect_getNearestCorner(x,y,w,h, 0,0)
+        if abs(px) < abs(py) then py = 0 else px = 0 end
+        nx, ny = sign(px), sign(py)
+        tx, ty = x1 + px, y1 + py
+      else
+        -- intersecting and moving - move in the opposite direction
+        local ti1
+        ti1,_,nx,ny = rect_getSegmentIntersectionIndices(x,y,w,h, 0,0,dx,dy, -math.huge, 1)
+        tx, ty = x1 + dx * ti1, y1 + dy * ti1
+      end
+    else -- tunnel
+      tx, ty = x1 + dx * ti, y1 + dy * ti
     end
 
-    col.bounce = {x = bx, y = by}
-    col.bounceNormal = {x = bnx, y = bny}
+    return {
+      overlaps  = overlaps,
+      ti        = ti,
+      move      = {x = dx, y = dy},
+      normal    = {x = nx, y = ny},
+      touch     = {x = tx, y = ty},
+      itemRect  = {x = x1, y = y1, w = w1, h = h1},
+      otherRect = {x = x2, y = y2, w = w2, h = h2}
+    }
+  end,
 
-    return col
+  respond = function(world, col, futureX, futureY, filter)
+    local touch = col.touch
+    return touch.x, touch.y, {}, 0
   end
-end
+}
 
-------------------------------------------
--- Response functions
-------------------------------------------
+local cross = {
+  detect = touch.detect,
+  respond = function(world, col, futureX, futureY, filter)
+    local item, touch = col.item, col.touch
+    world:move(item, touch.x, touch.y)
+    local cols, len = world:check(item, futureX, futureY, filter)
+    return futureX, futureY, cols, len
+  end
+}
 
+local slide = {
+  detect = function(itemRect, otherRect, futureX, futureY)
+    futureX = futureX or itemRect.x
+    futureY = futureY or itemRect.y
 
-local response_touch = function(world, col, futureX, futureY, filter)
-  local touch = col.touch
-  return touch.x, touch.y, {}, 0
-end
+    local col = touch.detect(itemRect, otherRect, futureX, futureY)
 
-local response_cross = function(world, col, futureX, futureY, filter)
-  local item, touch = col.item, col.touch
-  world:move(item, touch.x, touch.y)
-  local cols, len = world:check(item, futureX, futureY, filter)
-  return futureX, futureY, cols, len
-end
+    if col then
+      local sx, sy = col.touch.x, col.touch.y
+      local move = col.move
+      if move.x ~= 0 or move.y ~= 0 then
+        if col.normal.x == 0 then
+          sx = futureX
+        else
+          sy = futureY
+        end
+      end
+      col.slide = {x = sx, y = sy}
+      return col
+    end
+  end,
 
-local response_slide = function(world, col, futureX, futureY, filter)
-  local item, touch, slide = col.item, col.touch, col.slide
-  world:move(item, touch.x, touch.y)
-  futureX, futureY = slide.x, slide.y
-  cols, len = world:check(item, futureX, futureY, filter)
-  return futureX, futureY, cols, len
-end
+  respond = function(world, col, futureX, futureY, filter)
+    local item, touch, slide = col.item, col.touch, col.slide
+    world:move(item, touch.x, touch.y)
+    futureX, futureY = slide.x, slide.y
+    cols, len = world:check(item, futureX, futureY, filter)
+    return futureX, futureY, cols, len
+  end
+}
 
-local response_bounce = function(world, col, futureX, futureY, filter)
-  local item, touch, bounce = col.item, col.touch, col.bounce
-  world:move(item, touch.x, touch.y)
-  futureX, futureY = bounce.x, bounce.y
-  cols, len = world:check(item, futureX, futureY, filter)
-  return futureX, futureY, cols, len
-end
+local bounce = {
+  detect = function(itemRect, other, futureX, futureY)
+    futureX = futureX or itemRect.x
+    futureY = futureY or itemRect.y
+
+    local col = touch.detect(itemRect, other, futureX, futureY)
+
+    if col then
+      local touch = col.touch
+      local tx, ty = touch.x, touch.y
+
+      local bx, by, bnx, bny = tx, ty, 0,0
+
+      local move = col.move
+      if move.x ~= 0 or move.y ~= 0 then
+        bnx, bny = futureX - tx, futureY - ty
+        if col.normal.x == 0 then bny = -bny else bnx = -bnx end
+        bx, by = tx + bnx, ty + bny
+      end
+
+      col.bounce = {x = bx, y = by}
+      col.bounceNormal = {x = bnx, y = bny}
+
+      return col
+    end
+  end,
+
+  respond = function(world, col, futureX, futureY, filter)
+    local item, touch, bounce = col.item, col.touch, col.bounce
+    world:move(item, touch.x, touch.y)
+    futureX, futureY = bounce.x, bounce.y
+    cols, len = world:check(item, futureX, futureY, filter)
+    return futureX, futureY, cols, len
+  end
+}
+
 
 ------------------------------------------
 -- World
@@ -450,22 +455,21 @@ local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
   return itemInfo, itemInfoLen
 end
 
-local collide = function(self, item, other, futureX, futureY, filter)
-  local resolverKind = filter(other)
-  if not resolverKind then return end
+local detectCollision = function(self, item, other, futureX, futureY, filter)
+  local collisionTypeName = filter(other)
+  if not collisionTypeName then return end
 
-  local resolver = self.resolvers[resolverKind]
-  if not resolver then error('Unknown resolver kind: ' .. tostring(resolverKind)) end
+  local collisionType = self:getCollisionType(collisionTypeName)
 
   local iRect, oRect = self.rects[item], self.rects[other]
-  local col = resolver.collide(iRect, oRect, futureX, futureY)
+  local col = collisionType.detect(iRect, oRect, futureX, futureY)
 
   if not col then return end
 
-  col.item  = item
-  col.other = other
-  col.id    = oRect.id
-  col.kind  = resolverKind
+  col.item     = item
+  col.other    = other
+  col.other_id = oRect.id
+  col.type     = collisionTypeName
 
   return col
 end
@@ -548,7 +552,7 @@ function World:check(item, futureX, futureY, filter)
   for other,_ in pairs(dictItemsInCellRect) do
     if not visited[other] then
       visited[other] = true
-      local col = collide(self, item, other, futureX, futureY, filter)
+      local col = detectCollision(self, item, other, futureX, futureY, filter)
       if col then
         len = len + 1
         collisions[len] = col
@@ -556,7 +560,7 @@ function World:check(item, futureX, futureY, filter)
     end
   end
 
-  table.sort(collisions, sortByTiAndId)
+  table.sort(collisions, sortByTiAndOtherId)
 
   return collisions, len
 end
@@ -658,8 +662,16 @@ function World:querySegmentWithCoords(x1, y1, x2, y2, filter)
   return itemInfo, len
 end
 
-function World:addResolver(resolver_name, collide, respond)
-  self.resolvers[resolver_name] = { collide = collide, respond = respond }
+function World:addCollisionType(name, collisionType)
+  self.collisionTypes[name] = collisionType
+end
+
+function World:getCollisionType(name)
+  local collisionType = self.collisionTypes[name]
+  if not collisionType then
+    error(('Unknown collision type: %s (%s)'):format(name, type(name)))
+  end
+  return collisionType
 end
 
 function World:resolve(item, futureX, futureY, filter)
@@ -682,12 +694,8 @@ function World:resolve(item, futureX, futureY, filter)
 
     visited[col.other] = true
 
-    local resolver = self.resolvers[col.kind]
-    if resolver then
-      futureX, futureY, cols, len = resolver.respond(self, col, futureX, futureY, visitedFilter)
-    else
-      error('unknown resolver kind: ' .. col.kind)
-    end
+    local collisionType = self:getCollisionType(col.type)
+    futureX, futureY, cols, len = collisionType.respond(self, col, futureX, futureY, visitedFilter)
   end
 
   self:move(item, futureX, futureY)
@@ -705,21 +713,22 @@ bump.newWorld = function(cellSize)
     rows           = {},
     nonEmptyCells  = {},
     lastId         = 0,
-    resolvers      = {}
+    collisionTypes = {}
   }, World_mt)
 
-  world:addResolver('touch', collision_touch, response_touch)
-  world:addResolver('cross', collision_touch, response_cross)
-  world:addResolver('slide', collision_slide, response_slide)
-  world:addResolver('bounce', collision_bounce, response_bounce)
+  world:addCollisionType('touch', touch)
+  world:addCollisionType('cross', cross)
+  world:addCollisionType('slide', slide)
+  world:addCollisionType('bounce', bounce)
 
   return world
 end
 
-bump.collisions = {
-  touch  = collision_touch,
-  slide  = collision_slide,
-  bounce = collision_bounce
+bump.collisionTypes = {
+  touch  = touch,
+  cross  = cross,
+  slide  = slide,
+  bounce = bounce
 }
 
 return bump
