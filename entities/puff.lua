@@ -55,8 +55,10 @@ function Puff:update(dt)
     self:destroy()
   else
     self:expand(dt)
-    self:move(self.l + self.vx * dt,
-              self.t + self.vy * dt)
+    local next_l = self.l + self.vx * dt
+    local next_t = self.t + self.vy * dt
+    self.world:update(self, next_l, next_t)
+    self.l, self.t = next_l, next_t
   end
 end
 

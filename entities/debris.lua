@@ -18,7 +18,8 @@ local maxVel = -1 * minVel
 local bounciness = 0.1
 
 local debrisFilter = function(other)
-  return other.class.name == 'Block' or other.class.name == 'Guardian'
+  local kind = other.class.name
+  if kind == 'Block' or kind == 'Guardian' then return "bounce" end
 end
 
 function Debris:initialize(world, x, y, r,g,b)
@@ -42,29 +43,14 @@ function Debris:moveColliding(dt)
   local future_l = self.l + self.vx * dt
   local future_t = self.t + self.vy * dt
 
-  local cols, len = world:check(self, future_l, future_t, debrisFilter)
-  if len == 0 then
-    self:move(future_l, future_t)
-  else
-    local col, tl, tt, nx, ny, bl, bt
-    local visited = {}
-    while len > 0 do
-      col = cols[1]
-      tl,tt,nx,ny,sl,st = col:getBounce()
+  local next_l, next_t, cols, len = world:move(self, future_l, future_t, debrisFilter)
 
-      self:changeVelocityByCollisionNormal(nx, ny, bounciness)
-
-      self:move(tl, tt)
-
-      if visited[col.other] then return end -- stop iterating when we collide with the same item twice
-      visited[col.other] = true
-
-      cols, len = world:check(self, sl, st, debrisFilter)
-      if len == 0 then
-        self:move(sl, st)
-      end
-    end
+  for i=1, len do
+    local col = cols[i]
+    self:changeVelocityByCollisionNormal(col.normal.x, col.normal.y, bounciness)
   end
+
+  self.l, self.t = next_l, next_t
 end
 
 function Debris:update(dt)

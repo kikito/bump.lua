@@ -10,7 +10,7 @@
 --
 -- Grenades bounce using collision:getBounce(). Two points of interest:
 -- * Grenades won't collide with the Guardian that created them (their "parent") at the beginning -
---   they need to "exit their parent" first. That's what the self.insideParent attribute controls.
+--   they need to "exit their parent" first. That's what the self.ignoresParent attribute controls.
 -- * Grenades explode instantly if they touch the Player. They will bounce over Blocks and Guardians
 --   (except their parent, until they exit it for the first time)
 -- ]]
@@ -31,10 +31,7 @@ local bounciness        = 0.4 -- How much energy is lost on each bounce. 1 is pe
 local lifeTime          = 4   -- Lifetime in seconds
 local bounceSoundSpeed  = 30  -- How fast must a grenade go to make bouncing noises
 
-local grenadeFilter = function(other)
-  local cname = other.class.name
-  return cname == 'Block' or cname == 'Guardian' or cname == 'Player'
-end
+
 
 function Grenade:initialize(world, parent, camera, x, y, vx, vy)
   Entity.initialize(self, world, x, y, width, height)
@@ -42,7 +39,16 @@ function Grenade:initialize(world, parent, camera, x, y, vx, vy)
   self.camera = camera
   self.vx, self.vy  = vx, vy
   self.lived = 0
-  self.insideParent = true
+  self.ignoresParent = true
+  self.filter = function(other)
+    local kind = other.class.name
+    if kind == 'Block'
+    or kind == 'Player'
+    or(kind == 'Guardian' and not self.ignoresParent)
+    then
+      return "bounce"
+    end
+  end
 end
 
 function Grenade:getBounceSpeed(nx, ny)
@@ -58,48 +64,37 @@ end
 
 function Grenade:moveColliding(dt)
   local world = self.world
-  local isTouchingParent = false
+  local parent = self.parent
 
   local future_l = self.l + self.vx * dt
   local future_t = self.t + self.vy * dt
 
-  local cols, len = world:check(self, future_l, future_t, grenadeFilter)
-  local col = cols[1]
-  if col and col.other == self.parent and self.insideParent then
-    isTouchingParent = true
-    table.remove(cols, 1)
-    len = len - 1
-  end
-  if len == 0 then
-    self:move(future_l, future_t)
-  else
-    local tl, tt, nx, ny, bl, bt
-    local visited = {}
+  local next_l, next_t, cols, len = world:move(self, future_l, future_t, self.filter)
 
-    while len > 0 do
-      col = cols[1]
-      if col.other.class.name == 'Player' then
-        self:destroy()
-        return
-      end
-      tl,tt,nx,ny,sl,st = col:getBounce()
+  for i=1, len do
+    local col = cols[1]
+    if col.other.class.name == 'Player' then
+      self:destroy()
+      return
+    end
 
-      self:changeVelocityByCollisionNormal(nx, ny, bounciness)
+    if col.other ~= parent or not self.ignoresParent then
+      local nx, ny = col.normal.x, col.normal.y
+      self:changeVelocityByCollisionNormal(nx,ny, bounciness)
       self:emitCollisionSound(nx, ny)
-
-      self:move(tl, tt)
-
-      if visited[col.other] then return end -- stop iterating when we collide with the same item twice
-      visited[col.other] = true
-
-      cols, len = world:check(self, sl, st, grenadeFilter)
-      if len == 0 then
-        self:move(sl, st)
-      end
     end
   end
 
-  if not isTouchingParent then self.insideParent = false end
+  self.l, self.t = next_l, next_t
+end
+
+function Grenade:detectExitedParent()
+  if self.ignoresParent then
+    local parent = self.parent
+    local x1,y1,w1,h1 = self.l, self.t, self.w, self.h
+    local x2,y2,w2,h2 = parent.l, parent.t, parent.w, parent.h
+    self.ignoresParent = x1 < x2+w2 and x2 < x1+w1 and y1 < y2+h2 and y2 < y1+h1
+  end
 end
 
 function Grenade:update(dt)
@@ -109,6 +104,7 @@ function Grenade:update(dt)
   else
     self:changeVelocityByGravity(dt)
     self:moveColliding(dt)
+    self:detectExitedParent()
   end
 end
 
@@ -124,6 +120,7 @@ function Grenade:draw(drawDebug)
 
   g = math.floor(255 * percent)
   b = g
+
   love.graphics.setColor(r,g,b)
 
   love.graphics.circle('fill', cx, cy, Grenade.radius)

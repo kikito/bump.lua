@@ -36,8 +36,8 @@ local beltHeight    = 8
 local abs = math.abs
 
 local playerFilter = function(other)
-  local cname = other.class.name
-  return cname == 'Guardian' or cname == 'Block'
+  local kind = other.class.name
+  if kind == 'Guardian' or kind == 'Block' then return 'slide' end
 end
 
 function Player:initialize(map, world, x,y)
@@ -122,30 +122,15 @@ function Player:moveColliding(dt)
   local future_l = self.l + self.vx * dt
   local future_t = self.t + self.vy * dt
 
-  local cols, len = world:check(self, future_l, future_t, playerFilter)
-  if len == 0 then
-    self:move(future_l, future_t)
-  else
-    local col, tl, tt, nx, ny, sl, st
-    local visited = {}
-    while len > 0 do
-      col = cols[1]
-      tl,tt,nx,ny,sl,st = col:getSlide()
+  local next_l, next_t, cols, len = world:move(self, future_l, future_t, playerFilter)
 
-      self:changeVelocityByCollisionNormal(nx, ny)
-      self:checkIfOnGround(ny)
-
-      self:move(tl,tt)
-
-      if visited[col.other] then return end -- prevent infinite loops
-      visited[col.other] = true
-
-      cols, len = world:check(self, sl, st, playerFilter)
-      if len == 0 then
-        self:move(sl, st)
-      end
-    end
+  for i=1, len do
+    local col = cols[i]
+    self:changeVelocityByCollisionNormal(col.normal.x, col.normal.y, bounciness)
+    self:checkIfOnGround(col.normal.y)
   end
+
+  self.l, self.t = next_l, next_t
 end
 
 function Player:updateHealth(dt)
