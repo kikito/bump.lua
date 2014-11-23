@@ -4,18 +4,24 @@ local function rect(x,y,w,h)
   return {x=x,y=y,w=w,h=h}
 end
 
-local touch = function(itemRect, otherRect, future_x, future_y)
-  local col = collisionTypes.touch.detect(itemRect, otherRect, future_x, future_y)
+local touch = function(r, o, future_x, future_y)
+  local col = collisionTypes.touch.detect(r.x, r.y, r.w, r.h,
+                                          o.x, o.y, o.w, o.h,
+                                          future_x, future_y)
   return {col.touch.x, col.touch.y, col.normal.x, col.normal.y}
 end
 
-local slide = function(itemRect, otherRect, future_x, future_y)
-  local col = collisionTypes.slide.detect(itemRect, otherRect, future_x, future_y)
+local slide = function(r, o, future_x, future_y)
+  local col = collisionTypes.slide.detect(r.x, r.y, r.w, r.h,
+                                          o.x, o.y, o.w, o.h,
+                                          future_x, future_y)
   return {col.touch.x, col.touch.y, col.normal.x, col.normal.y, col.slide.x, col.slide.y}
 end
 
-local bounce = function(itemRect, otherRect, future_x, future_y)
-  local col = collisionTypes.bounce.detect(itemRect, otherRect, future_x, future_y)
+local bounce = function(r, o, future_x, future_y)
+  local col = collisionTypes.bounce.detect(r.x, r.y, r.w, r.h,
+                                           o.x, o.y, o.w, o.h,
+                                           future_x, future_y)
   return {col.touch.x, col.touch.y, col.normal.x, col.normal.y, col.bounce.x, col.bounce.y }
 end
 
@@ -24,13 +30,13 @@ describe('collisionTypes.touch.detect', function()
     describe('when item is static', function()
       describe('when itemRect does not intersect otherRect', function()
         it('returns nil', function()
-          local c = collisionTypes.touch.detect(rect(0,0,1,1), rect(5,5,1,1), 0,0)
+          local c = collisionTypes.touch.detect(0,0,1,1, 5,5,1,1, 0,0)
           assert.is_nil(c)
         end)
       end)
       describe('when itemRect overlaps otherRect', function()
         it('returns overlaps, normal, move, ti, diff, itemRect, otherRect', function()
-          local c = collisionTypes.touch.detect(rect(0,0,7,6), rect(5,5,1,1), 0, 0)
+          local c = collisionTypes.touch.detect(0,0,7,6, 5,5,1,1, 0, 0)
 
           assert.is_true(c.overlaps)
           assert.equals(c.ti, -2)
@@ -46,30 +52,30 @@ describe('collisionTypes.touch.detect', function()
     describe('when item is moving', function()
       describe('when itemRect does not intersect otherRect', function()
         it('returns nil', function()
-          local c = collisionTypes.touch.detect(rect(0,0,1,1), rect(5,5,1,1), 0,1)
+          local c = collisionTypes.touch.detect(0,0,1,1, 5,5,1,1, 0,1)
           assert.is_nil(c)
         end)
       end)
       describe('when itemRect intersects otherRect', function()
         it('detects collisions from the left', function()
-          local c = collisionTypes.touch.detect(rect(1,1,1,1), rect(5,0,1,1), 6,0)
+          local c = collisionTypes.touch.detect(1,1,1,1, 5,0,1,1, 6,0)
           assert.equal(c.ti, 0.6)
           assert.same(c.normal, {x=-1, y=0})
         end)
         it('detects collisions from the right', function()
-          local c = collisionTypes.touch.detect(rect(6,0,1,1), rect(1,0,1,1), 1,1)
+          local c = collisionTypes.touch.detect(6,0,1,1, 1,0,1,1, 1,1)
           assert.is_false(c.overlaps)
           assert.equal(c.ti, 0.8)
           assert.same(c.normal, {x=1, y=0})
         end)
         it('detects collisions from the top', function()
-          local c = collisionTypes.touch.detect(rect(0,0,1,1), rect(0,4,1,1), 0,5)
+          local c = collisionTypes.touch.detect(0,0,1,1, 0,4,1,1, 0,5)
           assert.is_false(c.overlaps)
           assert.equal(c.ti, 0.6)
           assert.same(c.normal, {x=0, y=-1})
         end)
         it('detects collisions from the bottom', function()
-          local c = collisionTypes.touch.detect(rect(0,4,1,1), rect(0,0,1,1), 0,-1)
+          local c = collisionTypes.touch.detect(0,4,1,1, 0,0,1,1, 0,-1)
           assert.is_false(c.overlaps)
           assert.equal(c.ti, 0.6)
           assert.same(c.normal, {x=0, y=1})
@@ -103,9 +109,9 @@ describe('collisionTypes.touch.detect', function()
           assert.same(touch(rect( 3,-1,2,2), other), { 3,-2, 0, -1}) -- 2
           assert.same(touch(rect( 7,-1,2,2), other), { 7,-2, 0, -1}) -- 3
 
-          assert.same(touch(rect(-1, 3,2,2), other), {-2, 3, -1, 0}) -- 4
+          assert.same(touch(rect(-1, 3,2,2), other), {-1, 8,  0, 1}) -- 4
           assert.same(touch(rect( 3, 3,2,2), other), { 3, 8,  0, 1}) -- 5
-          assert.same(touch(rect( 7, 3,2,2), other), { 8, 3,  1, 0}) -- 6
+          assert.same(touch(rect( 7, 3,2,2), other), { 7,-2,  0,-1}) -- 6
 
           assert.same(touch(rect(-1, 7,2,2), other), {-1, 8,  0, 1}) -- 1
           assert.same(touch(rect( 3, 7,2,2), other), { 3, 8,  0, 1}) -- 2
@@ -141,8 +147,8 @@ describe('collisionTypes.slide.detect', function()
 
   describe('when there is no movement', function()
     it('behaves like touch, plus safe info', function()
-      local ct = collisionTypes.touch.detect(rect(3,3,2,2), other)
-      local cs = collisionTypes.slide.detect(rect(3,3,2,2), other)
+      local ct = collisionTypes.touch.detect(3,3,2,2, 0,0,8,8)
+      local cs = collisionTypes.slide.detect(3,3,2,2, 0,0,8,8)
       local slide = cs.slide
       cs.slide = nil
       assert.same(ct, cs)
@@ -173,8 +179,8 @@ describe('collisionTypes.bounce.detect', function()
 
   describe('when there is no movement', function()
     it('behaves like :getTouch(), plus safe info', function()
-      local ct = collisionTypes.touch.detect(rect(3,3,2,2), other)
-      local cb = collisionTypes.bounce.detect(rect(3,3,2,2), other)
+      local ct = collisionTypes.touch.detect(3,3,2,2, 0,0,8,8)
+      local cb = collisionTypes.bounce.detect(3,3,2,2, 0,0,8,8)
       local bounce, bounceNormal = cb.bounce, cb.bounceNormal
       cb.bounce, cb.bounceNormal = nil, nil
       assert.same(ct, cb)

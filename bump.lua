@@ -213,18 +213,16 @@ end
 ------------------------------------------
 
 local touch = {
-  detect = function(itemRect, otherRect, futureX, futureY)
-    futureX = futureX or itemRect.x
-    futureY = futureY or itemRect.y
+  detect = function(x1,y1,w1,h1, x2,y2,w2,h2, futureX, futureY)
+    futureX = futureX or x1
+    futureY = futureY or x1
 
-    local x1,y1,w1,h1 = itemRect.x, itemRect.y, itemRect.w, itemRect.h
-    local x2,y2,w2,h2 = otherRect.x, otherRect.y, otherRect.w, otherRect.h
     local dx, dy      = futureX - x1, futureY - y1
     local x,y,w,h     = rect_getDiff(x1,y1,w1,h1, x2,y2,w2,h2)
 
     local overlaps, ti, nx, ny
 
-    if rect_containsPoint(x,y,w,h, 0,0) then -- itemRect was intersecting otherRect
+    if rect_containsPoint(x,y,w,h, 0,0) then -- item was intersecting other
       local px, py    = rect_getNearestCorner(x,y,w,h, 0, 0)
       local wi, hi    = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
       ti              = -wi * hi -- ti is the negative area of intersection
@@ -232,7 +230,7 @@ local touch = {
     else
       local ti1,ti2,nx1,ny1 = rect_getSegmentIntersectionIndices(x,y,w,h, 0,0,dx,dy, -math.huge, math.huge)
 
-      -- itemRect tunnels into otherRect while it travels
+      -- item tunnels into other
       if ti1 and ti1 < 1 and (0 < ti1 or 0 == ti1 and ti2 > 0) then
         ti, nx, ny = ti1, nx1, ny1
         overlaps   = false
@@ -288,11 +286,11 @@ local cross = {
 }
 
 local slide = {
-  detect = function(itemRect, otherRect, futureX, futureY)
-    futureX = futureX or itemRect.x
-    futureY = futureY or itemRect.y
+  detect = function(x1,y1,w1,h1, x2,y2,w2,h2, futureX, futureY)
+    futureX = futureX or x1
+    futureY = futureY or y1
 
-    local col = touch.detect(itemRect, otherRect, futureX, futureY)
+    local col = touch.detect(x1,y1,w1,h1, x2,y2,w2,h2, futureX, futureY)
 
     if col then
       local sx, sy = col.touch.x, col.touch.y
@@ -319,11 +317,11 @@ local slide = {
 }
 
 local bounce = {
-  detect = function(itemRect, other, futureX, futureY)
-    futureX = futureX or itemRect.x
-    futureY = futureY or itemRect.y
+  detect = function(x1,y1,w1,h1, x2,y2,w2,h2, futureX, futureY)
+    futureX = futureX or x1
+    futureY = futureY or y1
 
-    local col = touch.detect(itemRect, other, futureX, futureY)
+    local col = touch.detect(x1,y1,w1,h1, x2,y2,w2,h2, futureX, futureY)
 
     if col then
       local touch = col.touch
@@ -478,14 +476,14 @@ local detectCollision = function(self, item, other, futureX, futureY, filter)
 
   local collisionType = self:getCollisionType(collisionTypeName)
 
-  local iRect, oRect = self.rects[item], self.rects[other]
-  local col = collisionType.detect(iRect, oRect, futureX, futureY)
+  local r, o = getRect(self, item), getRect(self, other)
+  local col = collisionType.detect(r.x, r.y, r.w, r.h, o.x, o.y, o.w, o.h, futureX, futureY)
 
   if not col then return end
 
   col.item     = item
   col.other    = other
-  col.other_id = oRect.id
+  col.other_id = o.id
   col.type     = collisionTypeName
 
   return col
