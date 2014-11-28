@@ -532,6 +532,8 @@ function World:check(item, futureX, futureY, filter)
 end
 
 function World:project(x,y,w,h, futureX, futureY, filter)
+  assertIsRect(x,y,w,h)
+
   futureX = futureX or x
   futureY = futureY or y
   filter  = filter  or default_filter
@@ -700,9 +702,10 @@ function World:move(item, futureX, futureY, filter)
     return filter(item)
   end
 
-  local cols, len = self:check(item, futureX, futureY, visitedFilter)
-
   local r = getRect(self, item)
+  local x,y,w,h = r.x,r.y,r.w,r.h
+
+  local cols, len = self:project(x,y,w,h,futureX,futureY, visitedFilter)
 
   while len > 0 do
     local col  = cols[1]
@@ -717,7 +720,7 @@ function World:move(item, futureX, futureY, filter)
     futureX, futureY, cols, len = collisionType.respond(
       self,
       col,
-      r.x, r.y, r.w, r.h,
+      x, y, w, h,
       futureX, futureY,
       visitedFilter
     )

@@ -92,89 +92,69 @@ describe('World', function()
     end)
   end)
 
-  describe(':check', function()
-    describe('when the item does not exist', function()
-      it('throws an error', function()
-
-        assert.error(function() world:check({}) end)
-      end)
+  describe(':project', function()
+    it('throws an error if when not given a rect', function()
+      assert.error(function() world:project() end)
     end)
+
     describe('when the world is empty', function()
       it('returns an empty list of collisions', function()
-
-        local obj = world:add({}, 1,2,3,4)
-        assert.same(world:check(obj), {})
+        assert.same(world:project(1,2,3,4), {})
       end)
     end)
 
     describe('when the world is not empty', function()
       it('returns a list of collisions', function()
-
-
         world:add({'a'}, 0,0,10,10)
-        local b = world:add({'b'}, 4,6,10,10)
         world:add({'c'}, 14,16,10,10)
-        assert.same(#world:check(b), 1)
-
+        assert.same(#world:project(4,6,10,10), 1)
       end)
 
-      describe('when next l,t are passed', function()
+      describe('when next futureX & Y are passed', function()
         it('still handles intersections as before', function()
-
-
           world:add({'a'}, 0,0, 2,2)
-          local b = world:add({'b'}, 1,1, 2,2)
-          assert.same(#world:check(b, 1, 1), 1)
+          assert.same(#world:project(1,1,2,2, 1, 1), 1)
         end)
 
         it('detects and tags tunneling correctly', function()
-
-
           world:add({'a'},  1,0, 2,1)
-          local b = world:add({'b'}, -5,0, 4,1)
-          assert.same(#world:check(b, 5, 0), 1)
+          assert.same(#world:project(-5,0,4,1, 5,0), 1)
         end)
 
         it('detects the case where an object was touching another without intersecting, and then penetrates', function()
-          local a = world:add({'a'}, 32,50,20,20)
           world:add({'b'}, 0,0,32,100)
-
-          assert.same(#world:check(a, 30, 50), 1)
+          assert.same(#world:project(32,50,20,20, 30,50), 1)
         end)
 
         it('returns a list of collisions sorted by ti', function()
-          local a = world:add({'a'}, 110,0, 10,10)
           world:add({'b'}, 70,0, 10,10)
           world:add({'c'}, 50,0, 10,10)
           world:add({'d'}, 90,0, 10,10)
 
-          local col = world:check(a, 10, 0)
+          local col = world:project(110,0,10,10, 10,0)
 
           assert.same(collect(col, 'ti'), {0.1, 0.3, 0.5})
         end)
-      end) -- when next l,t are passed
+      end) -- when FutureX & Y are passed
 
-      describe('options', function()
-        local a, b, c, d
+      describe('the filter param', function()
+        local b, c, d
 
         before_each(function()
-          a = world:add({'a'}, 110,0, 10,10)
           b = world:add({'b'}, 70,0, 10,10)
           c = world:add({'c'}, 50,0, 10,10)
           d = world:add({'d'}, 90,0, 10,10)
         end)
 
-        describe('the filter param', function()
-          it('deactivates collisions when filter returns false', function()
-            local cols = world:check(a, 10, 0, function(obj)
-              return obj ~= d and "touch"
-            end)
-            assert.same(#cols, 2)
+        it('deactivates collisions when filter returns false', function()
+          local cols = world:project(110,0, 10,10, 10, 0, function(obj)
+            return obj ~= d and "touch"
           end)
+          assert.same(#cols, 2)
         end)
       end)
     end) -- when the world is not empty
-  end) -- :check
+  end) -- :project
 
   describe(':remove', function()
     it('throws an error if the item does not exist', function()
@@ -182,10 +162,9 @@ describe('World', function()
     end)
     it('makes the item disappear from the world', function()
       local a = world:add({'a'}, 0,0, 10,10)
-      local b = world:add({'b'}, 5,0, 1,1)
-      assert.same(#world:check(b), 1)
+      assert.same(#world:project(5,0,1,1), 1)
       world:remove(a)
-      assert.same(world:check(b), {})
+      assert.same(#world:project(5,0,1,1), 0)
     end)
     it('marks empty cells & rows for deallocation', function()
       world:add({'a'}, 0,0, 10, 10)
