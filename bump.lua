@@ -722,7 +722,6 @@ function World:move(item, futureX, futureY, filter)
     )
   end
 
-
   self:update(item, futureX, futureY)
 
   return futureX, futureY, cols, len
