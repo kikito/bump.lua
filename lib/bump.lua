@@ -34,10 +34,6 @@ local bump = {
 
 local abs, floor, ceil, min, max = math.abs, math.floor, math.ceil, math.min, math.max
 
-local function clamp(x, lower, upper)
-  return max(lower, min(upper, x))
-end
-
 local function sign(x)
   if x > 0 then return 1 end
   if x == 0 then return 0 end
@@ -47,9 +43,6 @@ end
 local function nearest(x, a, b)
   if abs(a - x) < abs(b - x) then return a else return b end
 end
-
-
-
 
 local function assertType(desiredType, value, name)
   if type(value) ~= desiredType then
@@ -178,7 +171,6 @@ local function grid_traverse(cellSize, x1,y1,x2,y2, f)
   local stepX, dx, tx  = grid_traverse_initStep(cellSize, cx1, x1, x2)
   local stepY, dy, ty  = grid_traverse_initStep(cellSize, cy1, y1, y2)
   local cx,cy          = cx1,cy1
-  local ncx, ncy
 
   f(cx, cy)
 
@@ -213,18 +205,16 @@ end
 ------------------------------------------
 
 local touch = {
-  detect = function(itemRect, otherRect, futureX, futureY)
-    futureX = futureX or itemRect.x
-    futureY = futureY or itemRect.y
+  detect = function(x1,y1,w1,h1, x2,y2,w2,h2, futureX, futureY)
+    futureX = futureX or x1
+    futureY = futureY or x1
 
-    local x1,y1,w1,h1 = itemRect.x, itemRect.y, itemRect.w, itemRect.h
-    local x2,y2,w2,h2 = otherRect.x, otherRect.y, otherRect.w, otherRect.h
     local dx, dy      = futureX - x1, futureY - y1
     local x,y,w,h     = rect_getDiff(x1,y1,w1,h1, x2,y2,w2,h2)
 
     local overlaps, ti, nx, ny
 
-    if rect_containsPoint(x,y,w,h, 0,0) then -- itemRect was intersecting otherRect
+    if rect_containsPoint(x,y,w,h, 0,0) then -- item was intersecting other
       local px, py    = rect_getNearestCorner(x,y,w,h, 0, 0)
       local wi, hi    = min(w1, abs(px)), min(h1, abs(py)) -- area of intersection
       ti              = -wi * hi -- ti is the negative area of intersection
@@ -232,7 +222,7 @@ local touch = {
     else
       local ti1,ti2,nx1,ny1 = rect_getSegmentIntersectionIndices(x,y,w,h, 0,0,dx,dy, -math.huge, math.huge)
 
-      -- itemRect tunnels into otherRect while it travels
+      -- item tunnels into other
       if ti1 and ti1 < 1 and (0 < ti1 or 0 == ti1 and ti2 > 0) then
         ti, nx, ny = ti1, nx1, ny1
         overlaps   = false
@@ -271,7 +261,7 @@ local touch = {
     }
   end,
 
-  respond = function(world, col, futureX, futureY, filter)
+  respond = function(world, col, x,y,w,h, futureX, futureY, filter)
     local touch = col.touch
     return touch.x, touch.y, {}, 0
   end
@@ -279,20 +269,19 @@ local touch = {
 
 local cross = {
   detect = touch.detect,
-  respond = function(world, col, futureX, futureY, filter)
-    local item, touch = col.item, col.touch
-    world:update(item, touch.x, touch.y)
-    local cols, len = world:check(item, futureX, futureY, filter)
+  respond = function(world, col, x,y,w,h, futureX, futureY, filter)
+    local touch = col.touch
+    local cols, len = world:project(touch.x, touch.y, w,h, futureX, futureY, filter)
     return futureX, futureY, cols, len
   end
 }
 
 local slide = {
-  detect = function(itemRect, otherRect, futureX, futureY)
-    futureX = futureX or itemRect.x
-    futureY = futureY or itemRect.y
+  detect = function(x1,y1,w1,h1, x2,y2,w2,h2, futureX, futureY)
+    futureX = futureX or x1
+    futureY = futureY or y1
 
-    local col = touch.detect(itemRect, otherRect, futureX, futureY)
+    local col = touch.detect(x1,y1,w1,h1, x2,y2,w2,h2, futureX, futureY)
 
     if col then
       local sx, sy = col.touch.x, col.touch.y
@@ -309,21 +298,21 @@ local slide = {
     end
   end,
 
-  respond = function(world, col, futureX, futureY, filter)
-    local item, touch, slide = col.item, col.touch, col.slide
-    world:update(item, touch.x, touch.y)
-    futureX, futureY = slide.x, slide.y
-    cols, len = world:check(item, futureX, futureY, filter)
+  respond = function(world, col, x,y,w,h, futureX, futureY, filter)
+    local touch, slide = col.touch, col.slide
+    x,y                = touch.x, touch.y
+    futureX, futureY   = slide.x, slide.y
+    local cols, len    = world:project(x,y,w,h, futureX, futureY, filter)
     return futureX, futureY, cols, len
   end
 }
 
 local bounce = {
-  detect = function(itemRect, other, futureX, futureY)
-    futureX = futureX or itemRect.x
-    futureY = futureY or itemRect.y
+  detect = function(x1,y1,w1,h1, x2,y2,w2,h2, futureX, futureY)
+    futureX = futureX or x1
+    futureY = futureY or y1
 
-    local col = touch.detect(itemRect, other, futureX, futureY)
+    local col = touch.detect(x1,y1,w1,h1, x2,y2,w2,h2, futureX, futureY)
 
     if col then
       local touch = col.touch
@@ -345,11 +334,11 @@ local bounce = {
     end
   end,
 
-  respond = function(world, col, futureX, futureY, filter)
-    local item, touch, bounce = col.item, col.touch, col.bounce
-    world:update(item, touch.x, touch.y)
-    futureX, futureY = bounce.x, bounce.y
-    cols, len = world:check(item, futureX, futureY, filter)
+  respond = function(world, col, x,y,w,h, futureX, futureY, filter)
+    local touch, bounce = col.touch, col.bounce
+    x,y                = touch.x, touch.y
+    futureX, futureY   = bounce.x, bounce.y
+    local cols, len    = world:project(x,y,w,h, futureX, futureY, filter)
     return futureX, futureY, cols, len
   end
 }
@@ -472,24 +461,6 @@ local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
   return itemInfo, itemInfoLen
 end
 
-local detectCollision = function(self, item, other, futureX, futureY, filter)
-  local collisionTypeName = filter(other)
-  if not collisionTypeName then return end
-
-  local collisionType = self:getCollisionType(collisionTypeName)
-
-  local iRect, oRect = self.rects[item], self.rects[other]
-  local col = collisionType.detect(iRect, oRect, futureX, futureY)
-
-  if not col then return end
-
-  col.item     = item
-  col.other    = other
-  col.other_id = oRect.id
-  col.type     = collisionTypeName
-
-  return col
-end
 
 --------------------------
 
@@ -548,13 +519,25 @@ end
 function World:check(item, futureX, futureY, filter)
   filter = filter or default_filter
 
-  local rect = getRect(self, item)
+  local itemFilter = function(other)
+    return other ~= item and filter(other)
+  end
+
+  local r = getRect(self, item)
+
+  return self:project(r.x, r.y, r.w, r.h, futureX, futureY, itemFilter)
+end
+
+function World:project(x,y,w,h, futureX, futureY, filter)
+  assertIsRect(x,y,w,h)
+
+  futureX = futureX or x
+  futureY = futureY or y
+  filter  = filter  or default_filter
+
   local collisions, len = {}, 0
 
-  local visited = { [item] = true }
-
-  local x,y,w,h = rect.x, rect.y, rect.w, rect.h
-  futureX, futureY = futureX or x, futureY or y
+  local visited = {}
 
   -- TODO this could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding rect of the whole movement. Conditional to building a queryPolygon method
@@ -569,10 +552,22 @@ function World:check(item, futureX, futureY, filter)
   for other,_ in pairs(dictItemsInCellRect) do
     if not visited[other] then
       visited[other] = true
-      local col = detectCollision(self, item, other, futureX, futureY, filter)
-      if col then
-        len = len + 1
-        collisions[len] = col
+
+      local collisionTypeName = filter(other)
+      if collisionTypeName then
+        local collisionType = self:getCollisionType(collisionTypeName)
+        local o   = getRect(self, other)
+        local col = collisionType.detect(x, y, w, h, o.x, o.y, o.w, o.h, futureX, futureY)
+
+        if col then
+          col.item     = item
+          col.other    = other
+          col.other_id = o.id
+          col.type     = collisionTypeName
+
+          len = len + 1
+          collisions[len] = col
+        end
       end
     end
   end
@@ -631,6 +626,8 @@ function World:queryRect(x,y,w,h, filter)
 
   return items, len
 end
+
+
 
 function World:queryPoint(x,y, filter)
   local cx,cy = self:toCell(x,y)
@@ -692,33 +689,42 @@ function World:getCollisionType(name)
 end
 
 function World:move(item, futureX, futureY, filter)
+  filter = filter or default_filter
 
-  local res, res_len = {}, 0
+  local cols, len = {}, 0
 
-  local visited = {}
+  local visited = {[item] = true}
   local visitedFilter = function(item)
     if visited[item] then return false end
     return filter(item)
   end
 
-  local cols, len = self:check(item, futureX, futureY, filter)
+  local r = getRect(self, item)
+  local x,y,w,h = r.x,r.y,r.w,r.h
 
-  while len > 0 do
-    local col  = cols[1]
+  local projected_cols, projected_len = self:project(x,y,w,h,futureX,futureY, visitedFilter)
 
-    res_len      = res_len + 1
-    res[res_len] = col
+  while projected_len > 0 do
+    local col = projected_cols[1]
+    len       = len + 1
+    cols[len] = col
 
     visited[col.other] = true
 
     local collisionType = self:getCollisionType(col.type)
-    futureX, futureY, cols, len = collisionType.respond(self, col, futureX, futureY, visitedFilter)
+
+    futureX, futureY, projected_cols, projected_len = collisionType.respond(
+      self,
+      col,
+      x, y, w, h,
+      futureX, futureY,
+      visitedFilter
+    )
   end
 
   self:update(item, futureX, futureY)
 
-  return futureX, futureY, res, res_len
-
+  return futureX, futureY, cols, len
 end
 
 bump.newWorld = function(cellSize)
