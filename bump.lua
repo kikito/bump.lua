@@ -34,10 +34,6 @@ local bump = {
 
 local abs, floor, ceil, min, max = math.abs, math.floor, math.ceil, math.min, math.max
 
-local function clamp(x, lower, upper)
-  return max(lower, min(upper, x))
-end
-
 local function sign(x)
   if x > 0 then return 1 end
   if x == 0 then return 0 end
@@ -178,7 +174,6 @@ local function grid_traverse(cellSize, x1,y1,x2,y2, f)
   local stepX, dx, tx  = grid_traverse_initStep(cellSize, cx1, x1, x2)
   local stepY, dy, ty  = grid_traverse_initStep(cellSize, cy1, y1, y2)
   local cx,cy          = cx1,cy1
-  local ncx, ncy
 
   f(cx, cy)
 
@@ -269,7 +264,7 @@ local touch = {
     }
   end,
 
-  respond = function(world, col, futureX, futureY, filter)
+  respond = function(world, col, x,y,w,h, futureX, futureY, filter)
     local touch = col.touch
     return touch.x, touch.y, {}, 0
   end
@@ -277,10 +272,9 @@ local touch = {
 
 local cross = {
   detect = touch.detect,
-  respond = function(world, col, futureX, futureY, filter)
-    local item, touch = col.item, col.touch
-    world:update(item, touch.x, touch.y)
-    local cols, len = world:check(item, futureX, futureY, filter)
+  respond = function(world, col, x,y,w,h, futureX, futureY, filter)
+    local touch = col.touch
+    local cols, len = world:project(touch.x, touch.y, w,h, futureX, futureY, filter)
     return futureX, futureY, cols, len
   end
 }
@@ -307,11 +301,11 @@ local slide = {
     end
   end,
 
-  respond = function(world, col, futureX, futureY, filter)
-    local item, touch, slide = col.item, col.touch, col.slide
-    world:update(item, touch.x, touch.y)
-    futureX, futureY = slide.x, slide.y
-    cols, len = world:check(item, futureX, futureY, filter)
+  respond = function(world, col, x,y,w,h, futureX, futureY, filter)
+    local touch, slide = col.touch, col.slide
+    x,y                = touch.x, touch.y
+    futureX, futureY   = slide.x, slide.y
+    local cols, len    = world:project(x,y,w,h, futureX, futureY, filter)
     return futureX, futureY, cols, len
   end
 }
@@ -343,11 +337,11 @@ local bounce = {
     end
   end,
 
-  respond = function(world, col, futureX, futureY, filter)
-    local item, touch, bounce = col.item, col.touch, col.bounce
-    world:update(item, touch.x, touch.y)
-    futureX, futureY = bounce.x, bounce.y
-    cols, len = world:check(item, futureX, futureY, filter)
+  respond = function(world, col, x,y,w,h, futureX, futureY, filter)
+    local touch, bounce = col.touch, col.bounce
+    x,y                = touch.x, touch.y
+    futureX, futureY   = bounce.x, bounce.y
+    local cols, len    = world:project(x,y,w,h, futureX, futureY, filter)
     return futureX, futureY, cols, len
   end
 }
@@ -470,24 +464,6 @@ local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
   return itemInfo, itemInfoLen
 end
 
-local detectCollision = function(self, item, other, futureX, futureY, filter)
-  local collisionTypeName = filter(other)
-  if not collisionTypeName then return end
-
-  local collisionType = self:getCollisionType(collisionTypeName)
-
-  local r, o = getRect(self, item), getRect(self, other)
-  local col = collisionType.detect(r.x, r.y, r.w, r.h, o.x, o.y, o.w, o.h, futureX, futureY)
-
-  if not col then return end
-
-  col.item     = item
-  col.other    = other
-  col.other_id = o.id
-  col.type     = collisionTypeName
-
-  return col
-end
 
 --------------------------
 
@@ -546,13 +522,23 @@ end
 function World:check(item, futureX, futureY, filter)
   filter = filter or default_filter
 
-  local rect = getRect(self, item)
+  local itemFilter = function(other)
+    return other ~= item and filter(other)
+  end
+
+  local r = getRect(self, item)
+
+  return self:project(r.x, r.y, r.w, r.h, futureX, futureY, itemFilter)
+end
+
+function World:project(x,y,w,h, futureX, futureY, filter)
+  futureX = futureX or x
+  futureY = futureY or y
+  filter  = filter  or default_filter
+
   local collisions, len = {}, 0
 
-  local visited = { [item] = true }
-
-  local x,y,w,h = rect.x, rect.y, rect.w, rect.h
-  futureX, futureY = futureX or x, futureY or y
+  local visited = {}
 
   -- TODO this could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding rect of the whole movement. Conditional to building a queryPolygon method
@@ -567,10 +553,22 @@ function World:check(item, futureX, futureY, filter)
   for other,_ in pairs(dictItemsInCellRect) do
     if not visited[other] then
       visited[other] = true
-      local col = detectCollision(self, item, other, futureX, futureY, filter)
-      if col then
-        len = len + 1
-        collisions[len] = col
+
+      local collisionTypeName = filter(other)
+      if collisionTypeName then
+        local collisionType = self:getCollisionType(collisionTypeName)
+        local o   = getRect(self, other)
+        local col = collisionType.detect(x, y, w, h, o.x, o.y, o.w, o.h, futureX, futureY)
+
+        if col then
+          col.item     = item
+          col.other    = other
+          col.other_id = o.id
+          col.type     = collisionTypeName
+
+          len = len + 1
+          collisions[len] = col
+        end
       end
     end
   end
@@ -629,6 +627,8 @@ function World:queryRect(x,y,w,h, filter)
 
   return items, len
 end
+
+
 
 function World:queryPoint(x,y, filter)
   local cx,cy = self:toCell(x,y)
@@ -690,16 +690,19 @@ function World:getCollisionType(name)
 end
 
 function World:move(item, futureX, futureY, filter)
+  filter = filter or default_filter
 
   local res, res_len = {}, 0
 
-  local visited = {}
+  local visited = {[item] = true}
   local visitedFilter = function(item)
     if visited[item] then return false end
     return filter(item)
   end
 
-  local cols, len = self:check(item, futureX, futureY, filter)
+  local cols, len = self:check(item, futureX, futureY, visitedFilter)
+
+  local r = getRect(self, item)
 
   while len > 0 do
     local col  = cols[1]
@@ -710,13 +713,20 @@ function World:move(item, futureX, futureY, filter)
     visited[col.other] = true
 
     local collisionType = self:getCollisionType(col.type)
-    futureX, futureY, cols, len = collisionType.respond(self, col, futureX, futureY, visitedFilter)
+
+    futureX, futureY, cols, len = collisionType.respond(
+      self,
+      col,
+      r.x, r.y, r.w, r.h,
+      futureX, futureY,
+      visitedFilter
+    )
   end
+
 
   self:update(item, futureX, futureY)
 
   return futureX, futureY, res, res_len
-
 end
 
 bump.newWorld = function(cellSize)

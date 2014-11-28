@@ -397,7 +397,7 @@ describe('World', function()
       end)
     end)
 
-    describe('when bouncing', function()
+    describe('#focus when bouncing', function()
       it('bounces on each element',function()
         local a  = world:add('a', 0,0,1,1)
         local b  = world:add('b', 0,2,1,2)
