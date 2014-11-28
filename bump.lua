@@ -44,9 +44,6 @@ local function nearest(x, a, b)
   if abs(a - x) < abs(b - x) then return a else return b end
 end
 
-
-
-
 local function assertType(desiredType, value, name)
   if type(value) ~= desiredType then
     error(name .. ' must be a ' .. desiredType .. ', but was ' .. tostring(value) .. '(a ' .. type(value) .. ')')
@@ -694,7 +691,7 @@ end
 function World:move(item, futureX, futureY, filter)
   filter = filter or default_filter
 
-  local res, res_len = {}, 0
+  local cols, len = {}, 0
 
   local visited = {[item] = true}
   local visitedFilter = function(item)
@@ -705,19 +702,18 @@ function World:move(item, futureX, futureY, filter)
   local r = getRect(self, item)
   local x,y,w,h = r.x,r.y,r.w,r.h
 
-  local cols, len = self:project(x,y,w,h,futureX,futureY, visitedFilter)
+  local projected_cols, projected_len = self:project(x,y,w,h,futureX,futureY, visitedFilter)
 
-  while len > 0 do
-    local col  = cols[1]
-
-    res_len      = res_len + 1
-    res[res_len] = col
+  while projected_len > 0 do
+    local col = projected_cols[1]
+    len       = len + 1
+    cols[len] = col
 
     visited[col.other] = true
 
     local collisionType = self:getCollisionType(col.type)
 
-    futureX, futureY, cols, len = collisionType.respond(
+    futureX, futureY, projected_cols, projected_len = collisionType.respond(
       self,
       col,
       x, y, w, h,
@@ -729,7 +725,7 @@ function World:move(item, futureX, futureY, filter)
 
   self:update(item, futureX, futureY)
 
-  return futureX, futureY, res, res_len
+  return futureX, futureY, cols, len
 end
 
 bump.newWorld = function(cellSize)
