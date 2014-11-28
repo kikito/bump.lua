@@ -513,18 +513,6 @@ function World:update(item, x2,y2,w2,h2)
   end
 end
 
-function World:check(item, futureX, futureY, filter)
-  filter = filter or default_filter
-
-  local itemFilter = function(other)
-    return other ~= item and filter(other)
-  end
-
-  local x,y,w,h = getRect(self, item)
-
-  return self:project(x,y,w,h, futureX, futureY, itemFilter)
-end
-
 function World:project(x,y,w,h, futureX, futureY, filter)
   assertIsRect(x,y,w,h)
 
@@ -573,8 +561,6 @@ function World:project(x,y,w,h, futureX, futureY, filter)
   return collisions, len
 end
 
-
-
 function World:getRect(item)
   return getRect(self, item)
 end
@@ -621,8 +607,6 @@ function World:queryRect(x,y,w,h, filter)
 
   return items, len
 end
-
-
 
 function World:queryPoint(x,y, filter)
   local cx,cy = self:toCell(x,y)
