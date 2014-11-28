@@ -355,9 +355,6 @@ local function sortByTiAndDistance(a,b)
     local ir, ar, br = a.itemRect, a.otherRect, b.otherRect
     local ad = rect_getSquareDistance(ir.x,ir.y,ir.w,ir.h, ar.x,ar.y,ar.w,ar.h)
     local bd = rect_getSquareDistance(ir.x,ir.y,ir.w,ir.h, br.x,br.y,br.w,br.h)
-    if ad == bd then
-      return a.other_id < b.other_id
-    end
     return ad < bd
   end
   return a.ti < b.ti
@@ -368,7 +365,7 @@ local function getRect(self, item)
   if not rect then
     error('Item ' .. tostring(item) .. ' must be added to the world before getting its rect. Use world:add(item, x,y,w,h) to add it first.')
   end
-  return rect
+  return rect.x, rect.y, rect.w, rect.h
 end
 
 local function addItemToCell(self, item, cx, cy)
@@ -474,8 +471,7 @@ function World:add(item, x,y,w,h)
   end
   assertIsRect(x,y,w,h)
 
-  self.lastId = self.lastId + 1
-  self.rects[item] = {x=x,y=y,w=w,h=h,id=self.lastId}
+  self.rects[item] = {x=x,y=y,w=w,h=h}
 
   local cl,ct,cw,ch = grid_toCellRect(self.cellSize, x,y,w,h)
   for cy = ct, ct+ch-1 do
@@ -488,10 +484,10 @@ function World:add(item, x,y,w,h)
 end
 
 function World:remove(item)
-  local rect = getRect(self, item)
+  local x,y,w,h = getRect(self, item)
 
   self.rects[item] = nil
-  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, rect.x,rect.y,rect.w,rect.h)
+  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, x,y,w,h)
   for cy = ct, ct+ch-1 do
     for cx = cl, cl+cw-1 do
       removeItemFromCell(self, item, cx, cy)
@@ -499,19 +495,20 @@ function World:remove(item)
   end
 end
 
-function World:update(item, x,y,w,h)
-  local rect = getRect(self, item)
-  w,h = w or rect.w, h or rect.h
-  assertIsRect(x,y,w,h)
-  if rect.x ~= x or rect.y ~= y or rect.w ~= w or rect.h ~= h then
+function World:update(item, x2,y2,w2,h2)
+  local x,y,w,h = getRect(self, item)
+  w2,h2 = w2 or w, h2 or h
+  assertIsRect(x2,y2,w2,h2)
+  if x ~= x2 or y ~= y2 or w ~= w2 or h ~= h2 then
     local cellSize = self.cellSize
-    local cl1,ct1,cw1,ch1 = grid_toCellRect(cellSize, rect.x,rect.y,rect.w,rect.h)
-    local cl2,ct2,cw2,ch2 = grid_toCellRect(cellSize, x,y,w,h)
+    local cl1,ct1,cw1,ch1 = grid_toCellRect(cellSize, x,y,w,h)
+    local cl2,ct2,cw2,ch2 = grid_toCellRect(cellSize, x2,y2,w2,h2)
     if cl1==cl2 and ct1==ct2 and cw1==cw2 and ch1==ch2 then
-      rect.x, rect.y, rect.w, rect.h = x,y,w,h
+      local rect = self.rects[item]
+      rect.x, rect.y, rect.w, rect.h = x2,y2,w2,h2
     else
       self:remove(item)
-      self:add(item, x,y,w,h)
+      self:add(item, x2,y2,w2,h2)
     end
   end
 end
@@ -523,9 +520,9 @@ function World:check(item, futureX, futureY, filter)
     return other ~= item and filter(other)
   end
 
-  local r = getRect(self, item)
+  local x,y,w,h = getRect(self, item)
 
-  return self:project(r.x, r.y, r.w, r.h, futureX, futureY, itemFilter)
+  return self:project(x,y,w,h, futureX, futureY, itemFilter)
 end
 
 function World:project(x,y,w,h, futureX, futureY, filter)
@@ -556,13 +553,12 @@ function World:project(x,y,w,h, futureX, futureY, filter)
       local collisionTypeName = filter(other)
       if collisionTypeName then
         local collisionType = self:getCollisionType(collisionTypeName)
-        local o   = getRect(self, other)
-        local col = collisionType.detect(x, y, w, h, o.x, o.y, o.w, o.h, futureX, futureY)
+        local ox,oy,ow,oh   = getRect(self, other)
+        local col           = collisionType.detect(x,y,w,h, ox,oy,ow,oh, futureX, futureY)
 
         if col then
           col.item     = item
           col.other    = other
-          col.other_id = o.id
           col.type     = collisionTypeName
 
           len = len + 1
@@ -580,8 +576,7 @@ end
 
 
 function World:getRect(item)
-  local rect = getRect(self, item)
-  return { x = rect.x, y = rect.y, w = rect.w, h = rect.h }
+  return getRect(self, item)
 end
 
 function World:countCells()
@@ -699,8 +694,7 @@ function World:move(item, futureX, futureY, filter)
     return filter(item)
   end
 
-  local r = getRect(self, item)
-  local x,y,w,h = r.x,r.y,r.w,r.h
+  local x,y,w,h = getRect(self, item)
 
   local projected_cols, projected_len = self:project(x,y,w,h,futureX,futureY, visitedFilter)
 
@@ -735,7 +729,6 @@ bump.newWorld = function(cellSize)
     rects          = {},
     rows           = {},
     nonEmptyCells  = {},
-    lastId         = 0,
     collisionTypes = {}
   }, World_mt)
 
