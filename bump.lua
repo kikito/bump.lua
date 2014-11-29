@@ -68,7 +68,7 @@ local default_filter = function()
 end
 
 ------------------------------------------
--- Axis-aligned bounding box functions
+-- Rectangle functions
 ------------------------------------------
 
 local function rect_getNearestCorner(x,y,w,h, px, py)
@@ -348,6 +348,11 @@ local bounce = {
 -- World
 ------------------------------------------
 
+local World = {}
+local World_mt = {__index = World}
+
+-- Private functions and methods
+
 local function sortByWeight(a,b) return a.weight < b.weight end
 
 local function sortByTiAndDistance(a,b)
@@ -450,59 +455,19 @@ local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
   return itemInfo, itemInfoLen
 end
 
-
---------------------------
-
-local World = {}
-local World_mt = {__index = World}
-
-function World:add(item, x,y,w,h)
-  local rect = self.rects[item]
-  if rect then
-    error('Item ' .. tostring(item) .. ' added to the world twice.')
+local function getCollisionTypeByName(self, name)
+  local collisionType = self.collisionTypes[name]
+  if not collisionType then
+    error(('Unknown collision type: %s (%s)'):format(name, type(name)))
   end
-  assertIsRect(x,y,w,h)
-
-  self.rects[item] = {x=x,y=y,w=w,h=h}
-
-  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, x,y,w,h)
-  for cy = ct, ct+ch-1 do
-    for cx = cl, cl+cw-1 do
-      addItemToCell(self, item, cx, cy)
-    end
-  end
-
-  return item
+  return collisionType
 end
 
-function World:remove(item)
-  local x,y,w,h = getRect(self, item)
 
-  self.rects[item] = nil
-  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, x,y,w,h)
-  for cy = ct, ct+ch-1 do
-    for cx = cl, cl+cw-1 do
-      removeItemFromCell(self, item, cx, cy)
-    end
-  end
-end
+-- Misc Public Methods
 
-function World:update(item, x2,y2,w2,h2)
-  local x,y,w,h = getRect(self, item)
-  w2,h2 = w2 or w, h2 or h
-  assertIsRect(x2,y2,w2,h2)
-  if x ~= x2 or y ~= y2 or w ~= w2 or h ~= h2 then
-    local cellSize = self.cellSize
-    local cl1,ct1,cw1,ch1 = grid_toCellRect(cellSize, x,y,w,h)
-    local cl2,ct2,cw2,ch2 = grid_toCellRect(cellSize, x2,y2,w2,h2)
-    if cl1==cl2 and ct1==ct2 and cw1==cw2 and ch1==ch2 then
-      local rect = self.rects[item]
-      rect.x, rect.y, rect.w, rect.h = x2,y2,w2,h2
-    else
-      self:remove(item)
-      self:add(item, x2,y2,w2,h2)
-    end
-  end
+function World:addCollisionType(name, collisionType)
+  self.collisionTypes[name] = collisionType
 end
 
 function World:project(x,y,w,h, futureX, futureY, filter)
@@ -516,7 +481,7 @@ function World:project(x,y,w,h, futureX, futureY, filter)
 
   local visited = {}
 
-  -- TODO this could probably be done with less cells using a polygon raster over the cells instead of a
+  -- This could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding rect of the whole movement. Conditional to building a queryPolygon method
   local tl, tt = min(futureX, x),       min(futureY, y)
   local tr, tb = max(futureX + w, x+w), max(futureY + h, y+h)
@@ -532,12 +497,11 @@ function World:project(x,y,w,h, futureX, futureY, filter)
 
       local collisionTypeName = filter(other)
       if collisionTypeName then
-        local collisionType = self:getCollisionType(collisionTypeName)
-        local ox,oy,ow,oh   = getRect(self, other)
+        local collisionType = getCollisionTypeByName(self, collisionTypeName)
+        local ox,oy,ow,oh   = self:getRect(other)
         local col           = collisionType.detect(x,y,w,h, ox,oy,ow,oh, futureX, futureY)
 
         if col then
-          col.item     = item
           col.other    = other
           col.type     = collisionTypeName
 
@@ -563,6 +527,10 @@ function World:countCells()
   return count
 end
 
+function World:hasItem(item)
+  return not not self.rects[item]
+end
+
 function World:getRect(item)
   local rect = self.rects[item]
   if not rect then
@@ -579,9 +547,8 @@ function World:toCell(x,y)
   return grid_toCell(self.cellSize, x, y)
 end
 
-function World:hasItem(item)
-  return not not self.rects[item]
-end
+
+--- Query methods
 
 function World:queryRect(x,y,w,h, filter)
 
@@ -651,16 +618,56 @@ function World:querySegmentWithCoords(x1, y1, x2, y2, filter)
   return itemInfo, len
 end
 
-function World:addCollisionType(name, collisionType)
-  self.collisionTypes[name] = collisionType
+
+--- Main methods
+
+function World:add(item, x,y,w,h)
+  local rect = self.rects[item]
+  if rect then
+    error('Item ' .. tostring(item) .. ' added to the world twice.')
+  end
+  assertIsRect(x,y,w,h)
+
+  self.rects[item] = {x=x,y=y,w=w,h=h}
+
+  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, x,y,w,h)
+  for cy = ct, ct+ch-1 do
+    for cx = cl, cl+cw-1 do
+      addItemToCell(self, item, cx, cy)
+    end
+  end
+
+  return item
 end
 
-function World:getCollisionType(name)
-  local collisionType = self.collisionTypes[name]
-  if not collisionType then
-    error(('Unknown collision type: %s (%s)'):format(name, type(name)))
+function World:remove(item)
+  local x,y,w,h = self:getRect(item)
+
+  self.rects[item] = nil
+  local cl,ct,cw,ch = grid_toCellRect(self.cellSize, x,y,w,h)
+  for cy = ct, ct+ch-1 do
+    for cx = cl, cl+cw-1 do
+      removeItemFromCell(self, item, cx, cy)
+    end
   end
-  return collisionType
+end
+
+function World:update(item, x2,y2,w2,h2)
+  local x,y,w,h = self:getRect(item)
+  w2,h2 = w2 or w, h2 or h
+  assertIsRect(x2,y2,w2,h2)
+  if x ~= x2 or y ~= y2 or w ~= w2 or h ~= h2 then
+    local cellSize = self.cellSize
+    local cl1,ct1,cw1,ch1 = grid_toCellRect(cellSize, x,y,w,h)
+    local cl2,ct2,cw2,ch2 = grid_toCellRect(cellSize, x2,y2,w2,h2)
+    if cl1==cl2 and ct1==ct2 and cw1==cw2 and ch1==ch2 then
+      local rect = self.rects[item]
+      rect.x, rect.y, rect.w, rect.h = x2,y2,w2,h2
+    else
+      self:remove(item)
+      self:add(item, x2,y2,w2,h2)
+    end
+  end
 end
 
 function World:move(item, futureX, futureY, filter)
@@ -700,6 +707,9 @@ function World:move(item, futureX, futureY, filter)
 
   return futureX, futureY, cols, len
 end
+
+
+-- Public library functions
 
 bump.newWorld = function(cellSize)
   cellSize = cellSize or 64
