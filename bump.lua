@@ -5,7 +5,7 @@ local bump = {
   _LICENSE     = [[
     MIT LICENSE
 
-    Copyright (c) 2013 Enrique García Cota
+    Copyright (c) 2014 Enrique García Cota
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the
