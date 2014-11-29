@@ -26,7 +26,7 @@ before_install:
   - cd $TRAVIS_BUILD_DIR
 
 install:
-  - sudo -E luarocks install busted
+  - sudo -E luarocks install busted 1.11.1-1
 
 script:
   - sudo -E busted -v
