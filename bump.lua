@@ -360,14 +360,6 @@ local function sortByTiAndDistance(a,b)
   return a.ti < b.ti
 end
 
-local function getRect(self, item)
-  local rect = self.rects[item]
-  if not rect then
-    error('Item ' .. tostring(item) .. ' must be added to the world before getting its rect. Use world:add(item, x,y,w,h) to add it first.')
-  end
-  return rect.x, rect.y, rect.w, rect.h
-end
-
 local function addItemToCell(self, item, cx, cy)
   self.rows[cy] = self.rows[cy] or setmetatable({}, {__mode = 'v'})
   local row = self.rows[cy]
@@ -561,10 +553,6 @@ function World:project(x,y,w,h, futureX, futureY, filter)
   return collisions, len
 end
 
-function World:getRect(item)
-  return getRect(self, item)
-end
-
 function World:countCells()
   local count = 0
   for _,row in pairs(self.rows) do
@@ -573,6 +561,14 @@ function World:countCells()
     end
   end
   return count
+end
+
+function World:getRect(item)
+  local rect = self.rects[item]
+  if not rect then
+    error('Item ' .. tostring(item) .. ' must be added to the world before getting its rect. Use world:add(item, x,y,w,h) to add it first.')
+  end
+  return rect.x, rect.y, rect.w, rect.h
 end
 
 function World:toWorld(cx, cy)
@@ -678,7 +674,7 @@ function World:move(item, futureX, futureY, filter)
     return filter(item)
   end
 
-  local x,y,w,h = getRect(self, item)
+  local x,y,w,h = self:getRect(item)
 
   local projected_cols, projected_len = self:project(x,y,w,h,futureX,futureY, visitedFilter)
 
@@ -689,7 +685,7 @@ function World:move(item, futureX, futureY, filter)
 
     visited[col.other] = true
 
-    local collisionType = self:getCollisionType(col.type)
+    local collisionType = getCollisionTypeByName(self, col.type)
 
     futureX, futureY, projected_cols, projected_len = collisionType.respond(
       self,
