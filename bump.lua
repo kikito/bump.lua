@@ -64,7 +64,7 @@ local function assertIsRect(x,y,w,h)
 end
 
 local default_filter = function()
-  return 'touch'
+  return 'slide'
 end
 
 ------------------------------------------
