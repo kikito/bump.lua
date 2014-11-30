@@ -137,11 +137,11 @@ local function rect_getSquareDistance(x1,y1,w1,h1, x2,y2,w2,h2)
   return dx*dx + dy*dy
 end
 
-local function rect_detectCollision(x1,y1,w1,h1, x2,y2,w2,h2, futureX, futureY)
-  futureX = futureX or x1
-  futureY = futureY or x1
+local function rect_detectCollision(x1,y1,w1,h1, x2,y2,w2,h2, goalX, goalY)
+  goalX = goalX or x1
+  goalY = goalY or x1
 
-  local dx, dy      = futureX - x1, futureY - y1
+  local dx, dy      = goalX - x1, goalY - y1
   local x,y,w,h     = rect_getDiff(x1,y1,w1,h1, x2,y2,w2,h2)
 
   local overlaps, ti, nx, ny
@@ -260,42 +260,42 @@ end
 -- Collision Types
 ------------------------------------------
 
-local touch = function(world, col, x,y,w,h, futureX, futureY, filter)
+local touch = function(world, col, x,y,w,h, goalX, goalY, filter)
   local touch = col.touch
   return touch.x, touch.y, {}, 0
 end
 
-local cross = function(world, col, x,y,w,h, futureX, futureY, filter)
+local cross = function(world, col, x,y,w,h, goalX, goalY, filter)
   local touch = col.touch
-  local cols, len = world:project(touch.x, touch.y, w,h, futureX, futureY, filter)
-  return futureX, futureY, cols, len
+  local cols, len = world:project(touch.x, touch.y, w,h, goalX, goalY, filter)
+  return goalX, goalY, cols, len
 end
 
-local slide = function(world, col, x,y,w,h, futureX, futureY, filter)
-  futureX = futureX or x
-  futureY = futureY or y
+local slide = function(world, col, x,y,w,h, goalX, goalY, filter)
+  goalX = goalX or x
+  goalY = goalY or y
 
   local touch, move  = col.touch, col.move
   local sx, sy       = touch.x, touch.y
   if move.x ~= 0 or move.y ~= 0 then
     if col.normal.x == 0 then
-      sx = futureX
+      sx = goalX
     else
-      sy = futureY
+      sy = goalY
     end
   end
 
   col.slide = {x = sx, y = sy}
 
   x,y              = touch.x, touch.y
-  futureX, futureY = sx, sy
-  local cols, len  = world:project(x,y,w,h, futureX, futureY, filter)
-  return futureX, futureY, cols, len
+  goalX, goalY = sx, sy
+  local cols, len  = world:project(x,y,w,h, goalX, goalY, filter)
+  return goalX, goalY, cols, len
 end
 
-local bounce = function(world, col, x,y,w,h, futureX, futureY, filter)
-  futureX = futureX or x
-  futureY = futureY or y
+local bounce = function(world, col, x,y,w,h, goalX, goalY, filter)
+  goalX = goalX or x
+  goalY = goalY or y
 
   local touch, move = col.touch, col.move
   local tx, ty = touch.x, touch.y
@@ -303,7 +303,7 @@ local bounce = function(world, col, x,y,w,h, futureX, futureY, filter)
   local bx, by, bnx, bny = tx, ty, 0,0
 
   if move.x ~= 0 or move.y ~= 0 then
-    bnx, bny = futureX - tx, futureY - ty
+    bnx, bny = goalX - tx, goalY - ty
     if col.normal.x == 0 then bny = -bny else bnx = -bnx end
     bx, by = tx + bnx, ty + bny
   end
@@ -312,9 +312,9 @@ local bounce = function(world, col, x,y,w,h, futureX, futureY, filter)
   col.bounceNormal = {x = bnx, y = bny}
 
   x,y                = touch.x, touch.y
-  futureX, futureY   = bx, by
-  local cols, len    = world:project(x,y,w,h, futureX, futureY, filter)
-  return futureX, futureY, cols, len
+  goalX, goalY   = bx, by
+  local cols, len    = world:project(x,y,w,h, goalX, goalY, filter)
+  return goalX, goalY, cols, len
 end
 
 ------------------------------------------
@@ -443,11 +443,11 @@ function World:addCollisionType(name, collisionType)
   self.collisionTypes[name] = collisionType
 end
 
-function World:project(x,y,w,h, futureX, futureY, filter)
+function World:project(x,y,w,h, goalX, goalY, filter)
   assertIsRect(x,y,w,h)
 
-  futureX = futureX or x
-  futureY = futureY or y
+  goalX = goalX or x
+  goalY = goalY or y
   filter  = filter  or default_filter
 
   local collisions, len = {}, 0
@@ -456,8 +456,8 @@ function World:project(x,y,w,h, futureX, futureY, filter)
 
   -- This could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding rect of the whole movement. Conditional to building a queryPolygon method
-  local tl, tt = min(futureX, x),       min(futureY, y)
-  local tr, tb = max(futureX + w, x+w), max(futureY + h, y+h)
+  local tl, tt = min(goalX, x),       min(goalY, y)
+  local tr, tb = max(goalX + w, x+w), max(goalY + h, y+h)
   local tw, th = tr-tl, tb-tt
 
   local cl,ct,cw,ch = grid_toCellRect(self.cellSize, tl,tt,tw,th)
@@ -471,7 +471,7 @@ function World:project(x,y,w,h, futureX, futureY, filter)
       local collisionTypeName = filter(other)
       if collisionTypeName then
         local ox,oy,ow,oh   = self:getRect(other)
-        local col           = rect_detectCollision(x,y,w,h, ox,oy,ow,oh, futureX, futureY)
+        local col           = rect_detectCollision(x,y,w,h, ox,oy,ow,oh, goalX, goalY)
 
         if col then
           col.other    = other
@@ -642,7 +642,7 @@ function World:update(item, x2,y2,w2,h2)
   end
 end
 
-function World:move(item, futureX, futureY, filter)
+function World:move(item, goalX, goalY, filter)
   filter = filter or default_filter
 
   local cols, len = {}, 0
@@ -655,7 +655,7 @@ function World:move(item, futureX, futureY, filter)
 
   local x,y,w,h = self:getRect(item)
 
-  local projected_cols, projected_len = self:project(x,y,w,h,futureX,futureY, visitedFilter)
+  local projected_cols, projected_len = self:project(x,y,w,h, goalX,goalY, visitedFilter)
 
   while projected_len > 0 do
     local col = projected_cols[1]
@@ -666,18 +666,18 @@ function World:move(item, futureX, futureY, filter)
 
     local collisionType = getCollisionTypeByName(self, col.type)
 
-    futureX, futureY, projected_cols, projected_len = collisionType(
+    goalX, goalY, projected_cols, projected_len = collisionType(
       self,
       col,
       x, y, w, h,
-      futureX, futureY,
+      goalX, goalY,
       visitedFilter
     )
   end
 
-  self:update(item, futureX, futureY)
+  self:update(item, goalX, goalY)
 
-  return futureX, futureY, cols, len
+  return goalX, goalY, cols, len
 end
 
 
