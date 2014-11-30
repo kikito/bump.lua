@@ -470,7 +470,6 @@ function World:project(x,y,w,h, futureX, futureY, filter)
 
       local collisionTypeName = filter(other)
       if collisionTypeName then
-        local collisionType = getCollisionTypeByName(self, collisionTypeName)
         local ox,oy,ow,oh   = self:getRect(other)
         local col           = rect_detectCollision(x,y,w,h, ox,oy,ow,oh, futureX, futureY)
 
