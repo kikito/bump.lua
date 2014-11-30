@@ -2,44 +2,36 @@ local bump            = require('bump')
 local detect          = bump.rect.detectCollision
 local collisionTypes  = bump.collisionTypes
 
-local function rect(x,y,w,h)
-  return {x=x,y=y,w=w,h=h}
-end
+local world = bump.newWorld()
 
-local touch = function(r, o, future_x, future_y)
-  local col = detect(r.x, r.y, r.w, r.h,
-                     o.x, o.y, o.w, o.h,
-                     future_x, future_y)
+local touch = function(x,y,w,h, ox,oy,ow,oh, future_x, future_y)
+  local col = detect(x,y,w,h, ox,oy,ow,oh, future_x, future_y)
   return {col.touch.x, col.touch.y, col.normal.x, col.normal.y}
 end
 
-local slide = function(r, o, future_x, future_y)
-  local world = bump.newWorld()
-  local col = detect(r.x, r.y, r.w, r.h,
-                     o.x, o.y, o.w, o.h,
-                     future_x, future_y)
-  collisionTypes.slide(world, col, r.x, r.y, r.w, r.h, future_x, future_y)
+local slide = function(x,y,w,h, ox,oy,ow,oh, future_x, future_y)
+  local col = detect(x,y,w,h, ox,oy,ow,oh, future_x, future_y)
+  collisionTypes.slide(world, col, x, y, w, h, future_x, future_y)
   return {col.touch.x, col.touch.y, col.normal.x, col.normal.y, col.slide.x, col.slide.y}
 end
 
-local bounce = function(r, o, future_x, future_y)
-  local world = bump.newWorld()
-  local col = detect(r.x, r.y, r.w, r.h,
-                     o.x, o.y, o.w, o.h,
-                     future_x, future_y)
-  collisionTypes.bounce(world, col, r.x, r.y, r.w, r.h, future_x, future_y)
+local bounce = function(x,y,w,h, ox,oy,ow,oh, future_x, future_y)
+  local col = detect(x,y,w,h, ox,oy,ow,oh, future_x, future_y)
+  collisionTypes.bounce(world, col, x, y, w, h, future_x, future_y)
   return {col.touch.x, col.touch.y, col.normal.x, col.normal.y, col.bounce.x, col.bounce.y }
 end
 
 describe('bump.rect.detectCollision', function()
   describe('when detecting collisions', function()
     describe('when item is static', function()
+
       describe('when itemRect does not intersect otherRect', function()
         it('returns nil', function()
           local c = detect(0,0,1,1, 5,5,1,1, 0,0)
           assert.is_nil(c)
         end)
       end)
+
       describe('when itemRect overlaps otherRect', function()
         it('returns overlaps, normal, move, ti, diff, itemRect, otherRect', function()
           local c = detect(0,0,7,6, 5,5,1,1, 0, 0)
@@ -53,6 +45,7 @@ describe('bump.rect.detectCollision', function()
 
         end)
       end)
+
     end)
 
     describe('when item is moving', function()
@@ -91,9 +84,6 @@ describe('bump.rect.detectCollision', function()
   end)
 
   describe('when resolving collisions', function()
-
-    local other = rect(0,0,8,8)
-
     describe('on overlaps', function()
       describe('when there is no movement', function()
         it('returns the left,top coordinates of the minimum displacement on static items', function()
@@ -111,76 +101,74 @@ describe('bump.rect.detectCollision', function()
           --        | +-+-+---+-+-+ |    7     8     9
           --        +-+-+ +---+ +-+-+
 
-          assert.same(touch(rect(-1,-1,2,2), other), {-1,-2, 0, -1}) -- 1
-          assert.same(touch(rect( 3,-1,2,2), other), { 3,-2, 0, -1}) -- 2
-          assert.same(touch(rect( 7,-1,2,2), other), { 7,-2, 0, -1}) -- 3
+          assert.same(touch(-1,-1,2,2, 0,0,8,8), {-1,-2, 0, -1}) -- 1
+          assert.same(touch( 3,-1,2,2, 0,0,8,8), { 3,-2, 0, -1}) -- 2
+          assert.same(touch( 7,-1,2,2, 0,0,8,8), { 7,-2, 0, -1}) -- 3
 
-          assert.same(touch(rect(-1, 3,2,2), other), {-1, 8,  0, 1}) -- 4
-          assert.same(touch(rect( 3, 3,2,2), other), { 3, 8,  0, 1}) -- 5
-          assert.same(touch(rect( 7, 3,2,2), other), { 7,-2,  0,-1}) -- 6
+          assert.same(touch(-1, 3,2,2, 0,0,8,8), {-1, 8,  0, 1}) -- 4
+          assert.same(touch( 3, 3,2,2, 0,0,8,8), { 3, 8,  0, 1}) -- 5
+          assert.same(touch( 7, 3,2,2, 0,0,8,8), { 7,-2,  0,-1}) -- 6
 
-          assert.same(touch(rect(-1, 7,2,2), other), {-1, 8,  0, 1}) -- 1
-          assert.same(touch(rect( 3, 7,2,2), other), { 3, 8,  0, 1}) -- 2
-          assert.same(touch(rect( 7, 7,2,2), other), { 7, 8,  0, 1}) -- 3
+          assert.same(touch(-1, 7,2,2, 0,0,8,8), {-1, 8,  0, 1}) -- 1
+          assert.same(touch( 3, 7,2,2, 0,0,8,8), { 3, 8,  0, 1}) -- 2
+          assert.same(touch( 7, 7,2,2, 0,0,8,8), { 7, 8,  0, 1}) -- 3
 
         end)
       end)
 
       describe('when the item is moving', function()
         it('returns the left,top coordinates of the overlaps with the movement line, opposite direction', function()
-          assert.same(touch(rect( 3, 3,2,2), other, 4, 3), { -2,  3, -1,  0})
-          assert.same(touch(rect( 3, 3,2,2), other, 2, 3), {  8,  3,  1,  0})
-          assert.same(touch(rect( 3, 3,2,2), other, 2, 3), {  8,  3,  1,  0})
-          assert.same(touch(rect( 3, 3,2,2), other, 3, 4), {  3, -2,  0, -1})
-          assert.same(touch(rect( 3, 3,2,2), other, 3, 2), {  3,  8,  0,  1})
+          assert.same(touch(3,3,2,2, 0,0,8,8, 4, 3), { -2,  3, -1,  0})
+          assert.same(touch(3,3,2,2, 0,0,8,8, 2, 3), {  8,  3,  1,  0})
+          assert.same(touch(3,3,2,2, 0,0,8,8, 2, 3), {  8,  3,  1,  0})
+          assert.same(touch(3,3,2,2, 0,0,8,8, 3, 4), {  3, -2,  0, -1})
+          assert.same(touch(3,3,2,2, 0,0,8,8, 3, 2), {  3,  8,  0,  1})
         end)
       end)
     end)
 
     describe('on tunnels', function()
       it('returns the coordinates of the item when it starts touching the other, and the normal', function()
-        assert.same(touch(rect( -3,  3,2,2), other, 3,3), { -2,  3, -1,  0})
-        assert.same(touch(rect(  9,  3,2,2), other, 3,3), {  8,  3,  1,  0})
-        assert.same(touch(rect(  3, -3,2,2), other, 3,3), {  3, -2,  0, -1})
-        assert.same(touch(rect(  3,  9,2,2), other, 3,3), {  3,  8,  0,  1})
+        assert.same(touch(-3, 3,2,2, 0,0,8,8, 3,3), { -2,  3, -1,  0})
+        assert.same(touch( 9, 3,2,2, 0,0,8,8, 3,3), {  8,  3,  1,  0})
+        assert.same(touch( 3,-3,2,2, 0,0,8,8, 3,3), {  3, -2,  0, -1})
+        assert.same(touch( 3, 9,2,2, 0,0,8,8, 3,3), {  3,  8,  0,  1})
       end)
     end)
   end)
 end)
 
 describe('collisionTypes.slide', function()
-  local other = rect(0,0,8,8)
   it('slides on overlaps', function()
-    assert.same(slide(rect(3,3,2,2), other, 4, 5), { 0.5, -2, 0,-1, 4, -2})
-    assert.same(slide(rect(3,3,2,2), other, 5, 4), { -2, 0.5, -1,0, -2, 4})
-    assert.same(slide(rect(3,3,2,2), other, 2, 1), { 5.5, 8, 0,1, 2, 8})
-    assert.same(slide(rect(3,3,2,2), other, 1, 2), { 8, 5.5, 1,0, 8, 2})
+    assert.same(slide(3,3,2,2, 0,0,8,8, 4, 5), { 0.5, -2, 0,-1, 4, -2})
+    assert.same(slide(3,3,2,2, 0,0,8,8, 5, 4), { -2, 0.5, -1,0, -2, 4})
+    assert.same(slide(3,3,2,2, 0,0,8,8, 2, 1), { 5.5, 8, 0,1, 2, 8})
+    assert.same(slide(3,3,2,2, 0,0,8,8, 1, 2), { 8, 5.5, 1,0, 8, 2})
   end)
 
   it('slides over tunnels', function()
-    assert.same(slide(rect(10,10,2,2), other, 1, 4), { 7, 8, 0, 1, 1, 8})
-    assert.same(slide(rect(10,10,2,2), other, 4, 1), { 8, 7, 1, 0, 8, 1})
+    assert.same(slide(10,10,2,2, 0,0,8,8, 1, 4), { 7, 8, 0, 1, 1, 8})
+    assert.same(slide(10,10,2,2, 0,0,8,8, 4, 1), { 8, 7, 1, 0, 8, 1})
 
     -- perfect corner case:
-    assert.same(slide(rect(10,10,2,2), other, 1, 1), { 8, 8, 1, 0, 8, 1})
+    assert.same(slide(10,10,2,2, 0,0,8,8, 1, 1), { 8, 8, 1, 0, 8, 1})
   end)
 end)
 
 describe('collisionTypes.bounce', function()
-  local other = rect(0,0,8,8)
   it('bounces on overlaps', function()
-    assert.same(bounce(rect( 3, 3,2,2), other, 4, 5), { 0.5, -2, 0,-1, 4, -9})
-    assert.same(bounce(rect( 3, 3,2,2), other, 5, 4), { -2, 0.5, -1,0, -9, 4})
-    assert.same(bounce(rect( 3, 3,2,2), other, 2, 1), { 5.5, 8, 0,1, 2, 15})
-    assert.same(bounce(rect( 3, 3,2,2), other, 1, 2), { 8, 5.5, 1,0, 15,2})
+    assert.same(bounce( 3, 3,2,2, 0,0,8,8, 4, 5), { 0.5, -2, 0,-1, 4, -9})
+    assert.same(bounce( 3, 3,2,2, 0,0,8,8, 5, 4), { -2, 0.5, -1,0, -9, 4})
+    assert.same(bounce( 3, 3,2,2, 0,0,8,8, 2, 1), { 5.5, 8, 0,1, 2, 15})
+    assert.same(bounce( 3, 3,2,2, 0,0,8,8, 1, 2), { 8, 5.5, 1,0, 15,2})
   end)
 
   it('bounces over tunnels', function()
-    assert.same(bounce(rect(10,10,2,2), other, 1, 4), { 7, 8, 0, 1, 1, 12})
-    assert.same(bounce(rect(10,10,2,2), other, 4, 1), { 8, 7, 1, 0, 12, 1})
+    assert.same(bounce(10,10,2,2, 0,0,8,8, 1, 4), { 7, 8, 0, 1, 1, 12})
+    assert.same(bounce(10,10,2,2, 0,0,8,8, 4, 1), { 8, 7, 1, 0, 12, 1})
 
     -- perfect corner case:
-    assert.same(bounce(rect(10,10,2,2), other, 1, 1), { 8, 8, 1, 0, 15, 1})
+    assert.same(bounce(10,10,2,2, 0,0,8,8, 1, 1), { 8, 8, 1, 0, 15, 1})
   end)
 end)
 
