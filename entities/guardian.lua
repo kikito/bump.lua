@@ -43,9 +43,11 @@ function Guardian:initialize(world, target, camera, x, y)
   self.timeSinceLastTargetAquired = targetCoolDown
 
   -- remove any blocks it touches on creation
-  local cols, len = world:check(self)
+  local others, len = world:queryRect(x,y,width,height)
+  local other
   for i=1,len do
-    world:remove(cols[i].other)
+    other = others[i]
+    if other ~= self then world:remove(other) end
   end
 end
 
