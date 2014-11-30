@@ -4,20 +4,20 @@ local collisionTypes  = bump.collisionTypes
 
 local world = bump.newWorld()
 
-local touch = function(x,y,w,h, ox,oy,ow,oh, future_x, future_y)
-  local col = detect(x,y,w,h, ox,oy,ow,oh, future_x, future_y)
+local touch = function(x,y,w,h, ox,oy,ow,oh, futureX, futureY)
+  local col = detect(x,y,w,h, ox,oy,ow,oh, futureX, futureY)
   return {col.touch.x, col.touch.y, col.normal.x, col.normal.y}
 end
 
-local slide = function(x,y,w,h, ox,oy,ow,oh, future_x, future_y)
-  local col = detect(x,y,w,h, ox,oy,ow,oh, future_x, future_y)
-  collisionTypes.slide(world, col, x, y, w, h, future_x, future_y)
+local slide = function(x,y,w,h, ox,oy,ow,oh, futureX, futureY)
+  local col = detect(x,y,w,h, ox,oy,ow,oh, futureX, futureY)
+  collisionTypes.slide(world, col, x, y, w, h, futureX, futureY)
   return {col.touch.x, col.touch.y, col.normal.x, col.normal.y, col.slide.x, col.slide.y}
 end
 
-local bounce = function(x,y,w,h, ox,oy,ow,oh, future_x, future_y)
-  local col = detect(x,y,w,h, ox,oy,ow,oh, future_x, future_y)
-  collisionTypes.bounce(world, col, x, y, w, h, future_x, future_y)
+local bounce = function(x,y,w,h, ox,oy,ow,oh, futureX, futureY)
+  local col = detect(x,y,w,h, ox,oy,ow,oh, futureX, futureY)
+  collisionTypes.bounce(world, col, x, y, w, h, futureX, futureY)
   return {col.touch.x, col.touch.y, col.normal.x, col.normal.y, col.bounce.x, col.bounce.y }
 end
 
