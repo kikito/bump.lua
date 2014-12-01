@@ -1,4 +1,4 @@
-## bump.lua
+# bump.lua
 
 Lua collision-detection library for axis-aligned rectangles. Its main features are:
 
@@ -25,6 +25,7 @@ The demos are LÖVE based, but this library can be used in any Lua-compatible en
 ## Example
 
 ```lua
+
 local bump = require 'bump'
 
 -- The grid cell size can be specified via the initialize method
@@ -36,27 +37,27 @@ local A = {name="A"}
 local B = {name="B"}
 
 -- insert both rectangles into bump
-world:add(A,   0, 0, 100, 100) -- left, top, width, height
-world:add(B, 300, 0, 100, 100)
+world:add(A,   0, 0,    64, 256) -- left, top, width, height
+world:add(B,   0, -100, 32, 32)
 
--- see if A is colliding with anything
-local collisions, len = world:check(B)
-assert(len == 0)
+-- Try to move B to 0,64. If it collides with A, "slide over it"
+local actualX, actualY, cols, len = world:move(B, 0,64)
 
--- check whether moving B to 100, 100 would make it collide with A
-local collisions, len = world:check(B, 50, 0, 100, 100)
-
--- prints "B collisions with A."
-for _,col in ipairs(collision) do -- If more than one simultaneous collision, they are sorted out by proximity
-  print(("%s collisions with %s."):format(col.item.name, col.other.name))
+-- prints "Attempted to move to 0,64, but ended up in 0,-32 due to 1 collisions"
+if len > 0 then
+  print(("Attempted to move to 0,64, but ended up in %d,%d due to %d collisions"):format(actualX, actualY, len))
+else
+  print("Moved B to 100,100 without collisions")
 end
 
--- Move B only until it starts touching A on its way to 100, 100
-local dx, dy = collisions[1]:getTouch()
-world:move(B, dx, dy)
+-- prints the new coordinates of B: 0, -32, 32, 32
+print(world:getRect(B))
 
-local collisions, len = world:check(B)
-assert(len == 0)
+-- prints "Collision with A"
+for i=1,len do -- If more than one simultaneous collision, they are sorted out by proximity
+  local col = cols[i]
+  print(("Collision with %s."):format(col.other.name))
+end
 
 -- remove A and B from the world
 world:remove(A)
@@ -80,13 +81,17 @@ http://github.com/kikito/bump.lua/tree/demo
 
 You will need [LÖVE](http://love2d.org) in order to try any of them.
 
-## API
+## Basic API
 
 ### Requiring the library
 
 ``` lua
 local bump = require 'bump'
 ```
+
+The following methods (`bump.newWorld`, `world:add`, `world:remove`, `world:update`, `world:move` & `world:check`) are *basic* for
+working with bump, as well as the 4 collision responses. If you want to use bump.lua effectively, you will need to understand at least
+these.
 
 ### Creating a world
 
@@ -110,15 +115,17 @@ The rest of the methods we have are for the worlds that we create.
 ### Adding items to the world
 
 ``` lua
-world:add(item, l,t,w,h)
+world:add(item, x,y,w,h)
 ```
 
 `world:add` is what you need to insert a new item in a world. "Items" are "anything that matters to your collision". It can be the player character,
 a tile, a missile etc. In fact, you can insert items that don't participate in the collision at all - like puffs of smoke or background tiles. This
 can be handy if you want to use the bump world as a spatial database in addition to a collision detector (see the "queries section" below for mode details).
 
+Each `item` will have an associated "rectangle" in the `world`.
+
 * `item` is the new item being inserted (usually a table representing a game object, like `player` or `ground_tile`).
-* `l,t,w,h` are the dimensions of the item: left, top, width, height. They are all mandatory.
+* `x,y,w,h`: the rectangle associated to `item` in the world: left, top, width, height. They are all mandatory.
 
 `world:add` returns no values. It generates no collisions - you can call `world:check(item)` after adding the item if that's what you desire.
 
@@ -131,7 +138,9 @@ If you try to add an item to a world that already contains it, you will get an e
 world:remove(item)
 ```
 
-Removes the item from the world.
+bump.lua stores *hard references* to any items that you add (with `world:add`). If you decide that a item is no longer necessary, in addition to removing it
+from your "entity list", you must also remove it from the world using `world:remove`. Otherwise it will still be there, and other objects might still collide
+with it.
 
 * `item` must be something previously inserted in the world with `world:add(item, l,t,w,h)`. If this is not the case, `world:remove` will raise an error.
 
@@ -140,187 +149,157 @@ with `world:move` or checking collisions with `world:check` will raise an error.
 
 It is ok to remove an object from the world and later add it again. In fact, some bump methods do this internally.
 
-### Moving items in the world
+This method returns nothing.
+
+### Changing the position and dimensions of items in the world
 
 ``` lua
-world:move(item, l,t,w,h)
+world:update(item, x,y,<w>,<h>)
 ```
 
-Moves the item inside the world.
+Even if your "player" has attributes like `player.x` and `player.y`, changing those will not automatically change them inside `world`. `update` is one of
+the ways to do so: it changes the rect of `item` inside `world`.
+
+* `item` must be something previously inserted in the world with `world:add(item, l,t,w,h)`. Otherwise, `world:update` will raise an error.
+* `x,y,w,h` the new dimensions of `item`. `x` and `y` are mandatory. `w` and `h` will default to the values the world already had for `item`.
+
+This method always changes the rect associated to `item`, ignoring all collisions (use `world:move` for that). It returns nothing.
+
+
+### Moving an item in the world, reacting to collisions
+
+``` lua
+local actualX, actualY, cols, len = world:move(item, goalX, goalY, <filter>)
+```
+
+This is probably the most useful method of bump. It moves the item inside the world towards a desired position, but taking collisions into account.
 
 * `item` must be something previously inserted in the world with `world:add(item, l,t,w,h)`. Otherwise, `world:move` will raise an error.
-* `l,t,w,h` are the new left, top, width and height coordinates of `item` inside `world`. `l,t` are mandatory, but `w,h` are optional (the width and height will
-   remain unchanged if not passed)
+* `goalX, goalY` are the *desired* `x` and `y` coordinates. The item will end up in those coordinates if it doesn't collide with anything.
+  If, however, it collides with 1 or more other items, it can end up in a different set of coordinates.
+* `filter` is an optional function. If provided, it must have this signature: `local type = filter(other)`. By default, `filter` always returns `"slide"`.
+  * `other` is an item (different from `item`) which can collide with `item`.
+  * `type` is a value which defines how `item` collides with `other`.
+    * If `type` is `false` or `nil`, `item` will ignore `other` completely (there will be no collision)
+    * If `type` is `"touch"`, `"cross"`, `"slide"` or `"bounce"`, `item` will respond to the collisions in different ways (explained below)
+    * Any other value (unless handled in an advanced way) will provoke an error
+* `actualX, actualY` are the coordinates where the object ended up after colliding with other objects in the world while trying to get to
+  `goalX, goalY`. They can be equal to `goalX, goalY` if, for example, no collisions happened.
+* `len` is the amount of collisions produced. It is equivalent to `#cols`
+* `cols` is an array of all the collisions that were detected. Each collision is a table. The most important item in that table is `cols[i].other`, which
+  points to the item that collided with `item`. A full description of what's inside of each collision can be found on the "Advanced API" section.
 
-This function returns no values.
-
-It is equivalent to doing
-
-``` lua
-world:remove(item)
-world:add(item, l,t,w,h)
-```
-
-except that `w` and `h` will be automatically filled with their existing values if not provided.
-
-
-### Collision detection
-
-``` lua
-local collisions, len = world:check(item, future_l, future_t, filter)
-```
-
-It returns an array of collisions, indicating which items collide with `item`
-
-* `item` is the item being checked for collisions. Must be something previously inserted in the world with `world:add(item, l,t,w,h)`, or an error will be raised.
-* `future_l` means "next left". It is an optional value. It will be explained with more detail below.
-* `future_t` means "next top". It is also optional. It will be explained later.
-* `filter` is an optional function. The function only takes one parameter, called `other`, which will be every object with which `item` collides. If `filter` returns `false` or `nil`,
-  then `other` will be ignored. The order in which filter is called is not guaranteed. By default all items collide. It is recommended that `filter` executes fast.
-* `collisions` is an array of zero or more collisions between `item` and other objects inserted in the world. Each collision has an attribute called `.other`, which
-  points to the colliding item. Only one collision per "other" object will be returned. When the item is moving (see below) the collisions will be returned "in order":
-  the ones which happen "first along the movement of `item`" will be first in `collisions`.
-* `len` is the length of `collisions`. Exactly equivalent to `#collisions` (but a bit more efficient).
-
-`world:check` is the core method of the library, so it requires further explanations.
-
-The only mandatory parameter this method requires is `item`. With no other parameters, this method will return the collisions of the object "as it is in the world".
+The usual way you would use move is: calculate a "desirable" `goalX, goalY` point for an item (maybe using its velocity), pass it to move, and then use `actualX, actualY`
+as the real "updates" - . For example, here's how a player would move:
 
 ``` lua
--- Check if the player is colliding with anything in his current position
-local collisions, len = world:check(player)
+function movePlayer(player, dt)
+  local goalX, goalY = player.vx * dt, player.vy * dt
+  local actualX, actualY, cols, len = world:move(player, goalX, goalY)
+  player.x, player.y = actualX, actualY
+  -- deal with the collisions
+  for i=1,len do
+    print('collided with ' .. tostring(cols[i].other))
+  end
+end
 ```
 
-In this case, `item` is not moving, and we want to know which other items in the `world` collide with it. The object that "collides" the most (has the most surface overlap)
-with item will appear in `collisions[1].other`. The second will appear in `collisions[2].other`, etc. If no object collides with `item`, then `collisions` will
-be empty and `len` will be 0.
-
-`future_l` and `future_t` are "possible future values for the left top coordinates of the item". When you pass them, you get "the collisions that will be produced if `item` moves
-from its current position to `future_l`, `future_t`".
+### Checking for collisions without moving
 
 ``` lua
--- Check if the player would collide with anything while it moves to 100, 200
-local collisions, len = world:check(player, 100, 200)
+local actualX, actualY, cols, len = world:check(item, goalX, goalY, <filter>)
 ```
 
-In this case, `item` (the player) wants to move to `{100, 200}`. If `len` is 0, that means that there are no collisions and it can move there freely. Otherwise, `len` will be
-greater than 0, and the `collisions` table can be used to sort out exactly what happens with the player (more about this on the "Resolution" section). This form of collision
-detection is able to detect tunnelling (even if `item` moves "very fast", it will still collide with other objects).
+It returns the position where `item` would end up, and the collisions it would encounter, should it attempt to move to `goalX, goalY` with the specified `filter`.
 
-Note that `world:check` does *not* move the item at all - you will have to move it with `world:move`.
+Notice that `check` has the same parameters and return values as `move`. The difference is that the former does not update the position of `item` in the world - you
+would have to call `world:update` in order to do that.
 
-The last parameter is straightforward: any "possible candidate" to collide with `item` will be passed to this
-function if it exists. If the function returns `false` or `nil`, then the candidate will be ignored. By default, no candidates are ignored.
+The equivalent code to the previous example using `check` would be:
 
 ``` lua
--- Check if the player would collide with anything while it moves to 100, 200
--- Ignore enemies if the player is invincible (will still collide with the ground, walls, etc)
-local collisions, len = world:check(player, 100, 200, function(other)
-  if player.invincible and other.isEnemy then return false end
-  return true -- collide with everything else
-end)
+function movePlayer(player, dt)
+  local goalX, goalY = player.vx * dt, player.vy * dt
+  local actualX, actualY, cols, len = world:check(player, goalX, goalY)
+  world:update(player, actualX, actualY) -- update the player's rectangle in the world
+  player.x, player.y = actualX, actualY
+  ... <deal with the collisions as before>
+end
 ```
 
-### Collision resolution
+`item` is useful for things like "planing in advance" or "studying alternatives", when moving is still not fully decided.
 
-Once you have detected that a collision has taken place, often you will want to adjust the position of the `item` colliding. `bump` does not have an extensive array
-of methods for handling this situation; it only comes with three. But they are the most usual ones that you'll likely need in a 2d rectangle-based game.
 
-`world:check()` returns a list of zero or more `Collision` objects. A `Collision` object is a Lua table with at least the
-following attributes:
+## Collision Resolution
 
-* `col.item`: the item that was being tested for collisions (the first parameter passed to `world:check(item, ...)`)
-* `col.other`: the item that has been found colliding with `item`
-* `col.future_l` & `col.future_t`: the `future_l` and `future_t` parameters passed to `world:check`.
-* `col.itemRect` & `col.otherRect`: the bounding rectangles of the items, in the form `{l=...,t=...,w=...,h=...}`.
-* `col.is_intersection`: `true` if `item` and `other` are currently intersecting in the world. `false` if the collision
-  is a "tunnelling collision" - `item` will collides with `other` when it travels from its current position to `{future_l, future_t}`,
-  but it is not presently intersecting with `other`.
-* `col.vx`: the difference between `item`'s "current `left`" and `future_l`
-* `col.vy`: the difference between `item`'s "current `top`" and `future_t`
+As said above, both `world:move` and `world:check` return, in addition to new coordinates for item, a list of collisions.
 
-The most interesting attribute is `col.other`. In some cases it is more than enough - for example if `item` is one of those bullets
-that disappear when impacting the player, you don't need to know more - you must make the bullet disappear.
+For each of those collisions, the most interesting attribute is `col.other`. Often it's enough with it - for example if `item`
+is one of those bullets that disappear when impacting the player you must make the bullet disappear (and decrease the player's health).
 
-Very often you'll just be ok by checking `collisions[1]` (especially if you have been dilligent using `filter`).
 The reason `world:check()` returns a list instead of a single collisions is that in some cases you might want to "skip" some
-collisions, or react to several of them in a single frame.
-
-For example, imagine a player which collides on the same frame with a coin first, an enemy fireball, and the floor.
+collisions, or react to several of them in a single frame. For example, imagine a player which collides on the same frame with a coin first, an enemy fireball, and the floor.
 
 * since `cols[1].other` will be a coin, you will want to make the coin disappear (maybe with a sound) and increase the player's score.
 * `cols[2].other` will be a fireball, so you will want to decrease the player's health and make the fireball disappear.
 * `cols[3].other` will be a ground tile, so you will need to stop the player from "falling down", and maybe align it with the ground.
 
-The first two can be handled just by using detection, but "aligning the player with the ground" requires *collision resolution*.
+The first two can be handled just by using `col.other`, but "aligning the player with the ground" requires *collision resolution*.
 
-The 3 methos provided by `bump` for handling resolution are called `touch`, `slide` and `bounce`.
+bump.lua comes with 4 built-in ways to handle collisions: `touch`, `cross`, `slide` & `bounce`. You can select which one is used on each collision by returning
+their name in the `filter` param of `world:move` or `world:check`. You can also choose to ignore a collision by returning `nil` or `false`.
 
-``` lua
-local tl, tt, nx, ny = col:getTouch()
-```
-Returns the coordinates to which you would have to move `item` so that it "touches" (without colliding) `col.other`.
+### `"touch"` response
 
 ![touch](img/touch.png)
 
-This type of collision resolution is the fastest one. It is useful for things like arrows that "get stuck" on their targets, or
-as a complement to the other resolutions.
+This is the type of collision for things like arrows or bullets; things that "gets stuck" on their targets.
 
-* `tl`, `tt`: The left, top coordinates to which `item` can be moved.
-* `nx`, `ny`: The "normal" of the collision. `nx` can only be `1`(right), `0`(nothing) or `-1`(left). `ny` can be `1`(down), `0`(nothing) or `-1`(up).
-  `nx` and `ny` can not be 0 at the same time.
+Collisions of this type have their `type` attribute set to `"touch"` and don't have any additional information appart from the the default one, shared by all collisions (see below).
 
-`world:check(...)` returns collision by order - `cols[1]:getTouch()` will return the "touch that happened first", `cols[2]:getTouch()` will return the second one, etc.
+### `"cross"` response
 
-``` lua
-local tl, tt, nx, ny, sl, st = col:getSlide()
-```
-This is the type of collision resolution used by objects that "slide" over other objects after colliding with them.
+![cross](img/cross.png)
 
-A prime example of this is Super Mario (he "slides" over the floor instead of "getting stuck on it", like an arrow would).
+This type of collision is for cases where you want to detect a collision but you don't want any response. It is useful for things like: detecting that the player has entered a new area,
+or consumables (i.e. coins) which usually don't affect the player's trayectory, but it's still useful to know then they are collided with.
+
+Collisions of this type have their `type` attribute set to `"cross"` and don't have any additional information appart from the the default one, shared by all collisions (see below).
+
+### `"slide"` response
 
 ![slide](img/slide.png)
 
-* `tl, tt, nx, ny`: Same as in `col:getTouch()`
-* `sl, st`: The left,top coordinates of `item` after it finishes sliding over `other`.
+This is the default collision type used in bump. It's what you want to use for solid objects which "slide over other objects", like Super Mario does over a platform or the ground.
 
-This is a slightly more complex resolution: `item` first "touches" `other`, and then uses its remaining "displacement vector" to "slide over `other`".
+Collisions of this type have their `type` attribute set to `"slide"`. They also have a special attribute called `col.slide`, which is a 2d vector with two components: `col.slide.x` &
+`col.slide.y`. It represents the x and y coordinates to which the `item` "attempted to slide to". They are different from `actualX` & `actualY` since other collisions later on can
+modify them.
 
-While the touch is guaranteed to be "in order", once you start sliding you could generate new collisions with other items in the world. So it is recommended
-that you `move` the item until it "touches" the first collision, and then `check` if it can be moved to `sl` and `st` before moving it there. And if this generates
-more collisions, react accordingly.
-
-Since it is possible that you bounce with the same item more than once in the same frame while sliding, it is recommended that you keep track of which objects have
-"already been visited", so you don't get into an infinite loop (colliding with one item, sliding back, colliding with another, sliding forward, colliding with the first item, etc).
-
-You can see an example of how this is done in [the Player class in the demo](https://github.com/kikito/bump.lua/blob/demo/entities/player.lua).
-
-``` lua
-local tl, tt, nx, ny, bl, bt = col:getBounce()
-```
-This is the type of collision resolution used by objects that "bounce".
-
-A good example of this behavior is Arkanoid's ball.
+### `"bounce"` response
 
 ![bounce](img/bounce.png)
 
-* `tl, tt, nx, ny`: Same as in `col:getTouch()`
-* `bl, bt`: The left,top coordinates of `item` after it finishes bouncing. It is very possible that after bouncing, it doesn't touch `other` any more.
+A good example of this behavior is Arkanoid's ball; you can use this type of collision for things that "move away" after touching others.
 
-While the touch is guaranteed to be "in order", once you start sliding you could generate new collisions with other items in the world. So it is recommended
-that you `move` the item until it "touches" the first collision, and then `check` if it can be moved to `sl` and `st` before moving it there. And if this generates
-more collisions, react accordingly.
-
-As with in the case of sliding, keeping tabs of which objects have been "already visited" is important in order to avoid infinite loops.
+Collisions of this type have their `type` attribute set to `"bounce"`. They also have two special attributes: called `col.bounce`, is a 2d vector which represents the x and y
+coordinates to which the `item` "attempted to bounce". `col.bounceNormal` is a 2d vector representing the direction of the "force" that `other` would offer to `item` in that
+collision.
 
 The [Grenades](https://github.com/kikito/bump.lua/blob/demo/entities/grenade.lua) and the [Debris](https://github.com/kikito/bump.lua/blob/demo/entities/debris.lua) in the
-Demo use `:getBounce()` to resolve their collisions, and also display a possible way to mark objects as `visited`.
+demo use `"bounce"` to resolve their collisions.
 
-### Querying the world
+
+## Intermediate - Querying the world
+
+The following methods are useful, but not required for basic usage of bump.lua.
 
 Sometimes it is desirable to know "which items are in a certain area". This is called "querying the world".
 
 Bump allows querying the world via a point, a rectangular zone, and a straight line segment.
+
+
+### Querying with a point
 
 ``` lua
 local items, len = world:queryPoint(x,y, filter)
@@ -336,6 +315,8 @@ It is useful for things like clicking with the mouse.
   `false` or `nil` on `filter(item)`. By default, all items touched by the point are returned.
 * `len` is the length of the items list. It is equivalent to `#items`, but it's slightly faster to use `len` instead.
 
+### Querying with a rectangle
+
 ``` lua
 local items, len = world:queryRect(l,t,w,h, filter)
 ```
@@ -349,6 +330,8 @@ the screen, or selecting a group of units with the mouse in a strategy game.
   `false` or `nil`, that item is ignored. By default, all items are included.
 * `items` is a list of items, like in `world:queryPoint`. But instead of for a point `x,y` for a rectangle `l,t,w,h`.
 * `len` is equivalent to `#items`
+
+### Querying with a segment
 
 ``` lua
 local items, len = world:querySegment(x1,y1,x2,y2,filter)
@@ -365,6 +348,7 @@ It's useful for things like line-of-sight or modelling real-life bullets.
   away appear later.
 * `len` is equivalent to `#items`.
 
+### Querying with a segment (with more detailed info)
 
 ``` lua
 local itemInfo, len = world:querySegmentWithCoords(x1,y1,x2,y2)
@@ -388,37 +372,62 @@ Most people will only need `info.item`, `info.x1` and `info.y1`. `info.x2` and `
 of a shoot", for example. `info.ti1` and `info.ti2` give an idea about the distance to the origin, so they can be used for things like
 calculating the intensity of a shooting that becomes weaker with distance.
 
+
+## Advanced API
+
+The following methods are advanced and/or used internally by the library; most people will not need them.
+
+### Collision info
+
+Here's the info contained on every collision item contained in the `cols` variables mentioned above:
+
+```lua
+col[i] = {
+  other = an item colliding with the item being moved
+  type  = the result of `filter(other)`. It's usually "touch", "cross", "slide" or "bounce"
+  overlaps  = boolean. True if item "was overlapping" other when the collision started.
+              False if it didn't but "tunneled" through other
+  ti        = Number between 0 and 1. How far along the movement to the goal did the collision occur>
+  move      = Vector({x=number,y=number}). The difference between the original coordinates and the actual ones.
+  normal    = Vector({x=number,y=number}). The collision normal; usually -1,0 or 1 in `x` and `y`
+  touch     = Vector({x=number,y=number}). The coordinates where item started touching other
+  itemRect  = The rectangle item occupied when the touch happened({x = N, y = N, w = N, h = N})
+  otherRect = The rectangle other occupied when the touch happened({x = N, y = N, w = N, h = N})
+}
+```
+
+Note that collisions of type `slide` and `bounce` have some additional fields (1 and two respectively). They are described
+on each response's section above.
+
 ### Misc functions
+
+``` lua
+local cols, len = world:project(x,y,w,h, goalX, goalY, filter)
+```
+
+Moves a the given imaginary rectangle towards goalX and goalY, providing a list of collisions as they happen *in that straight path*.
+
+This method is useful mostly when creating new collision responses, although it could be also used as a query method.
+
+If you are really ambitious, you could also use this to implement your own collision resolution algorithm (this was the only way to
+to it in prevous versions of bump)
 
 ``` lua
 local result = world:hasItem(item)
 ```
-
-Returns wether the world contains the given item or not.
-
-* `item` can be any Lua object.
-* `result` is `true` if `item` is one of the items inside `world`, and `false` otherwise.
-
-This function does not throw an error if `item` is not included in `world`; it just returns `false`.
+Returns wether the world contains the given item or not. This function does not throw an error if `item` is not included in `world`; it just returns `false`.
 
 ``` lua
-local rect = world:getRect(item)
+local x,y,w,h = world:getRect(item)
 ```
 
-Given an item, obtain the coordinates of its bounding rect.
-Useful for debugging/testing things.
-
-* `item` is an item that must exist in world (it must have been inserted with `world:add(item ...)`). Otherwise this method will
-  throw an error.
-* `rect` is a lua table in the form `{l=... , t=... , w=... , h=...}`
+Given an item, obtain the coordinates of its bounding rect. Useful for debugging/testing things.
 
 ``` lua
 local cell_count = world:countCells()
 ```
 
 Returns the number of cells being used. Useful for testing/debugging.
-
-### Grid functions
 
 ``` lua
 local cx,cy = world:toCell(x,y)
