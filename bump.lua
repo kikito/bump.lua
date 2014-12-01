@@ -643,6 +643,14 @@ function World:update(item, x2,y2,w2,h2)
 end
 
 function World:move(item, goalX, goalY, filter)
+  local actualX, actualY, cols, len = self:check(item, goalX, goalY, filter)
+
+  self:update(item, actualX, actualY)
+
+  return actualX, actualY, cols, len
+end
+
+function World:check(item, goalX, goalY, filter)
   filter = filter or default_filter
 
   local cols, len = {}, 0
@@ -674,8 +682,6 @@ function World:move(item, goalX, goalY, filter)
       visitedFilter
     )
   end
-
-  self:update(item, goalX, goalY)
 
   return goalX, goalY, cols, len
 end
