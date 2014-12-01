@@ -1,6 +1,6 @@
 local bump            = require('bump')
 local detect          = bump.rect.detectCollision
-local collisionTypes  = bump.collisionTypes
+local responses  = bump.responses
 
 local world = bump.newWorld()
 
@@ -11,18 +11,18 @@ end
 
 local slide = function(x,y,w,h, ox,oy,ow,oh, goalX, goalY)
   local col = detect(x,y,w,h, ox,oy,ow,oh, goalX, goalY)
-  collisionTypes.slide(world, col, x, y, w, h, goalX, goalY)
+  responses.slide(world, col, x, y, w, h, goalX, goalY)
   return {col.touch.x, col.touch.y, col.normal.x, col.normal.y, col.slide.x, col.slide.y}
 end
 
 local bounce = function(x,y,w,h, ox,oy,ow,oh, goalX, goalY)
   local col = detect(x,y,w,h, ox,oy,ow,oh, goalX, goalY)
-  collisionTypes.bounce(world, col, x, y, w, h, goalX, goalY)
+  responses.bounce(world, col, x, y, w, h, goalX, goalY)
   return {col.touch.x, col.touch.y, col.normal.x, col.normal.y, col.bounce.x, col.bounce.y }
 end
 
-describe('rect.collisionTypes', function()
-  describe('collisionTypes.touch', function()
+describe('rect.responses', function()
+  describe('responses.touch', function()
     describe('when resolving collisions', function()
       describe('on overlaps', function()
         describe('when there is no movement', function()
@@ -78,7 +78,7 @@ describe('rect.collisionTypes', function()
     end)
   end)
 
-  describe('collisionTypes.slide', function()
+  describe('responses.slide', function()
     it('slides on overlaps', function()
       assert.same(slide(3,3,2,2, 0,0,8,8, 4, 5), { 0.5, -2, 0,-1, 4, -2})
       assert.same(slide(3,3,2,2, 0,0,8,8, 5, 4), { -2, 0.5, -1,0, -2, 4})
@@ -95,7 +95,7 @@ describe('rect.collisionTypes', function()
     end)
   end)
 
-  describe('collisionTypes.bounce', function()
+  describe('responses.bounce', function()
     it('bounces on overlaps', function()
       assert.same(bounce( 3, 3,2,2, 0,0,8,8, 4, 5), { 0.5, -2, 0,-1, 4, -9})
       assert.same(bounce( 3, 3,2,2, 0,0,8,8, 5, 4), { -2, 0.5, -1,0, -9, 4})
