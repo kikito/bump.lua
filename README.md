@@ -248,7 +248,7 @@ Collisions of this type have their `type` attribute set to `"touch"` and don't h
 ![cross](img/cross.png)
 
 This type of collision is for cases where you want to detect a collision but you don't want any response. It is useful for things like: detecting that the player has entered a new area,
-or consumables (i.e. coins) which usually don't affect the player's trayectory, but it's still useful to know then they are collided with.
+or consumables (i.e. coins) which usually don't affect the player's trajectory, but it's still useful to know then they are collided with.
 
 Collisions of this type have their `type` attribute set to `"cross"` and don't have any additional information appart from the the default one, shared by all collisions (see below).
 
@@ -551,6 +551,21 @@ Specs for this project can be run using [busted](http://olivinelabs.com/busted).
 
 
 ## Changelog
+
+### v3.0.0
+
+* Renamed `world:move` to `world:update`
+* `world:move()` now implements a basic collision-resolution algorithm - no need for the user to do the "complex loops" he needed to use in 2.0.x
+* Collisions no longer have methods. Instead, `filter` now returns "the type of collision", and "move" handles that internally. The collisions are now
+  "plain tables", which are returned by `world:move` after all the collisions have been dealt with.
+* Added a new type of collision: `cross`, for when it's good to know that a collision happened but item's trajectory should remain unaltered
+* `world:check()` does the same thing as `world:move`, except without calling `world:update`. Useful for planning/studying alternatives without moving things.
+* `world:project()` now does more or less what `word:check()` did in 2.0.0. It's a key method for collision resolution.
+* `world:getRect` now returns 4 integers instead of a table
+* Collision detection is handled by the function `rect.detectCollision`.
+* The `rect` module is now available to the user.
+* It is possible to add new response types to the world
+
 
 ### v2.0.1
 
