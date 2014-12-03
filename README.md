@@ -184,8 +184,13 @@ This is probably the most useful method of bump. It moves the item inside the wo
 * `item` must be something previously inserted in the world with `world:add(item, l,t,w,h)`. Otherwise, `world:move` will raise an error.
 * `goalX, goalY` are the *desired* `x` and `y` coordinates. The item will end up in those coordinates if it doesn't collide with anything.
   If, however, it collides with 1 or more other items, it can end up in a different set of coordinates.
-* `filter` is an optional function. If provided, it must have this signature: `local type = filter(other)`. By default, `filter` always returns `"slide"`. You have a
-  more complete description of filter below.
+* `filter` is an optional function. If provided, it must have this signature: `local type = filter(other)`. By default, `filter` always returns `"slide"`.
+  * `other` is an item (different from `item`) which can collide with `item`.
+  * `type` is a value which defines how `item` collides with `other`.
+    * If `type` is `false` or `nil`, `item` will ignore `other` completely (there will be no collision)
+    * If `type` is `"touch"`, `"cross"`, `"slide"` or `"bounce"`, `item` will respond to the collisions in different ways (explained below)
+    * Any other value (unless handled in an advanced way) will provoke an error
+
 * `actualX, actualY` are the coordinates where the object ended up after colliding with other objects in the world while trying to get to
   `goalX, goalY`. They can be equal to `goalX, goalY` if, for example, no collisions happened.
 * `len` is the amount of collisions produced. It is equivalent to `#cols`
@@ -207,18 +212,11 @@ function movePlayer(player, dt)
 end
 ```
 
-Let's talk about `filter` for a moment: as said before, its signature is `type = filter(other)`
-* `other` is an item (different from `item`) which can collide with `item`.
-* `type` is a value which defines how `item` collides with `other`.
-  * If `type` is `false` or `nil`, `item` will ignore `other` completely (there will be no collision)
-  * If `type` is `"touch"`, `"cross"`, `"slide"` or `"bounce"`, `item` will respond to the collisions in different ways (explained below)
-  * Any other value (unless handled in an advanced way) will provoke an error
-
 Notice that if `filter` returns `nil` or `false`, it is guaranteed that `other` will not produce a collision. But the opposite is not true: it is possible that `filter` returns
 `"slide"`, and yet no collision is produced. This is because `filter` is applied to *all the neighbors of `item`*, that is, all the items that "touch" the same cells as item. Some
 of them might be on the same cells, but still not collide with item..
 
-Let's talk about collision *resolution* now.
+#### Collision Resolution
 
 For each of the collisions returned by `world:move`, the most interesting attribute is `cols[i].other`. Often it's enough with it - for example if `item`
 is one of those bullets that disappear when impacting the player you must make the bullet disappear (and decrease the player's health).
@@ -237,15 +235,11 @@ The first two can be handled just by using `col.other`, but "aligning the player
 bump.lua comes with 4 built-in ways to handle collisions: `touch`, `cross`, `slide` & `bounce`. You can select which one is used on each collision by returning
 their name in the `filter` param of `world:move` or `world:check`. You can also choose to ignore a collision by returning `nil` or `false`.
 
-#### `"touch"` response
-
 ![touch](img/touch.png)
 
 This is the type of collision for things like arrows or bullets; things that "gets stuck" on their targets.
 
 Collisions of this type have their `type` attribute set to `"touch"` and don't have any additional information appart from the the default one, shared by all collisions (see below).
-
-#### `"cross"` response
 
 ![cross](img/cross.png)
 
@@ -254,8 +248,6 @@ or consumables (i.e. coins) which usually don't affect the player's trajectory, 
 
 Collisions of this type have their `type` attribute set to `"cross"` and don't have any additional information appart from the the default one, shared by all collisions (see below).
 
-#### `"slide"` response
-
 ![slide](img/slide.png)
 
 This is the default collision type used in bump. It's what you want to use for solid objects which "slide over other objects", like Super Mario does over a platform or the ground.
@@ -263,8 +255,6 @@ This is the default collision type used in bump. It's what you want to use for s
 Collisions of this type have their `type` attribute set to `"slide"`. They also have a special attribute called `col.slide`, which is a 2d vector with two components: `col.slide.x` &
 `col.slide.y`. It represents the x and y coordinates to which the `item` "attempted to slide to". They are different from `actualX` & `actualY` since other collisions later on can
 modify them.
-
-#### `"bounce"` response
 
 ![bounce](img/bounce.png)
 
