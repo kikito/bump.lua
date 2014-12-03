@@ -347,7 +347,7 @@ cols[i] = {
 }
 ```
 
-Note that collisions of type `slide` and `bounce` have some additional fields (1 and two respectively). They are described
+Note that collisions of type `slide` and `bounce` have some additional fields. They are described
 on each response's section above.
 
 Most of this info is useful only if you are doing semi-advanced stuff with collisions, but they could have some uses.
