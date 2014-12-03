@@ -309,7 +309,6 @@ local bounce = function(world, col, x,y,w,h, goalX, goalY, filter)
   end
 
   col.bounce       = {x = bx,  y = by}
-  col.bounceNormal = {x = bnx, y = bny}
 
   x,y                = touch.x, touch.y
   goalX, goalY   = bx, by

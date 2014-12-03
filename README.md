@@ -260,9 +260,8 @@ modify them.
 
 A good example of this behavior is Arkanoid's ball; you can use this type of collision for things that "move away" after touching others.
 
-Collisions of this type have their `type` attribute set to `"bounce"`. They also have two special attributes: called `col.bounce`, is a 2d vector which represents the x and y
-coordinates to which the `item` "attempted to bounce". `col.bounceNormal` is a 2d vector representing the direction of the "force" that `other` would offer to `item` in that
-collision.
+Collisions of this type have their `type` attribute set to `"bounce"`. They also have a special attributes called `col.bounce`. It is a 2d vector which represents the x and y
+coordinates to which the `item` "attempted to bounce".
 
 The [Grenades](https://github.com/kikito/bump.lua/blob/demo/entities/grenade.lua) and the [Debris](https://github.com/kikito/bump.lua/blob/demo/entities/debris.lua) in the
 demo use `"bounce"` to resolve their collisions.
