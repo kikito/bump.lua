@@ -257,7 +257,7 @@ local function grid_toCellRect(cellSize, x,y,w,h)
 end
 
 ------------------------------------------
--- Collision Types
+-- Responses
 ------------------------------------------
 
 local touch = function(world, col, x,y,w,h, goalX, goalY, filter)
@@ -309,7 +309,6 @@ local bounce = function(world, col, x,y,w,h, goalX, goalY, filter)
   end
 
   col.bounce       = {x = bx,  y = by}
-  col.bounceNormal = {x = bnx, y = bny}
 
   x,y                = touch.x, touch.y
   goalX, goalY   = bx, by
@@ -428,19 +427,19 @@ local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
   return itemInfo, itemInfoLen
 end
 
-local function getCollisionTypeByName(self, name)
-  local collisionType = self.collisionTypes[name]
-  if not collisionType then
+local function getResponseByName(self, name)
+  local response = self.responses[name]
+  if not response then
     error(('Unknown collision type: %s (%s)'):format(name, type(name)))
   end
-  return collisionType
+  return response
 end
 
 
 -- Misc Public Methods
 
-function World:addCollisionType(name, collisionType)
-  self.collisionTypes[name] = collisionType
+function World:addResponse(name, response)
+  self.responses[name] = response
 end
 
 function World:project(x,y,w,h, goalX, goalY, filter)
@@ -468,14 +467,14 @@ function World:project(x,y,w,h, goalX, goalY, filter)
     if not visited[other] then
       visited[other] = true
 
-      local collisionTypeName = filter(other)
-      if collisionTypeName then
+      local responseName = filter(other)
+      if responseName then
         local ox,oy,ow,oh   = self:getRect(other)
         local col           = rect_detectCollision(x,y,w,h, ox,oy,ow,oh, goalX, goalY)
 
         if col then
           col.other    = other
-          col.type     = collisionTypeName
+          col.type     = responseName
 
           len = len + 1
           collisions[len] = col
@@ -643,6 +642,14 @@ function World:update(item, x2,y2,w2,h2)
 end
 
 function World:move(item, goalX, goalY, filter)
+  local actualX, actualY, cols, len = self:check(item, goalX, goalY, filter)
+
+  self:update(item, actualX, actualY)
+
+  return actualX, actualY, cols, len
+end
+
+function World:check(item, goalX, goalY, filter)
   filter = filter or default_filter
 
   local cols, len = {}, 0
@@ -664,9 +671,9 @@ function World:move(item, goalX, goalY, filter)
 
     visited[col.other] = true
 
-    local collisionType = getCollisionTypeByName(self, col.type)
+    local response = getResponseByName(self, col.type)
 
-    goalX, goalY, projected_cols, projected_len = collisionType(
+    goalX, goalY, projected_cols, projected_len = response(
       self,
       col,
       x, y, w, h,
@@ -674,8 +681,6 @@ function World:move(item, goalX, goalY, filter)
       visitedFilter
     )
   end
-
-  self:update(item, goalX, goalY)
 
   return goalX, goalY, cols, len
 end
@@ -691,13 +696,13 @@ bump.newWorld = function(cellSize)
     rects          = {},
     rows           = {},
     nonEmptyCells  = {},
-    collisionTypes = {}
+    responses = {}
   }, World_mt)
 
-  world:addCollisionType('touch', touch)
-  world:addCollisionType('cross', cross)
-  world:addCollisionType('slide', slide)
-  world:addCollisionType('bounce', bounce)
+  world:addResponse('touch', touch)
+  world:addResponse('cross', cross)
+  world:addResponse('slide', slide)
+  world:addResponse('bounce', bounce)
 
   return world
 end
@@ -712,7 +717,7 @@ bump.rect = {
   detectCollision               = rect_detectCollision
 }
 
-bump.collisionTypes = {
+bump.responses = {
   touch  = touch,
   cross  = cross,
   slide  = slide,
