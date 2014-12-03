@@ -26,8 +26,6 @@ local world = bump.newWorld()
 -- Player functions
 local player = { x=50,y=50,w=20,h=20, speed = 80 }
 
-local filter = function() return 'slide' end
-
 local function updatePlayer(dt)
   local speed = player.speed
 
@@ -43,9 +41,8 @@ local function updatePlayer(dt)
     dy = -speed * dt
   end
 
-  col_len = 0
   if dx ~= 0 or dy ~= 0 then
-    player.x, player.y, _, col_len = world:move(player, player.x + dx, player.y + dy, filter)
+    player.x, player.y = world:move(player, player.x + dx, player.y + dy)
   end
 end
 
