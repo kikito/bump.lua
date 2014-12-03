@@ -1,5 +1,7 @@
 # bump.lua
 
+[![Build Status](https://travis-ci.org/kikito/bump.lua.svg?branch=master)](https://travis-ci.org/kikito/bump.lua)
+
 Lua collision-detection library for axis-aligned rectangles. Its main features are:
 
 * bump.lua only does axis-aligned bounding-box (AABB) collisions. If you need anything more complicated than that (circles, polygons, etc.) give HardonCollider a look.
