@@ -267,7 +267,7 @@ end
 
 local cross = function(world, col, x,y,w,h, goalX, goalY, filter)
   local touch = col.touch
-  local cols, len = world:project(touch.x, touch.y, w,h, goalX, goalY, filter)
+  local cols, len = world:project(x,y,w,h, goalX, goalY, filter)
   return goalX, goalY, cols, len
 end
 
