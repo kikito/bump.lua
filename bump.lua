@@ -1,5 +1,5 @@
 local bump = {
-  _VERSION     = 'bump v3.0.0',
+  _VERSION     = 'bump v3.0.1',
   _URL         = 'https://github.com/kikito/bump.lua',
   _DESCRIPTION = 'A collision detection library for Lua',
   _LICENSE     = [[
@@ -267,7 +267,7 @@ end
 
 local cross = function(world, col, x,y,w,h, goalX, goalY, filter)
   local touch = col.touch
-  local cols, len = world:project(touch.x, touch.y, w,h, goalX, goalY, filter)
+  local cols, len = world:project(x,y,w,h, goalX, goalY, filter)
   return goalX, goalY, cols, len
 end
 
