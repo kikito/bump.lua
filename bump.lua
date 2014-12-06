@@ -267,7 +267,7 @@ end
 
 local cross = function(world, col, x,y,w,h, goalX, goalY, filter)
   local touch = col.touch
-  local cols, len = world:project(x,y,w,h, goalX, goalY, filter)
+  local cols, len = world:project(col.item, x,y,w,h, goalX, goalY, filter)
   return goalX, goalY, cols, len
 end
 
@@ -287,9 +287,9 @@ local slide = function(world, col, x,y,w,h, goalX, goalY, filter)
 
   col.slide = {x = sx, y = sy}
 
-  x,y              = touch.x, touch.y
+  x,y          = touch.x, touch.y
   goalX, goalY = sx, sy
-  local cols, len  = world:project(x,y,w,h, goalX, goalY, filter)
+  local cols, len  = world:project(col.item, x,y,w,h, goalX, goalY, filter)
   return goalX, goalY, cols, len
 end
 
@@ -308,11 +308,11 @@ local bounce = function(world, col, x,y,w,h, goalX, goalY, filter)
     bx, by = tx + bnx, ty + bny
   end
 
-  col.bounce       = {x = bx,  y = by}
+  col.bounce   = {x = bx,  y = by}
+  x,y          = touch.x, touch.y
+  goalX, goalY = bx, by
 
-  x,y                = touch.x, touch.y
-  goalX, goalY   = bx, by
-  local cols, len    = world:project(x,y,w,h, goalX, goalY, filter)
+  local cols, len    = world:project(col.item, x,y,w,h, goalX, goalY, filter)
   return goalX, goalY, cols, len
 end
 
@@ -442,7 +442,7 @@ function World:addResponse(name, response)
   self.responses[name] = response
 end
 
-function World:project(x,y,w,h, goalX, goalY, filter)
+function World:project(item, x,y,w,h, goalX, goalY, filter)
   assertIsRect(x,y,w,h)
 
   goalX = goalX or x
@@ -467,13 +467,14 @@ function World:project(x,y,w,h, goalX, goalY, filter)
     if not visited[other] then
       visited[other] = true
 
-      local responseName = filter(other)
+      local responseName = filter(other, item)
       if responseName then
         local ox,oy,ow,oh   = self:getRect(other)
         local col           = rect_detectCollision(x,y,w,h, ox,oy,ow,oh, goalX, goalY)
 
         if col then
           col.other    = other
+          col.item     = item
           col.type     = responseName
 
           len = len + 1
@@ -662,7 +663,7 @@ function World:check(item, goalX, goalY, filter)
 
   local x,y,w,h = self:getRect(item)
 
-  local projected_cols, projected_len = self:project(x,y,w,h, goalX,goalY, visitedFilter)
+  local projected_cols, projected_len = self:project(item, x,y,w,h, goalX,goalY, visitedFilter)
 
   while projected_len > 0 do
     local col = projected_cols[1]
