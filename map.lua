@@ -9,11 +9,8 @@ local class       = require 'lib.middleclass'
 local bump        = require 'lib.bump'
 local bump_debug  = require 'lib.bump_debug'
 
-local media       = require 'media'
-
 local Player      = require 'entities.player'
 local Block       = require 'entities.block'
-local Guardian    = require 'entities.guardian'
 
 local random = math.random
 
@@ -27,7 +24,7 @@ end
 
 local Map = class('Map')
 
-function Map:initialize(width, height, camera)
+function Map:initialize(width, height)
   self.width  = width
   self.height = height
   self.camera = camera
@@ -36,13 +33,10 @@ function Map:initialize(width, height, camera)
 end
 
 function Map:reset()
-  local music = media.music
-  music:rewind()
-  music:play()
 
   local width, height = self.width, self.height
   self.world  = bump.newWorld()
-  self.player = Player:new(self, self.world, 60, 60)
+  self.player = Player:new(self.world, 60, 60)
 
   -- walls & ceiling
   Block:new(self.world,        0,         0, width,        32, true)
@@ -53,34 +47,6 @@ function Map:reset()
   local tilesOnFloor = 40
   for i=0,tilesOnFloor - 1 do
     Block:new(self.world, i*width/tilesOnFloor, height-32, width/tilesOnFloor, 32, true)
-  end
-
-  -- groups of blocks
-  local l,t,w,h, area
-  for i=1,60 do
-    w = random(100, 400)
-    h = random(100, 400)
-    area = w * h
-    l = random(100, width-w-200)
-    t = random(100, height-h-100)
-
-
-    for i=1, math.floor(area/7000) do
-      Block:new( self.world,
-                 random(l, l+w),
-                 random(t, t+h),
-                 random(32, 100),
-                 random(32, 100),
-                 random() > 0.75 )
-    end
-  end
-
-  for i=1,10 do
-    Guardian:new( self.world,
-                  self.player,
-                  self.camera,
-                  random(100, width-200),
-                  random(100, height-150) )
   end
 
 end

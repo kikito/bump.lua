@@ -1,9 +1,6 @@
 require 'lib.middleclass'
 local gamera     = require 'lib.gamera'
-local shakycam   = require 'lib.shakycam'
-local media      = require 'media'
 local Map        = require 'map'
-
 
 local updateRadius = 100 -- how "far away from the camera" things stop being updated
 local drawDebug   = false  -- draw bump's debug info, fps and memory
@@ -21,17 +18,13 @@ local camera, map
 local Phi = 0.61803398875
 
 function love.load()
-  media.load()
-
-  local width, height = 4000, 2000
-  local gamera_cam = gamera.new(0,0, width, height)
-  camera = shakycam.new(gamera_cam)
+  local width, height = 2000, 1000
+  camera = gamera.new(0,0, width, height)
   map    = Map:new(width, height, camera)
 end
 
 -- Updating
 function love.update(dt)
-  media.cleanup()
   -- Note that we only update elements that are visible to the camera. This is optional
   -- replace the map:update(dt, camera:getVisible()) with the following line to update everything
   -- map:update(dt)
@@ -40,7 +33,6 @@ function love.update(dt)
 
   map:update(dt, l,t,w,h)
   camera:setPosition(map.player:getCenter())
-  camera:update(dt)
 end
 
 -- Drawing
@@ -57,7 +49,7 @@ function love.draw()
   love.graphics.printf(msg, w - 200, 10, 200, 'left')
 
   if drawDebug then
-    local statistics = ("fps: %d, mem: %dKB\n sfx: %d"):format(love.timer.getFPS(), collectgarbage("count"), media.countInstances())
+    local statistics = ("fps: %d, mem: %dKB"):format(love.timer.getFPS(), collectgarbage("count"))
     love.graphics.printf(statistics, w - 200, h - 40, 200, 'right')
   end
 end
