@@ -19,13 +19,21 @@ local height        = 64
 
 local abs = math.abs
 
-local playerFilter = function(other)
-  local kind = other.class.name
-  if kind == 'Block' then return 'slide' end
-end
+local delta         = 1 -- distance from which the player is allowed to "pop up" over a pass-through platform
+                        -- needs to be greater than 0, or filter + player moving with platform + floating precision
+                        -- make the player "fall"
 
 function Player:initialize(world, x,y)
   Entity.initialize(self, world, x, y, width, height)
+
+  self.filter = function(other)
+    local kind = other.class.name
+    if kind == 'Block'
+    or (kind == 'Platform' and self.y + self.h - delta <= other.y)
+    then
+      return 'slide'
+    end
+  end
 end
 
 function Player:changeVelocityByKeys(dt)
@@ -63,22 +71,32 @@ function Player:checkIfOnGround(ny)
   if ny < 0 then self.onGround = true end
 end
 
+function Player:changePositionIfPlatform(other, actualX, actualY)
+  local dx,dy = 0,0
+  if other.class.name == 'Platform' then
+    dx,dy = -other.dx, -other.dy
+  end
+  return actualX + dx, actualY + dy
+end
+
 function Player:moveColliding(dt)
   self.onGround = false
   local world = self.world
 
-  local future_l = self.x + self.vx * dt
-  local future_t = self.y + self.vy * dt
+  local goalX = self.x + self.vx * dt
+  local goalY = self.y + self.vy * dt
 
-  local next_l, next_t, cols, len = world:move(self, future_l, future_t, playerFilter)
+  local actualX, actualY, cols, len = world:check(self, goalX, goalY, self.filter)
 
   for i=1, len do
     local col = cols[i]
     self:changeVelocityByCollisionNormal(col.normal.x, col.normal.y, bounciness)
     self:checkIfOnGround(col.normal.y)
+    actualX, actualY = self:changePositionIfPlatform(col.other, actualX, actualY)
   end
 
-  self.x, self.y = next_l, next_t
+  self.x, self.y = actualX, actualY
+  world:update(self, actualX, actualY)
 end
 
 function Player:update(dt)

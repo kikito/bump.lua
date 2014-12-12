@@ -17,6 +17,7 @@ function Platform:initialize(world, waypoints)
 
   self.waypoints = waypoints
   self.nextWaypointIndex = 1
+  self.dx, self.dy = 0,0
 
   self:gotoToNextWaypoint()
 end
@@ -41,7 +42,17 @@ function Platform:gotoToNextWaypoint()
   self.world:update(self, self.x, self.y)
 end
 
+function Platform:advanceTowardsNextWaypoint(advance)
+  local distanceToNext = self:getDistanceToNextWaypoint()
+  local dx,dy = self:getDiffVectorToNextWaypoint()
+  local mx,my = (dx / distanceToNext) * advance, (dy / distanceToNext) * advance
+
+  self.x, self.y = self.x + mx, self.y + my
+end
+
 function Platform:update(dt)
+  local startX, startY = self.x, self.y
+
   local advance = speed * dt
 
   local distanceToNext = self:getDistanceToNextWaypoint()
@@ -52,10 +63,11 @@ function Platform:update(dt)
     distanceToNext = self:getDistanceToNextWaypoint()
   end
 
-  local dx,dy = self:getDiffVectorToNextWaypoint()
-  local mx,my = (dx / distanceToNext) * advance, (dy / distanceToNext) * advance
+  self:advanceTowardsNextWaypoint(advance)
 
-  self.x, self.y = self.x + mx, self.y + my
+  self.dx = startX - self.x
+  self.dy = startY - self.y
+
   self.world:update(self, self.x, self.y)
 end
 
