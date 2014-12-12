@@ -13,10 +13,10 @@ local Entity = class('Entity')
 
 local gravityAccel  = 500 -- pixels per second^2
 
-function Entity:initialize(world, l,t,w,h)
-  self.world, self.l, self.t, self.w, self.h = world, l,t,w,h
+function Entity:initialize(world, x,y,w,h)
+  self.world, self.x, self.y, self.w, self.h = world, x,y,w,h
   self.vx, self.vy = 0,0
-  self.world:add(self, l,t,w,h)
+  self.world:add(self, x,y,w,h)
   self.created_at = love.timer.getTime()
 end
 
@@ -40,8 +40,8 @@ function Entity:changeVelocityByCollisionNormal(nx, ny, bounciness)
 end
 
 function Entity:getCenter()
-  return self.l + self.w / 2,
-         self.t + self.h / 2
+  return self.x + self.w / 2,
+         self.y + self.h / 2
 end
 
 function Entity:destroy()

@@ -11,6 +11,7 @@ local bump_debug  = require 'lib.bump_debug'
 
 local Player      = require 'entities.player'
 local Block       = require 'entities.block'
+local Platform    = require 'entities.platform'
 
 local random = math.random
 
@@ -27,7 +28,6 @@ local Map = class('Map')
 function Map:initialize(width, height)
   self.width  = width
   self.height = height
-  self.camera = camera
 
   self:reset()
 end
@@ -49,6 +49,7 @@ function Map:reset()
     Block:new(self.world, i*width/tilesOnFloor, height-32, width/tilesOnFloor, 32, true)
   end
 
+  Platform:new(self.world, { {x=100,y=950}, {x=200,y=950}, {x=200,y=850} })
 end
 
 

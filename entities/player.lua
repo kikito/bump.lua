@@ -67,8 +67,8 @@ function Player:moveColliding(dt)
   self.onGround = false
   local world = self.world
 
-  local future_l = self.l + self.vx * dt
-  local future_t = self.t + self.vy * dt
+  local future_l = self.x + self.vx * dt
+  local future_t = self.y + self.vy * dt
 
   local next_l, next_t, cols, len = world:move(self, future_l, future_t, playerFilter)
 
@@ -78,7 +78,7 @@ function Player:moveColliding(dt)
     self:checkIfOnGround(col.normal.y)
   end
 
-  self.l, self.t = next_l, next_t
+  self.x, self.y = next_l, next_t
 end
 
 function Player:update(dt)
@@ -90,11 +90,11 @@ function Player:update(dt)
 end
 
 function Player:draw(drawDebug)
-  util.drawFilledRectangle(self.l, self.t, self.w, self.h, 0,255,0)
+  util.drawFilledRectangle(self.x, self.y, self.w, self.h, 0,255,0)
 
   if drawDebug then
     if self.onGround then
-      util.drawFilledRectangle(self.l, self.t + self.h - 4, self.w, 4, 255,255,255)
+      util.drawFilledRectangle(self.x, self.y + self.h - 4, self.w, 4, 255,255,255)
     end
   end
 end
