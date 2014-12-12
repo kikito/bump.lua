@@ -13,16 +13,17 @@ local speed = 40
 function Platform:initialize(world, waypoints)
   assert(#waypoints > 1, "must have at least 2 waypoints")
 
-  local x,y = waypoints[1].x, waypoints[1].y
-  Entity.initialize(self, world, x,y, width, height)
+  Entity.initialize(self, world, 0, 0, width, height)
 
   self.waypoints = waypoints
-  self.nextWaypointIndex = 2
+  self.nextWaypointIndex = 1
+
+  self:gotoToNextWaypoint()
 end
 
 function Platform:getDiffVectorToNextWaypoint()
   local nextWaypoint = self.waypoints[self.nextWaypointIndex]
-  local x,y          = self.x, self.y
+  local x,y          = self:getCenter()
   local nx, ny       = nextWaypoint.x, nextWaypoint.y
   return nx-x, ny-y
 end
@@ -32,6 +33,14 @@ function Platform:getDistanceToNextWaypoint()
   return math.sqrt(dx*dx + dy*dy)
 end
 
+function Platform:gotoToNextWaypoint()
+  local p = self.waypoints[self.nextWaypointIndex]
+  self.x, self.y = p.x - self.w / 2, p.y - self.h / 2
+
+  self.nextWaypointIndex = (self.nextWaypointIndex % #self.waypoints) + 1
+  self.world:update(self, self.x, self.y)
+end
+
 function Platform:update(dt)
   local advance = speed * dt
 
@@ -39,11 +48,7 @@ function Platform:update(dt)
 
   while advance > distanceToNext do
     advance = advance - distanceToNext
-
-    local thisWaypoint = self.waypoints[self.nextWaypointIndex]
-    self.x, self.y = thisWaypoint.x, thisWaypoint.y
-    self.nextWaypointIndex = (self.nextWaypointIndex % #self.waypoints) + 1
-
+    self:gotoToNextWaypoint()
     distanceToNext = self:getDistanceToNextWaypoint()
   end
 
@@ -54,8 +59,29 @@ function Platform:update(dt)
   self.world:update(self, self.x, self.y)
 end
 
-function Platform:draw()
+function Platform:draw(drawDebug)
+  if drawDebug then
+    love.graphics.setColor(0,200,200)
+
+    for i=1,#self.waypoints do
+      local p = self.waypoints[i]
+      love.graphics.circle('line', p.x, p.y, 5)
+    end
+
+    love.graphics.polygon('line', self:getPointCoords())
+  end
+
   util.drawFilledRectangle(self.x, self.y, self.w, self.h, 220, 220, 0)
+end
+
+function Platform:getPointCoords()
+  local coords = {}
+  for i=1, #self.waypoints do
+    local p = self.waypoints[i]
+    coords[i*2 - 1] = p.x
+    coords[i*2]     = p.y
+  end
+  return coords
 end
 
 return Platform
