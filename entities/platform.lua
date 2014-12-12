@@ -10,6 +10,16 @@ local width = 64
 local height = 16
 local speed = 40
 
+local function checkWaypoints(waypoints)
+  assert(type(waypoints) == 'table', 'waypoints must be a table')
+  assert(#waypoints > 1, "must have at least 2 waypoints")
+  for i=1, #waypoints do
+    local p = waypoints[i]
+    assert(type(p) == 'table' and type(p.x) == 'number' and type(p.y) == 'number',
+      "waypoints must be a table in the form {{x=0,y=0},{x=100,y=200}, ... }")
+  end
+end
+
 local function getDiffVectorToNextWaypoint(self)
   local nextWaypoint = self.waypoints[self.nextWaypointIndex]
   local x,y          = self:getCenter()
@@ -39,9 +49,8 @@ local function advanceTowardsNextWaypoint(self, advance)
 end
 
 
-
 function Platform:initialize(world, waypoints)
-  assert(#waypoints > 1, "must have at least 2 waypoints")
+  checkWaypoints(waypoints)
 
   Entity.initialize(self, world, 0, 0, width, height)
 
