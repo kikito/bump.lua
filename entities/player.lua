@@ -37,8 +37,6 @@ function Player:initialize(world, x,y)
 end
 
 function Player:changeVelocityByKeys(dt)
-  if self.isDead then return end
-
   local vx, vy = self.vx, self.vy
 
   if love.keyboard.isDown("left") then
