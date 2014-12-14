@@ -10,7 +10,6 @@ local Entity = require 'entities.entity'
 local Player = class('Player', Entity)
 Player.static.updateOrder = 1
 
-
 local runAccel      = 500 -- the player acceleration while going left/right
 local brakeAccel    = 2000
 local jumpVelocity  = 400 -- the initial upwards velocity when jumping
@@ -19,17 +18,13 @@ local height        = 64
 
 local abs = math.abs
 
-local delta         = 1 -- distance from which the player is allowed to "pop up" over a pass-through platform
-                        -- needs to be greater than 0, or filter + player moving with platform + floating precision
-                        -- make the player "fall"
-
 function Player:initialize(world, x,y)
   Entity.initialize(self, world, x, y, width, height)
 
   self.filter = function(other)
     local kind = other.class.name
     if kind == 'Block'
-    or (kind == 'Platform' and self.y + self.h - delta <= other.y)
+    or (kind == 'Platform' and self.y + self.h <= other.prevY)
     then
       return 'slide'
     end
@@ -59,26 +54,25 @@ function Player:changeVelocityByKeys(dt)
   end
 end
 
-function Player:changeVelocityByBeingOnGround()
-  if self.onGround then
-    self.vy = math.min(self.vy, 0)
+function Player:alignWithGround(dt)
+  if self.ground then
+    self.world:update(self, self.x, self.ground.y - self.h)
   end
 end
 
-function Player:checkIfOnGround(ny)
-  if ny < 0 then self.onGround = true end
+function Player:setGround(other, dt)
+  self.ground = other
+  self:alignWithGround(dt)
 end
 
-function Player:changePositionIfPlatform(other, actualX, actualY)
-  local dx,dy = 0,0
-  if other.class.name == 'Platform' then
-    dx,dy = -other.dx, -other.dy
+function Player:checkIfOnGround(ny, other)
+  if ny < 0 then
+    self.ground = other
   end
-  return actualX + dx, actualY + dy
 end
 
 function Player:moveColliding(dt)
-  self.onGround = false
+  self.ground = nil
   local world = self.world
 
   local goalX = self.x + self.vx * dt
@@ -89,8 +83,7 @@ function Player:moveColliding(dt)
   for i=1, len do
     local col = cols[i]
     self:changeVelocityByCollisionNormal(col.normal.x, col.normal.y, bounciness)
-    self:checkIfOnGround(col.normal.y)
-    actualX, actualY = self:changePositionIfPlatform(col.other, actualX, actualY)
+    self:checkIfOnGround(col.normal.y, col.other)
   end
 
   self.x, self.y = actualX, actualY
@@ -98,18 +91,19 @@ function Player:moveColliding(dt)
 end
 
 function Player:update(dt)
+  self:alignWithGround()
+
   self:changeVelocityByKeys(dt)
   self:changeVelocityByGravity(dt)
 
   self:moveColliding(dt)
-  self:changeVelocityByBeingOnGround(dt)
 end
 
 function Player:draw(drawDebug)
   util.drawFilledRectangle(self.x, self.y, self.w, self.h, 0,255,0)
 
   if drawDebug then
-    if self.onGround then
+    if self.ground then
       util.drawFilledRectangle(self.x, self.y + self.h - 4, self.w, 4, 255,255,255)
     end
   end
