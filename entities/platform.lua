@@ -61,13 +61,14 @@ function Platform:initialize(world, waypoints)
 
   self.waypoints = waypoints
   self.nextWaypointIndex = 1
+  self.prevX, self.prevY = 0,0
 
   gotoToNextWaypoint(self)
   self.world:update(self, self.x, self.y)
 end
 
 function Platform:update(dt)
-  local startX, startY = self.x, self.y
+  self.prevX, self.prevY = self.x, self.y
 
   local advance = speed * dt
 
@@ -83,7 +84,7 @@ function Platform:update(dt)
 
   local _,_, cols, len = self.world:move(self, self.x, self.y, platformFilter)
 
-  local dx, dy     = self.x - startX, self.y - startY
+  local dx, dy     = self.x - self.prevX, self.y - self.prevY
   self.vx, self.vy = dx/dt, dy/dt
 
   for i=1,len do
