@@ -99,23 +99,24 @@ function Platform:update(dt)
 end
 
 function Platform:draw(drawDebug)
+  love.graphics.setColor(0,200,200)
+
+  for i=1,#self.waypoints do
+    local p = self.waypoints[i]
+    love.graphics.circle('line', p.x, p.y, 5)
+  end
+
+  if #self.waypoints == 2 then
+    love.graphics.line(self:getPointCoords())
+  else
+    love.graphics.polygon('line', self:getPointCoords())
+  end
+
+
   if drawDebug then
-    love.graphics.setColor(0,200,200)
-
-    for i=1,#self.waypoints do
-      local p = self.waypoints[i]
-      love.graphics.circle('line', p.x, p.y, 5)
-    end
-
+    love.graphics.setColor(200,200,200)
     local p = self.waypoints[self.nextWaypointIndex]
-
     love.graphics.rectangle('line', p.x - 8, p.y - 8, 16, 16)
-
-    if #self.waypoints == 2 then
-      love.graphics.line(self:getPointCoords())
-    else
-      love.graphics.polygon('line', self:getPointCoords())
-    end
 
     local cx, cy = self:getCenter()
     love.graphics.circle('line', cx, cy, 3)
