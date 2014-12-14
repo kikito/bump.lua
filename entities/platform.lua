@@ -47,11 +47,7 @@ local function advanceTowardsNextWaypoint(self, advance)
   self.x, self.y = self.x + mx, self.y + my
 end
 
-local platformFilter = function(other)
-  if other.class.name == 'Player' then
-    return 'cross'
-  end
-end
+
 
 
 function Platform:initialize(world, waypoints)
@@ -65,6 +61,13 @@ function Platform:initialize(world, waypoints)
 
   gotoToNextWaypoint(self)
   self.world:update(self, self.x, self.y)
+
+  self.filter = function(other)
+    if other.class.name == 'Player' and self.prevY >= other.y + other.h then
+      return 'cross'
+    end
+  end
+
 end
 
 function Platform:update(dt)
@@ -82,7 +85,7 @@ function Platform:update(dt)
 
   advanceTowardsNextWaypoint(self, advance)
 
-  local _,_, cols, len = self.world:move(self, self.x, self.y, platformFilter)
+  local _,_, cols, len = self.world:move(self, self.x, self.y, self.filter)
 
   local dx, dy     = self.x - self.prevX, self.y - self.prevY
   self.vx, self.vy = dx/dt, dy/dt
