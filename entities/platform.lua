@@ -37,7 +37,6 @@ local function gotoToNextWaypoint(self)
   self.x, self.y = p.x - self.w / 2, p.y - self.h / 2
 
   self.nextWaypointIndex = (self.nextWaypointIndex % #self.waypoints) + 1
-  self.world:update(self, self.x, self.y)
 end
 
 local function advanceTowardsNextWaypoint(self, advance)
@@ -56,9 +55,9 @@ function Platform:initialize(world, waypoints)
 
   self.waypoints = waypoints
   self.nextWaypointIndex = 1
-  self.dx, self.dy = 0,0
 
   gotoToNextWaypoint(self)
+  self.world:update(self, self.x, self.y)
 end
 
 function Platform:update(dt)
@@ -76,8 +75,7 @@ function Platform:update(dt)
 
   advanceTowardsNextWaypoint(self, advance)
 
-  self.dx = startX - self.x
-  self.dy = startY - self.y
+  local _,_, cols, len = self.world:move(self, self.x, self.y, platformFilter)
 
   self.world:update(self, self.x, self.y)
 end
