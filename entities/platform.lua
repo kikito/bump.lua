@@ -68,7 +68,7 @@ function Platform:update(dt)
 
   local distanceToNext = getDistanceToNextWaypoint(self)
 
-  while advance > distanceToNext do
+  while distanceToNext > 0 and advance > distanceToNext do
     advance = advance - distanceToNext
     gotoToNextWaypoint(self)
     distanceToNext = getDistanceToNextWaypoint(self)
