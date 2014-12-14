@@ -95,7 +95,11 @@ function Platform:draw(drawDebug)
 
     love.graphics.rectangle('line', p.x - 8, p.y - 8, 16, 16)
 
-    love.graphics.polygon('line', self:getPointCoords())
+    if #self.waypoints == 2 then
+      love.graphics.line(self:getPointCoords())
+    else
+      love.graphics.polygon('line', self:getPointCoords())
+    end
 
     local cx, cy = self:getCenter()
     love.graphics.circle('line', cx, cy, 3)
