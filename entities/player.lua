@@ -67,12 +67,24 @@ end
 function Player:changeVelocityByGravity(dt)
   self.vy = self.vy + gravityAccel * dt
 end
+
+function Player:changeVelocityByCollisionNormal(col)
+  local other, normal = col.other, col.normal
+  local nx, ny        = normal.x, normal.y
+  local vx, vy        = self.vx, self.vy
+
+  if (nx < 0 and vx > 0) or (nx > 0 and vx < 0) then
+    self.vx = other.vx
+  end
+
+  if (ny < 0 and vy > 0) or (ny > 0 and vy < 0) then
+    self.vy = math.max(0, other.vy)
   end
 end
 
 function Player:setGround(other)
   self.ground = other
-  self.y = self.ground.y - self.h
+  self.y      = self.ground.y - self.h
   self.world:update(self, self.x, self.y)
 end
 
@@ -92,7 +104,7 @@ function Player:moveColliding(dt)
 
   for i=1, len do
     local col = cols[i]
-    self:changeVelocityByCollisionNormal(col.normal.x, col.normal.y, bounciness)
+    self:changeVelocityByCollisionNormal(col)
     self:checkIfOnGround(col.normal.y, col.other)
   end
 

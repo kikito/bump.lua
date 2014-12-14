@@ -18,22 +18,6 @@ function Entity:initialize(world, x,y,w,h)
   self.created_at = love.timer.getTime()
 end
 
-
-function Entity:changeVelocityByCollisionNormal(nx, ny, bounciness)
-  bounciness = bounciness or 0
-  local vx, vy = self.vx, self.vy
-
-  if (nx < 0 and vx > 0) or (nx > 0 and vx < 0) then
-    vx = -vx * bounciness
-  end
-
-  if (ny < 0 and vy > 0) or (ny > 0 and vy < 0) then
-    vy = -vy * bounciness
-  end
-
-  self.vx, self.vy = vx, vy
-end
-
 function Entity:getCenter()
   return self.x + self.w / 2,
          self.y + self.h / 2
