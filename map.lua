@@ -50,6 +50,22 @@ function Map:reset()
   end
 
   Platform:new(self.world, { {x=100,y=950}, {x=200,y=950}, {x=200,y=850} })
+
+  local platforms = 40
+  for i=1,platforms do
+    local prev = { x = math.random(100, width-100), y = math.random(100, height - 100) }
+    local waypoints = {prev}
+    for i=2, math.random(2,6) do
+      local point = {
+        x = math.random(math.max(100, prev.x - 200), math.min(width-100, prev.x + 200)),
+        y = math.random(math.max(100, prev.y - 200), math.min(height-100, prev.y + 200))
+      }
+      waypoints[i] = point
+      prev = point
+    end
+    Platform:new(self.world, waypoints)
+  end
+
 end
 
 
