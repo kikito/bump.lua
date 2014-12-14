@@ -64,18 +64,16 @@ function Player:changeVelocityByKeys(dt)
   end
 end
 
-function Player:alignWithGround(dt)
 function Player:changeVelocityByGravity(dt)
   self.vy = self.vy + gravityAccel * dt
 end
-  if self.ground then
-    self.world:update(self, self.x, self.ground.y - self.h)
   end
 end
 
-function Player:setGround(other, dt)
+function Player:setGround(other)
   self.ground = other
-  self:alignWithGround(dt)
+  self.y = self.ground.y - self.h
+  self.world:update(self, self.x, self.y)
 end
 
 function Player:checkIfOnGround(ny, other)
@@ -104,8 +102,6 @@ function Player:moveColliding(dt)
 end
 
 function Player:update(dt)
-  self:alignWithGround()
-
   self:changeVelocityByKeys(dt)
   self:changeVelocityByGravity(dt)
 
