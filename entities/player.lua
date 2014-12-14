@@ -83,7 +83,6 @@ function Player:checkIfOnGround(ny, other)
 end
 
 function Player:moveColliding(dt)
-  self.ground = nil
   local world = self.world
 
   local goalX = self.x + self.vx * dt
@@ -105,6 +104,7 @@ function Player:update(dt)
   self:changeVelocityByKeys(dt)
   self:changeVelocityByGravity(dt)
 
+  self.ground = nil
   self:moveColliding(dt)
 end
 
