@@ -37,8 +37,7 @@ function Player:initialize(world, x,y)
 end
 
 function Player:changeVelocityByKeys(dt)
-  local vx, vy = self.vx, self.vy
-
+  local vx = self.vx
   if love.keyboard.isDown("left") then
     vx = vx - dt * (vx > 0 and brakeAccel or runAccel)
   elseif love.keyboard.isDown("right") then
@@ -52,11 +51,12 @@ function Player:changeVelocityByKeys(dt)
     end
   end
 
-  if love.keyboard.isDown("up") and self.onGround then -- jump
-    vy = -jumpVelocity
-  end
+  self.vx = vx
 
-  self.vx, self.vy = vx, vy
+  if love.keyboard.isDown("up") and self.ground then -- jump
+    self.vy = -jumpVelocity
+    self.ground = nil
+  end
 end
 
 function Player:changeVelocityByBeingOnGround()
