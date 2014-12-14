@@ -11,8 +11,6 @@ local class = require 'lib.middleclass'
 
 local Entity = class('Entity')
 
-local gravityAccel  = 500 -- pixels per second^2
-
 function Entity:initialize(world, x,y,w,h)
   self.world, self.x, self.y, self.w, self.h = world, x,y,w,h
   self.vx, self.vy = 0,0
@@ -20,9 +18,6 @@ function Entity:initialize(world, x,y,w,h)
   self.created_at = love.timer.getTime()
 end
 
-function Entity:changeVelocityByGravity(dt)
-  self.vy = self.vy + gravityAccel * dt
-end
 
 function Entity:changeVelocityByCollisionNormal(nx, ny, bounciness)
   bounciness = bounciness or 0

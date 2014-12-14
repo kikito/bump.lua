@@ -18,6 +18,8 @@ local height        = 64
 
 local abs = math.abs
 
+local gravityAccel  = 500 -- pixels per second^2
+
 function Player:initialize(world, x,y)
   Entity.initialize(self, world, x, y, width, height)
 
@@ -55,6 +57,9 @@ function Player:changeVelocityByKeys(dt)
 end
 
 function Player:alignWithGround(dt)
+function Player:changeVelocityByGravity(dt)
+  self.vy = self.vy + gravityAccel * dt
+end
   if self.ground then
     self.world:update(self, self.x, self.ground.y - self.h)
   end
