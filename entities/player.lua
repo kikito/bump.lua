@@ -23,6 +23,8 @@ local gravityAccel  = 500 -- pixels per second^2
 function Player:initialize(world, x,y)
   Entity.initialize(self, world, x, y, width, height)
 
+  self.rvx = 0
+
   self.filter = function(other)
     local kind = other.class.name
     if kind == 'Block'
@@ -34,7 +36,8 @@ function Player:initialize(world, x,y)
 end
 
 function Player:changeVelocityByKeys(dt)
-  local vx = self.vx
+  local vx = self.rvx
+
   if love.keyboard.isDown("left") then
     vx = vx - dt * (vx > 0 and brakeAccel or runAccel)
   elseif love.keyboard.isDown("right") then
@@ -48,11 +51,16 @@ function Player:changeVelocityByKeys(dt)
     end
   end
 
-  self.vx = vx
+  self.rvx = vx
+
+  if self.ground then
+    self.vx = self.rvx + self.ground.vx
+  else
+    self.vx = self.rvx
+  end
 
   if love.keyboard.isDown("up") and self.ground then -- jump
     self.vy = -jumpVelocity
-    self.ground = nil
   end
 end
 
