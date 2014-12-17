@@ -63,7 +63,7 @@ local function assertIsRect(x,y,w,h)
   assertIsPositiveNumber(h, 'h')
 end
 
-local default_filter = function()
+local defaultFilter = function()
   return 'slide'
 end
 
@@ -447,7 +447,7 @@ function World:project(item, x,y,w,h, goalX, goalY, filter)
 
   goalX = goalX or x
   goalY = goalY or y
-  filter  = filter  or default_filter
+  filter  = filter  or defaultFilter
 
   local collisions, len = {}, 0
 
@@ -652,6 +652,7 @@ end
 
 function World:check(item, goalX, goalY, filter)
   local cols, len = {}, 0
+  filter = filter or defaultFilter
 
   local visited = {[item] = true}
   local visitedFilter = function(item, other)
