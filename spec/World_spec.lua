@@ -147,7 +147,7 @@ describe('World', function()
         end)
 
         it('deactivates collisions when filter returns false', function()
-          local cols = world:project({}, 110,0, 10,10, 10, 0, function(obj)
+          local cols = world:project({}, 110,0, 10,10, 10, 0, function(item, obj)
             return obj ~= d and "touch"
           end)
           assert.same(#cols, 2)

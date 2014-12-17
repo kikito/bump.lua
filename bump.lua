@@ -467,7 +467,7 @@ function World:project(item, x,y,w,h, goalX, goalY, filter)
     if not visited[other] then
       visited[other] = true
 
-      local responseName = filter(other, item)
+      local responseName = filter(item, other)
       if responseName then
         local ox,oy,ow,oh   = self:getRect(other)
         local col           = rect_detectCollision(x,y,w,h, ox,oy,ow,oh, goalX, goalY)
@@ -651,14 +651,12 @@ function World:move(item, goalX, goalY, filter)
 end
 
 function World:check(item, goalX, goalY, filter)
-  filter = filter or default_filter
-
   local cols, len = {}, 0
 
   local visited = {[item] = true}
-  local visitedFilter = function(item)
-    if visited[item] then return false end
-    return filter(item)
+  local visitedFilter = function(item, other)
+    if visited[other] then return false end
+    return filter(item, other)
   end
 
   local x,y,w,h = self:getRect(item)
