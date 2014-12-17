@@ -184,7 +184,8 @@ This is probably the most useful method of bump. It moves the item inside the wo
 * `item` must be something previously inserted in the world with `world:add(item, l,t,w,h)`. Otherwise, `world:move` will raise an error.
 * `goalX, goalY` are the *desired* `x` and `y` coordinates. The item will end up in those coordinates if it doesn't collide with anything.
   If, however, it collides with 1 or more other items, it can end up in a different set of coordinates.
-* `filter` is an optional function. If provided, it must have this signature: `local type = filter(other)`. By default, `filter` always returns `"slide"`.
+* `filter` is an optional function. If provided, it must have this signature: `local type = filter(item, other)`. By default, `filter` always returns `"slide"`.
+  * `item` is the item being moved (the same one passed to `world:move` on the first param)
   * `other` is an item (different from `item`) which can collide with `item`.
   * `type` is a value which defines how `item` collides with `other`.
     * If `type` is `false` or `nil`, `item` will ignore `other` completely (there will be no collision)
@@ -269,7 +270,7 @@ demo use `"bounce"` to resolve their collisions.
 Here's an example of a filter displaying all these behaviors:
 
 ```lua
-local playerFilter = function(other)
+local playerFilter = function(item, other)
   if     other.isCoin   then return 'cross'
   elseif other.isWall   then return 'slide'
   elseif other.isExit   then return 'touch'
@@ -311,7 +312,7 @@ local actualX, actualY, cols, len = world:check(item, goalX, goalY, <filter>)
 It returns the position where `item` would end up, and the collisions it would encounter, should it attempt to move to `goalX, goalY` with the specified `filter`.
 
 Notice that `check` has the same parameters and return values as `move`. The difference is that the former does not update the position of `item` in the world - you
-would have to call `world:update` in order to do that.
+would have to call `world:update` in order to do that. In fact, `world:move` is implemented by calling `world:check` first, and then `world:update` immediately after.
 
 The equivalent code to the previous example using `check` would be:
 
@@ -325,7 +326,7 @@ function movePlayer(player, dt)
 end
 ```
 
-`item` is useful for things like "planing in advance" or "studying alternatives", when moving is still not fully decided.
+`world:check` is useful for things like "planing in advance" or "studying alternatives", when moving is still not fully decided.
 
 
 ### Collision info
@@ -334,6 +335,7 @@ Here's the info contained on every collision item contained in the `cols` variab
 
 ```lua
 cols[i] = {
+  item  = the item being moved / checked
   other = an item colliding with the item being moved
   type  = the result of `filter(other)`. It's usually "touch", "cross", "slide" or "bounce"
   overlaps  = boolean. True if item "was overlapping" other when the collision started.
@@ -476,7 +478,7 @@ local x,y = world:toWorld(x,y)
 The inverse of `world:toCell`. Given the coordinates of a cell, return the coordinates of its top-left corner in the game world.
 
 ``` lua
-local cols, len = world:project(x,y,w,h, goalX, goalY, filter)
+local cols, len = world:project(item, x,y,w,h, goalX, goalY, filter)
 ```
 
 Moves a the given imaginary rectangle towards goalX and goalY, providing a list of collisions as they happen *in that straight path*.
@@ -542,6 +544,10 @@ Specs for this project can be run using [busted](http://olivinelabs.com/busted).
 
 
 ## Changelog
+
+### v3.1.0
+
+* The `filter` parameter of `world:move`, `world:check` and `world:project` now has the signature `filter(item, other)` instead of `filter(other)`.
 
 ### v3.0.0
 
