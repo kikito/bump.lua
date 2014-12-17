@@ -24,14 +24,14 @@ function Player:initialize(world, x,y)
   Entity.initialize(self, world, x, y, width, height)
 
   self.rvx = 0
+end
 
-  self.filter = function(other)
-    local kind = other.class.name
-    if kind == 'Block'
-    or (kind == 'Platform' and self.y + self.h <= other.prevY)
-    then
-      return 'slide'
-    end
+function Player:filter(other)
+  local kind = other.class.name
+  if kind == 'Block'
+  or (kind == 'Platform' and self.y + self.h <= other.prevY)
+  then
+    return 'slide'
   end
 end
 
