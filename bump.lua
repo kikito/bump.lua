@@ -652,7 +652,6 @@ function World:move(item, goalX, goalY, filter)
 end
 
 function World:check(item, goalX, goalY, filter)
-  local cols, len = {}, 0
   filter = filter or defaultFilter
 
   local visited = {[item] = true}
@@ -660,6 +659,8 @@ function World:check(item, goalX, goalY, filter)
     if visited[other] then return false end
     return filter(item, other)
   end
+
+  local cols, len = {}, 0
 
   local x,y,w,h = self:getRect(item)
 
@@ -672,7 +673,7 @@ function World:check(item, goalX, goalY, filter)
 
     visited[col.other] = true
 
-      local response = getResponseByName(self, col.type)
+    local response = getResponseByName(self, col.type)
 
     goalX, goalY, projected_cols, projected_len = response(
       self,
