@@ -452,6 +452,7 @@ function World:project(item, x,y,w,h, goalX, goalY, filter)
   local collisions, len = {}, 0
 
   local visited = {}
+  if item ~= nil then visited[item] = true end
 
   -- This could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding rect of the whole movement. Conditional to building a queryPolygon method
