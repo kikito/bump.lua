@@ -42,7 +42,7 @@ local function updatePlayer(dt)
   end
 
   if dx ~= 0 or dy ~= 0 then
-    player.x, player.y = world:move(player, player.x + dx, player.y + dy)
+    player.x, player.y, _, col_len = world:move(player, player.x + dx, player.y + dy)
   end
 end
 
@@ -100,6 +100,7 @@ function love.load()
 end
 
 function love.update(dt)
+  col_len = 0
   updatePlayer(dt)
 end
 
