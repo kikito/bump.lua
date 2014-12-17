@@ -670,7 +670,7 @@ function World:check(item, goalX, goalY, filter)
 
     visited[col.other] = true
 
-    local response = getResponseByName(self, col.type)
+      local response = getResponseByName(self, col.type)
 
     goalX, goalY, projected_cols, projected_len = response(
       self,
