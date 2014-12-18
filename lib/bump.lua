@@ -1,5 +1,5 @@
 local bump = {
-  _VERSION     = 'bump v3.0.1',
+  _VERSION     = 'bump v3.1.0',
   _URL         = 'https://github.com/kikito/bump.lua',
   _DESCRIPTION = 'A collision detection library for Lua',
   _LICENSE     = [[
@@ -63,7 +63,7 @@ local function assertIsRect(x,y,w,h)
   assertIsPositiveNumber(h, 'h')
 end
 
-local default_filter = function()
+local defaultFilter = function()
   return 'slide'
 end
 
@@ -267,7 +267,7 @@ end
 
 local cross = function(world, col, x,y,w,h, goalX, goalY, filter)
   local touch = col.touch
-  local cols, len = world:project(x,y,w,h, goalX, goalY, filter)
+  local cols, len = world:project(col.item, x,y,w,h, goalX, goalY, filter)
   return goalX, goalY, cols, len
 end
 
@@ -287,9 +287,9 @@ local slide = function(world, col, x,y,w,h, goalX, goalY, filter)
 
   col.slide = {x = sx, y = sy}
 
-  x,y              = touch.x, touch.y
+  x,y          = touch.x, touch.y
   goalX, goalY = sx, sy
-  local cols, len  = world:project(x,y,w,h, goalX, goalY, filter)
+  local cols, len  = world:project(col.item, x,y,w,h, goalX, goalY, filter)
   return goalX, goalY, cols, len
 end
 
@@ -308,11 +308,11 @@ local bounce = function(world, col, x,y,w,h, goalX, goalY, filter)
     bx, by = tx + bnx, ty + bny
   end
 
-  col.bounce       = {x = bx,  y = by}
+  col.bounce   = {x = bx,  y = by}
+  x,y          = touch.x, touch.y
+  goalX, goalY = bx, by
 
-  x,y                = touch.x, touch.y
-  goalX, goalY   = bx, by
-  local cols, len    = world:project(x,y,w,h, goalX, goalY, filter)
+  local cols, len    = world:project(col.item, x,y,w,h, goalX, goalY, filter)
   return goalX, goalY, cols, len
 end
 
@@ -442,16 +442,17 @@ function World:addResponse(name, response)
   self.responses[name] = response
 end
 
-function World:project(x,y,w,h, goalX, goalY, filter)
+function World:project(item, x,y,w,h, goalX, goalY, filter)
   assertIsRect(x,y,w,h)
 
   goalX = goalX or x
   goalY = goalY or y
-  filter  = filter  or default_filter
+  filter  = filter  or defaultFilter
 
   local collisions, len = {}, 0
 
   local visited = {}
+  if item ~= nil then visited[item] = true end
 
   -- This could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding rect of the whole movement. Conditional to building a queryPolygon method
@@ -467,13 +468,14 @@ function World:project(x,y,w,h, goalX, goalY, filter)
     if not visited[other] then
       visited[other] = true
 
-      local responseName = filter(other)
+      local responseName = filter(item, other)
       if responseName then
         local ox,oy,ow,oh   = self:getRect(other)
         local col           = rect_detectCollision(x,y,w,h, ox,oy,ow,oh, goalX, goalY)
 
         if col then
           col.other    = other
+          col.item     = item
           col.type     = responseName
 
           len = len + 1
@@ -650,19 +652,19 @@ function World:move(item, goalX, goalY, filter)
 end
 
 function World:check(item, goalX, goalY, filter)
-  filter = filter or default_filter
+  filter = filter or defaultFilter
+
+  local visited = {[item] = true}
+  local visitedFilter = function(item, other)
+    if visited[other] then return false end
+    return filter(item, other)
+  end
 
   local cols, len = {}, 0
 
-  local visited = {[item] = true}
-  local visitedFilter = function(item)
-    if visited[item] then return false end
-    return filter(item)
-  end
-
   local x,y,w,h = self:getRect(item)
 
-  local projected_cols, projected_len = self:project(x,y,w,h, goalX,goalY, visitedFilter)
+  local projected_cols, projected_len = self:project(item, x,y,w,h, goalX,goalY, visitedFilter)
 
   while projected_len > 0 do
     local col = projected_cols[1]

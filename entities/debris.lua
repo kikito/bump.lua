@@ -17,11 +17,6 @@ local minVel = -100
 local maxVel = -1 * minVel
 local bounciness = 0.1
 
-local debrisFilter = function(other)
-  local kind = other.class.name
-  if kind == 'Block' or kind == 'Guardian' then return "bounce" end
-end
-
 function Debris:initialize(world, x, y, r,g,b)
   Entity.initialize(self,
     world,
@@ -37,13 +32,18 @@ function Debris:initialize(world, x, y, r,g,b)
   self.vy = math.random(minVel, maxVel)
 end
 
+function Debris:filter(other)
+  local kind = other.class.name
+  if kind == 'Block' or kind == 'Guardian' then return "bounce" end
+end
+
 function Debris:moveColliding(dt)
   local world = self.world
 
   local future_l = self.l + self.vx * dt
   local future_t = self.t + self.vy * dt
 
-  local next_l, next_t, cols, len = world:move(self, future_l, future_t, debrisFilter)
+  local next_l, next_t, cols, len = world:move(self, future_l, future_t, self.filter)
 
   for i=1, len do
     local col = cols[i]

@@ -35,16 +35,16 @@ local beltHeight    = 8
 
 local abs = math.abs
 
-local playerFilter = function(other)
-  local kind = other.class.name
-  if kind == 'Guardian' or kind == 'Block' then return 'slide' end
-end
-
 function Player:initialize(map, world, x,y)
   Entity.initialize(self, world, x, y, width, height)
   self.health = 1
   self.deadCounter = 0
   self.map = map
+end
+
+function Player:filter(other)
+  local kind = other.class.name
+  if kind == 'Guardian' or kind == 'Block' then return 'slide' end
 end
 
 function Player:changeVelocityByKeys(dt)
@@ -122,7 +122,7 @@ function Player:moveColliding(dt)
   local future_l = self.l + self.vx * dt
   local future_t = self.t + self.vy * dt
 
-  local next_l, next_t, cols, len = world:move(self, future_l, future_t, playerFilter)
+  local next_l, next_t, cols, len = world:move(self, future_l, future_t, self.filter)
 
   for i=1, len do
     local col = cols[i]

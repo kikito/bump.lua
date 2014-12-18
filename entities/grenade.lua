@@ -40,14 +40,15 @@ function Grenade:initialize(world, parent, camera, x, y, vx, vy)
   self.vx, self.vy  = vx, vy
   self.lived = 0
   self.ignoresParent = true
-  self.filter = function(other)
-    local kind = other.class.name
-    if kind == 'Block'
-    or kind == 'Player'
-    or(kind == 'Guardian' and not self.ignoresParent)
-    then
-      return "bounce"
-    end
+end
+
+function Grenade:filter(other)
+  local kind = other.class.name
+  if kind == 'Block'
+  or kind == 'Player'
+  or(kind == 'Guardian' and not self.ignoresParent)
+  then
+    return "bounce"
   end
 end
 
