@@ -75,6 +75,7 @@ function Player:changeVelocityByCollisionNormal(col)
 
   if (nx < 0 and vx > 0) or (nx > 0 and vx < 0) then
     self.vx = other.vx
+    self.rvx = other.vx
   end
 
   if (ny < 0 and vy > 0) or (ny > 0 and vy < 0) then
