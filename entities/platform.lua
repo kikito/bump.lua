@@ -61,13 +61,12 @@ function Platform:initialize(world, waypoints)
 
   gotoToNextWaypoint(self)
   self.world:update(self, self.x, self.y)
+end
 
-  self.filter = function(other)
-    if other.class.name == 'Player' and self.prevY >= other.y + other.h then
-      return 'cross'
-    end
+function Platform:filter(other)
+  if other.class.name == 'Player' and self.prevY >= other.y + other.h then
+    return 'cross'
   end
-
 end
 
 function Platform:update(dt)
