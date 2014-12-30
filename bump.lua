@@ -139,7 +139,7 @@ end
 
 local function rect_detectCollision(x1,y1,w1,h1, x2,y2,w2,h2, goalX, goalY)
   goalX = goalX or x1
-  goalY = goalY or x1
+  goalY = goalY or y1
 
   local dx, dy      = goalX - x1, goalY - y1
   local x,y,w,h     = rect_getDiff(x1,y1,w1,h1, x2,y2,w2,h2)

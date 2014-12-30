@@ -28,8 +28,8 @@ describe('bump.responses', function()
         describe('when there is no movement', function()
           it('returns the left,top coordinates of the minimum displacement on static items', function()
 
-            --                                          -2-1 0 1 2 3 4 5 6 7 8 9 10 
-            --      -2 -1 0 1 2 3 4 5 6 7 8 9           -2 · ┌–––┐ · ┌–––┐ · ┌–––┐ ·    
+            --                                          -2-1 0 1 2 3 4 5 6 7 8 9 10
+            --      -2 -1 0 1 2 3 4 5 6 7 8 9           -2 · ┌–––┐ · ┌–––┐ · ┌–––┐ ·
             --      -1  ┌–––┐ · ┌–––┐ · ┌–––┐           -1 · │0-1│ · │0-1│ · │0-1│ ·
             --       0  │ ┌–––––––––––––––┐ │ 1  2  3    0 · └–┌–––––––––––––––┐–┘ ·
             --       1  └–│–┘ · └–––┘ · └–│–┘            1 · · │ · · · · · · · │ · ·
@@ -47,9 +47,9 @@ describe('bump.responses', function()
             assert.same(touch( 3,-1,2,2, 0,0,8,8), { 3,-2, 0, -1}) -- 2
             assert.same(touch( 7,-1,2,2, 0,0,8,8), { 7,-2, 0, -1}) -- 3
 
-            assert.same(touch(-1, 3,2,2, 0,0,8,8), {-1, 8,  0, 1}) -- 4
+            assert.same(touch(-1, 3,2,2, 0,0,8,8), {-2, 3, -1, 0}) -- 4
             assert.same(touch( 3, 3,2,2, 0,0,8,8), { 3, 8,  0, 1}) -- 5
-            assert.same(touch( 7, 3,2,2, 0,0,8,8), { 7,-2,  0,-1}) -- 6
+            assert.same(touch( 7, 3,2,2, 0,0,8,8), { 8, 3,  1, 0}) -- 6
 
             assert.same(touch(-1, 7,2,2, 0,0,8,8), {-1, 8,  0, 1}) -- 1
             assert.same(touch( 3, 7,2,2, 0,0,8,8), { 3, 8,  0, 1}) -- 2
