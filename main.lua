@@ -76,7 +76,7 @@ end
 local function drawDebug()
   bump_debug.draw(world)
 
-  local statistics = ("fps: %d, mem: %dKB, collisions: %d"):format(love.timer.getFPS(), collectgarbage("count"), col_len)
+  local statistics = ("fps: %d, mem: %dKB, collisions: %d, items: %d"):format(love.timer.getFPS(), collectgarbage("count"), col_len, world:countItems())
   love.graphics.setColor(255, 255, 255)
   love.graphics.printf(statistics, 0, 580, 790, 'right')
 end

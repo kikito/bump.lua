@@ -1,5 +1,5 @@
 local bump = {
-  _VERSION     = 'bump v3.1.0',
+  _VERSION     = 'bump v3.1.2',
   _URL         = 'https://github.com/kikito/bump.lua',
   _DESCRIPTION = 'A collision detection library for Lua',
   _LICENSE     = [[
@@ -139,7 +139,7 @@ end
 
 local function rect_detectCollision(x1,y1,w1,h1, x2,y2,w2,h2, goalX, goalY)
   goalX = goalX or x1
-  goalY = goalY or x1
+  goalY = goalY or y1
 
   local dx, dy      = goalX - x1, goalY - y1
   local x,y,w,h     = rect_getDiff(x1,y1,w1,h1, x2,y2,w2,h2)
@@ -502,6 +502,21 @@ end
 
 function World:hasItem(item)
   return not not self.rects[item]
+end
+
+function World:getItems()
+  local items, len = {}, 0
+  for item,_ in pairs(self.rects) do
+    len = len + 1
+    items[len] = item
+  end
+  return items, len
+end
+
+function World:countItems()
+  local len = 0
+  for _ in pairs(self.rects) do len = len + 1 end
+  return len
 end
 
 function World:getRect(item)
