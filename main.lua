@@ -57,7 +57,7 @@ function love.draw()
   love.graphics.printf(msg, w - 200, 10, 200, 'left')
 
   if drawDebug then
-    local statistics = ("fps: %d, mem: %dKB\n sfx: %d"):format(love.timer.getFPS(), collectgarbage("count"), media.countInstances())
+    local statistics = ("fps: %d, mem: %dKB\n sfx: %d, items: %d"):format(love.timer.getFPS(), collectgarbage("count"), media.countInstances(), map:countItems())
     love.graphics.printf(statistics, w - 200, h - 40, 200, 'right')
   end
 end

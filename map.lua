@@ -109,5 +109,9 @@ function Map:draw(drawDebug, l,t,w,h)
   end
 end
 
+function Map:countItems()
+  return self.world:countItems()
+end
+
 
 return Map
