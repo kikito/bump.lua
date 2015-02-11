@@ -504,6 +504,21 @@ function World:hasItem(item)
   return not not self.rects[item]
 end
 
+function World:getItems()
+  local items, len = {}, 0
+  for item,_ in pairs(self.rects) do
+    len = len + 1
+    items[len] = item
+  end
+  return items, len
+end
+
+function World:countItems()
+  local len = 0
+  for _ in pairs(self.rects) do len = len + 1 end
+  return len
+end
+
 function World:getRect(item)
   local rect = self.rects[item]
   if not rect then

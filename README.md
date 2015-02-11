@@ -454,6 +454,17 @@ local result = world:hasItem(item)
 Returns wether the world contains the given item or not. This function does not throw an error if `item` is not included in `world`; it just returns `false`.
 
 ``` lua
+local count = world:countItems()
+```
+Returns the number of items inserted in the world. Useful for debugging
+
+``` lua
+local items, len = world:getItems()
+```
+Builds and returns an array containing all the items in the world (as well as its length). This can be useful if you want to draw or update all the items in the world, without
+doing any queries. Notice that in which the items will be returned is non-deterministic.
+
+``` lua
 local x,y,w,h = world:getRect(item)
 ```
 Given an item, obtain the coordinates of its bounding rect. Useful for debugging/testing things.
