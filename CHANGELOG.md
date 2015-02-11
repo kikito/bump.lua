@@ -1,5 +1,9 @@
 ## bump.lua changelog
 
+## v3.1.2
+
+* Add world:getItems and world:countItems
+
 ## v3.1.1
 
 * Bugfix in rect_detectCollision where goalY was not correctly initialized
