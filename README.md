@@ -41,7 +41,7 @@ local A = {name="A"}
 local B = {name="B"}
 
 -- insert both rectangles into bump
-world:add(A,   0, 0,    64, 256) -- left, top, width, height
+world:add(A,   0, 0,    64, 256) -- x,y, width, height
 world:add(B,   0, -100, 32, 32)
 
 -- Try to move B to 0,64. If it collides with A, "slide over it"
@@ -129,7 +129,10 @@ can be handy if you want to use the bump world as a spatial database in addition
 Each `item` will have an associated "rectangle" in the `world`.
 
 * `item` is the new item being inserted (usually a table representing a game object, like `player` or `ground_tile`).
-* `x,y,w,h`: the rectangle associated to `item` in the world: left, top, width, height. They are all mandatory.
+* `x,y,w,h`: the rectangle associated to `item` in the world. They are all mandatory. `w` & `h` are the "width" and "height"
+  of the box. `x` and `y` depend on the host system's coordinate system. For example, in [LÖVE](http://love2d.org) &
+  [Corona SDK](http://coronalabs.com/products/corona-sdk/) they represent "left" & "top", while in [Cocos2d-x](http://cocos2d-x.org/wiki/Lua)
+  they represent "left" & "bottom".
 
 `world:add` returns no values. It generates no collisions - you can call `world:check(item)` if you want to get the collisions it creates right after it's added.
 
@@ -486,7 +489,7 @@ debug info.
 local x,y = world:toWorld(x,y)
 ```
 
-The inverse of `world:toCell`. Given the coordinates of a cell, return the coordinates of its top-left corner in the game world.
+The inverse of `world:toCell`. Given the coordinates of a cell, return the coordinates of its main corner (top-left in LÖVE and Corona SDK, bottom-left in Cocos2d-x) in the game world.
 
 ``` lua
 local cols, len = world:project(item, x,y,w,h, goalX, goalY, filter)
