@@ -105,12 +105,6 @@ function Player:playEffects()
   end
 end
 
-function Player:changeVelocityByBeingOnGround()
-  if self.onGround then
-    self.vy = math.min(self.vy, 0)
-  end
-end
-
 function Player:checkIfOnGround(ny)
   if ny < 0 then self.onGround = true end
 end
@@ -153,7 +147,6 @@ function Player:update(dt)
   self:playEffects()
 
   self:moveColliding(dt)
-  self:changeVelocityByBeingOnGround(dt)
 end
 
 function Player:takeHit()
