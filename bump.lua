@@ -120,10 +120,8 @@ local function rect_getDiff(x1,y1,w1,h1, x2,y2,w2,h2)
          h1 + h2
 end
 
-local delta = 0.00001 -- floating-point-safe comparisons here, otherwise bugs
 local function rect_containsPoint(x,y,w,h, px,py)
-  return px - x > delta      and py - y > delta and
-         x + w - px > delta  and y + h - py > delta
+  return px > x and px > y and px < x + w and py < y + h
 end
 
 local function rect_isIntersecting(x1,y1,w1,h1, x2,y2,w2,h2)
@@ -176,6 +174,7 @@ local function rect_detectCollision(x1,y1,w1,h1, x2,y2,w2,h2, goalX, goalY)
       -- intersecting and moving - move in the opposite direction
       local ti1
       ti1,_,nx,ny = rect_getSegmentIntersectionIndices(x,y,w,h, 0,0,dx,dy, -math.huge, 1)
+      if not ti1 then return end
       tx, ty = x1 + dx * ti1, y1 + dy * ti1
     end
   else -- tunnel
