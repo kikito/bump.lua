@@ -642,20 +642,45 @@ function World:remove(item)
 end
 
 function World:update(item, x2,y2,w2,h2)
-  local x,y,w,h = self:getRect(item)
-  w2,h2 = w2 or w, h2 or h
+  local x1,y1,w1,h1 = self:getRect(item)
+  w2,h2 = w2 or w1, h2 or h1
   assertIsRect(x2,y2,w2,h2)
-  if x ~= x2 or y ~= y2 or w ~= w2 or h ~= h2 then
+
+  if x1 ~= x2 or y1 ~= y2 or w1 ~= w2 or h1 ~= h2 then
+
     local cellSize = self.cellSize
-    local cl1,ct1,cw1,ch1 = grid_toCellRect(cellSize, x,y,w,h)
+    local cl1,ct1,cw1,ch1 = grid_toCellRect(cellSize, x1,y1,w1,h1)
     local cl2,ct2,cw2,ch2 = grid_toCellRect(cellSize, x2,y2,w2,h2)
-    if cl1==cl2 and ct1==ct2 and cw1==cw2 and ch1==ch2 then
-      local rect = self.rects[item]
-      rect.x, rect.y, rect.w, rect.h = x2,y2,w2,h2
-    else
-      self:remove(item)
-      self:add(item, x2,y2,w2,h2)
+
+    if cl1 ~= cl2 or ct1 ~= ct2 or cw1 ~= cw2 or ch1 ~= ch2 then
+
+      local cr1, cb1 = cl1+cw1-1, ct1+ch1-1
+      local cr2, cb2 = cl2+cw2-1, ct2+ch2-1
+      local cyOut
+
+      for cy = ct1, cb1 do
+        cyOut = cy < ct2 or cy > cb2
+        for cx = cl1, cr1 do
+          if cyOut or cx < cl2 or cx > cr2 then
+            removeItemFromCell(self, item, cx, cy)
+          end
+        end
+      end
+
+      for cy = ct2, cb2 do
+        cyOut = cy < ct1 or cy > cb1
+        for cx = cl2, cr2 do
+          if cyOut or cx < cl1 or cx > cr1 then
+            addItemToCell(self, item, cx, cy)
+          end
+        end
+      end
+
     end
+
+    local rect = self.rects[item]
+    rect.x, rect.y, rect.w, rect.h = x2,y2,w2,h2
+
   end
 end
 
