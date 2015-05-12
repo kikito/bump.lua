@@ -261,18 +261,18 @@ end
 -- Responses
 ------------------------------------------
 
-local touch = function(world, col, x,y,w,h, goalX, goalY, filter)
+local touch = function(world, col, x,y,w,h, goalX, goalY, ignored, filter)
   local touch = col.touch
   return touch.x, touch.y, {}, 0
 end
 
-local cross = function(world, col, x,y,w,h, goalX, goalY, filter)
+local cross = function(world, col, x,y,w,h, goalX, goalY, ignored, filter)
   local touch = col.touch
-  local cols, len = world:project(col.item, x,y,w,h, goalX, goalY, filter)
+  local cols, len = world:project(col.item, x,y,w,h, goalX, goalY, ignored, filter)
   return goalX, goalY, cols, len
 end
 
-local slide = function(world, col, x,y,w,h, goalX, goalY, filter)
+local slide = function(world, col, x,y,w,h, goalX, goalY, ignored, filter)
   goalX = goalX or x
   goalY = goalY or y
 
@@ -290,11 +290,11 @@ local slide = function(world, col, x,y,w,h, goalX, goalY, filter)
 
   x,y          = touch.x, touch.y
   goalX, goalY = sx, sy
-  local cols, len  = world:project(col.item, x,y,w,h, goalX, goalY, filter)
+  local cols, len  = world:project(col.item, x,y,w,h, goalX, goalY, ignored, filter)
   return goalX, goalY, cols, len
 end
 
-local bounce = function(world, col, x,y,w,h, goalX, goalY, filter)
+local bounce = function(world, col, x,y,w,h, goalX, goalY, ignored, filter)
   goalX = goalX or x
   goalY = goalY or y
 
@@ -313,7 +313,7 @@ local bounce = function(world, col, x,y,w,h, goalX, goalY, filter)
   x,y          = touch.x, touch.y
   goalX, goalY = bx, by
 
-  local cols, len    = world:project(col.item, x,y,w,h, goalX, goalY, filter)
+  local cols, len    = world:project(col.item, x,y,w,h, goalX, goalY, ignored, filter)
   return goalX, goalY, cols, len
 end
 
@@ -443,7 +443,7 @@ function World:addResponse(name, response)
   self.responses[name] = response
 end
 
-function World:project(item, x,y,w,h, goalX, goalY, filter)
+function World:project(item, x,y,w,h, goalX, goalY, ignored, filter)
   assertIsRect(x,y,w,h)
 
   goalX = goalX or x
@@ -466,7 +466,7 @@ function World:project(item, x,y,w,h, goalX, goalY, filter)
   local dictItemsInCellRect = getDictItemsInCellRect(self, cl,ct,cw,ch)
 
   for other,_ in pairs(dictItemsInCellRect) do
-    if not visited[other] then
+    if not ignored[other] and not visited[other] then
       visited[other] = true
 
       local responseName = filter(item, other)
@@ -695,24 +695,20 @@ end
 function World:check(item, goalX, goalY, filter)
   filter = filter or defaultFilter
 
-  local visited = {[item] = true}
-  local visitedFilter = function(item, other)
-    if visited[other] then return false end
-    return filter(item, other)
-  end
+  local ignored = {[item] = true}
 
   local cols, len = {}, 0
 
   local x,y,w,h = self:getRect(item)
 
-  local projected_cols, projected_len = self:project(item, x,y,w,h, goalX,goalY, visitedFilter)
+  local projected_cols, projected_len = self:project(item, x,y,w,h, goalX,goalY, ignored, filter)
 
   while projected_len > 0 do
     local col = projected_cols[1]
     len       = len + 1
     cols[len] = col
 
-    visited[col.other] = true
+    ignored[col.other] = true
 
     local response = getResponseByName(self, col.type)
 
@@ -721,7 +717,8 @@ function World:check(item, goalX, goalY, filter)
       col,
       x, y, w, h,
       goalX, goalY,
-      visitedFilter
+      ignored,
+      filter
     )
   end
 
