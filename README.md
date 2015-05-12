@@ -41,7 +41,7 @@ local A = {name="A"}
 local B = {name="B"}
 
 -- insert both rectangles into bump
-world:add(A,   0, 0,    64, 256) -- left, top, width, height
+world:add(A,   0, 0,    64, 256) -- x,y, width, height
 world:add(B,   0, -100, 32, 32)
 
 -- Try to move B to 0,64. If it collides with A, "slide over it"
@@ -129,7 +129,10 @@ can be handy if you want to use the bump world as a spatial database in addition
 Each `item` will have an associated "rectangle" in the `world`.
 
 * `item` is the new item being inserted (usually a table representing a game object, like `player` or `ground_tile`).
-* `x,y,w,h`: the rectangle associated to `item` in the world: left, top, width, height. They are all mandatory.
+* `x,y,w,h`: the rectangle associated to `item` in the world. They are all mandatory. `w` & `h` are the "width" and "height"
+  of the box. `x` and `y` depend on the host system's coordinate system. For example, in [LÖVE](http://love2d.org) &
+  [Corona SDK](http://coronalabs.com/products/corona-sdk/) they represent "left" & "top", while in [Cocos2d-x](http://cocos2d-x.org/wiki/Lua)
+  they represent "left" & "bottom".
 
 `world:add` returns no values. It generates no collisions - you can call `world:check(item)` if you want to get the collisions it creates right after it's added.
 
@@ -454,6 +457,17 @@ local result = world:hasItem(item)
 Returns wether the world contains the given item or not. This function does not throw an error if `item` is not included in `world`; it just returns `false`.
 
 ``` lua
+local count = world:countItems()
+```
+Returns the number of items inserted in the world. Useful for debugging
+
+``` lua
+local items, len = world:getItems()
+```
+Builds and returns an array containing all the items in the world (as well as its length). This can be useful if you want to draw or update all the items in the world, without
+doing any queries. Notice that in which the items will be returned is non-deterministic.
+
+``` lua
 local x,y,w,h = world:getRect(item)
 ```
 Given an item, obtain the coordinates of its bounding rect. Useful for debugging/testing things.
@@ -475,7 +489,7 @@ debug info.
 local x,y = world:toWorld(x,y)
 ```
 
-The inverse of `world:toCell`. Given the coordinates of a cell, return the coordinates of its top-left corner in the game world.
+The inverse of `world:toCell`. Given the coordinates of a cell, return the coordinates of its main corner (top-left in LÖVE and Corona SDK, bottom-left in Cocos2d-x) in the game world.
 
 ``` lua
 local cols, len = world:project(item, x,y,w,h, goalX, goalY, filter)
@@ -545,34 +559,6 @@ Specs for this project can be run using [busted](http://olivinelabs.com/busted).
 
 ## Changelog
 
-### v3.1.0
-
-* The `filter` parameter of `world:move`, `world:check` and `world:project` now has the signature `filter(item, other)` instead of `filter(other)`.
-
-### v3.0.0
-
-* Renamed `world:move` to `world:update`
-* `world:move()` now implements a basic collision-resolution algorithm - no need for the user to do the "complex loops" he needed to use in 2.0.x
-* Collisions no longer have methods. Instead, `filter` now returns "the type of collision", and "move" handles that internally. The collisions are now
-  "plain tables", which are returned by `world:move` after all the collisions have been dealt with.
-* Added a new type of collision: `cross`, for when it's good to know that a collision happened but item's trajectory should remain unaltered
-* `world:check()` does the same thing as `world:move`, except without calling `world:update`. Useful for planning/studying alternatives without moving things.
-* `world:project()` now does more or less what `word:check()` did in 2.0.0. It's a key method for collision resolution.
-* `world:getRect` now returns 4 integers instead of a table
-* Collision detection is handled by the function `rect.detectCollision`.
-* The `rect` module is now available to the user.
-* It is possible to add new response types to the world
-
-
-### v2.0.1
-
-* Added `world:hasItem(item)`
-
-### v2.0.0
-
-* Massive interface change:
-  * moved the state to worlds
-  * Only 1 element can be "moved" at the same time
-  * Introduced the concept of "Collision methods"
+See CHANGELOG.md for details
 
 
