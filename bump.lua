@@ -31,6 +31,7 @@ local bump = {
 ------------------------------------------
 -- Auxiliary functions
 ------------------------------------------
+local DELTA = 1e-10 -- floating-point margin of error
 
 local abs, floor, ceil, min, max = math.abs, math.floor, math.ceil, math.min, math.max
 
@@ -121,7 +122,8 @@ local function rect_getDiff(x1,y1,w1,h1, x2,y2,w2,h2)
 end
 
 local function rect_containsPoint(x,y,w,h, px,py)
-  return px > x and px > y and px < x + w and py < y + h
+  return px - x > DELTA      and py - y > DELTA and
+         x + w - px > DELTA  and y + h - py > DELTA
 end
 
 local function rect_isIntersecting(x1,y1,w1,h1, x2,y2,w2,h2)
@@ -153,7 +155,7 @@ local function rect_detectCollision(x1,y1,w1,h1, x2,y2,w2,h2, goalX, goalY)
     local ti1,ti2,nx1,ny1 = rect_getSegmentIntersectionIndices(x,y,w,h, 0,0,dx,dy, -math.huge, math.huge)
 
     -- item tunnels into other
-    if ti1 and ti1 < 1 and (0 < ti1 or 0 == ti1 and ti2 > 0) then
+    if ti1 and ti1 < 1 and (0 < ti1 + DELTA or 0 == ti1 and ti2 > 0) then
       ti, nx, ny = ti1, nx1, ny1
       overlaps   = false
     end
