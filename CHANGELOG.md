@@ -1,5 +1,10 @@
 ## bump.lua changelog
 
+## v3.1.3
+
+* Fix floating-point issue when using coordinates like 100.1298374892437, by adding a 10^-10 delta margin in some operations
+* Add and remove less stuff when updating an item
+
 ## v3.1.2
 
 * Add world:getItems and world:countItems
