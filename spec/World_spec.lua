@@ -141,7 +141,7 @@ describe('World', function()
         it('deactivates collisions when filter returns false', function()
           world:add({'b'}, 70,0, 10,10)
           world:add({'c'}, 50,0, 10,10)
-          world:add({'d'}, 90,0, 10,10)
+          local d = world:add({'d'}, 90,0, 10,10)
 
           local cols = world:project({}, 110,0, 10,10, 10, 0, function(item, obj)
             return obj ~= d and "touch"
