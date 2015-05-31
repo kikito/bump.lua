@@ -174,7 +174,7 @@ local function rect_detectCollision(x1,y1,w1,h1, x2,y2,w2,h2, goalX, goalY)
       tx, ty = x1 + px, y1 + py
     else
       -- intersecting and moving - move in the opposite direction
-      local ti1
+      local ti1, _
       ti1,_,nx,ny = rect_getSegmentIntersectionIndices(x,y,w,h, 0,0,dx,dy, -math.huge, 1)
       if not ti1 then return end
       tx, ty = x1 + dx * ti1, y1 + dy * ti1
