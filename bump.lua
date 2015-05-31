@@ -274,8 +274,8 @@ local slide = function(world, col, x,y,w,h, goalX, goalY, filter)
   goalX = goalX or x
   goalY = goalY or y
 
-  local touch, move  = col.touch, col.move
-  local sx, sy       = touch.x, touch.y
+  local tch, move  = col.touch, col.move
+  local sx, sy     = tch.x, tch.y
   if move.x ~= 0 or move.y ~= 0 then
     if col.normal.x == 0 then
       sx = goalX
@@ -286,7 +286,7 @@ local slide = function(world, col, x,y,w,h, goalX, goalY, filter)
 
   col.slide = {x = sx, y = sy}
 
-  x,y          = touch.x, touch.y
+  x,y          = tch.x, tch.y
   goalX, goalY = sx, sy
   local cols, len  = world:project(col.item, x,y,w,h, goalX, goalY, filter)
   return goalX, goalY, cols, len
@@ -296,8 +296,8 @@ local bounce = function(world, col, x,y,w,h, goalX, goalY, filter)
   goalX = goalX or x
   goalY = goalY or y
 
-  local touch, move = col.touch, col.move
-  local tx, ty = touch.x, touch.y
+  local tch, move = col.tch, col.move
+  local tx, ty = tch.x, tch.y
 
   local bx, by = tx, ty
 
@@ -308,7 +308,7 @@ local bounce = function(world, col, x,y,w,h, goalX, goalY, filter)
   end
 
   col.bounce   = {x = bx,  y = by}
-  x,y          = touch.x, touch.y
+  x,y          = tch.x, tch.y
   goalX, goalY = bx, by
 
   local cols, len    = world:project(col.item, x,y,w,h, goalX, goalY, filter)
@@ -694,9 +694,9 @@ function World:check(item, goalX, goalY, filter)
   filter = filter or defaultFilter
 
   local visited = {[item] = true}
-  local visitedFilter = function(self, other)
+  local visitedFilter = function(itm, other)
     if visited[other] then return false end
-    return filter(self, other)
+    return filter(itm, other)
   end
 
   local cols, len = {}, 0
