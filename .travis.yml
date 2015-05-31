@@ -27,8 +27,10 @@ before_install:
 
 install:
   - sudo -E luarocks install busted 1.11.1-1
+  - sudo -E luarocks install luacheck
 
 script:
+  - luacheck *.lua spec/*.lua
   - sudo -E busted -v
 
 notifications:
