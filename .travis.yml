@@ -30,7 +30,7 @@ install:
   - sudo -E luarocks install luacheck
 
 script:
-  - luacheck *.lua spec/*.lua
+  - luacheck *.lua spec/*.lua --globals _TEST it describe pending setup teardown before_each after_each async settimeout setloop
   - sudo -E busted -v
 
 notifications:
