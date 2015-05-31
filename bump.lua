@@ -262,12 +262,10 @@ end
 ------------------------------------------
 
 local touch = function(world, col, x,y,w,h, goalX, goalY, filter)
-  local touch = col.touch
-  return touch.x, touch.y, {}, 0
+  return col.touch.x, col.touch.y, {}, 0
 end
 
 local cross = function(world, col, x,y,w,h, goalX, goalY, filter)
-  local touch = col.touch
   local cols, len = world:project(col.item, x,y,w,h, goalX, goalY, filter)
   return goalX, goalY, cols, len
 end
@@ -301,10 +299,10 @@ local bounce = function(world, col, x,y,w,h, goalX, goalY, filter)
   local touch, move = col.touch, col.move
   local tx, ty = touch.x, touch.y
 
-  local bx, by, bnx, bny = tx, ty, 0,0
+  local bx, by = tx, ty
 
   if move.x ~= 0 or move.y ~= 0 then
-    bnx, bny = goalX - tx, goalY - ty
+    local bnx, bny = goalX - tx, goalY - ty
     if col.normal.x == 0 then bny = -bny else bnx = -bnx end
     bx, by = tx + bnx, ty + bny
   end
@@ -696,9 +694,9 @@ function World:check(item, goalX, goalY, filter)
   filter = filter or defaultFilter
 
   local visited = {[item] = true}
-  local visitedFilter = function(item, other)
+  local visitedFilter = function(self, other)
     if visited[other] then return false end
-    return filter(item, other)
+    return filter(self, other)
   end
 
   local cols, len = {}, 0
