@@ -1,5 +1,9 @@
 ## bump.lua changelog
 
+## v3.1.4
+
+* bump.lua was declaring '_' as a global variable by mistake. Added automated tests to prevent other global vars in the future
+
 ## v3.1.3
 
 * Fix floating-point issue when using coordinates like 100.1298374892437, by adding a 10^-10 delta margin in some operations
