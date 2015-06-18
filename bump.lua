@@ -296,7 +296,7 @@ local bounce = function(world, col, x,y,w,h, goalX, goalY, filter)
   goalX = goalX or x
   goalY = goalY or y
 
-  local tch, move = col.tch, col.move
+  local tch, move = col.touch, col.move
   local tx, ty = tch.x, tch.y
 
   local bx, by = tx, ty
