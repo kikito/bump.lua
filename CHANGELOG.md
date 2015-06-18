@@ -1,5 +1,9 @@
 ## bump.lua changelog
 
+## v3.1.5
+
+* Fixed a typo inside the bounce code
+
 ## v3.1.4
 
 * bump.lua was declaring '_' as a global variable by mistake. Added automated tests to prevent other global vars in the future
