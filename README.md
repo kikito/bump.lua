@@ -33,7 +33,7 @@ The demos are LÖVE based, but this library can be used in any Lua-compatible en
 local bump = require 'bump'
 
 -- The grid cell size can be specified via the initialize method
--- By default, the cell size is 32
+-- By default, the cell size is 64
 local world = bump.newWorld(50)
 
 -- create two rectangles
