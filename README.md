@@ -500,7 +500,7 @@ Moves a the given imaginary rectangle towards goalX and goalY, providing a list 
 This method is useful mostly when creating new collision responses, although it could be also used as a query method.
 
 You could use this method to implement your own collision response algorithm (this was the only way to
-to it in prevous versions of bump)
+do it in prevous versions of bump)
 
 ```lua
 bump.responses.touch
@@ -509,14 +509,14 @@ bump.responses.slide
 bump.responses.bounce
 ```
 
-These are the functions bump uses to resolve collisions by default. You can use these function's source as a base to build your own response function, if you feel adventurous.
+These are the functions bump uses to resolve collisions by default. You can use these functions' source as a base to build your own response function, if you feel adventurous.
 
 ```lua
 world:addResponse(name, response)
 ```
 
-This is how you register a new type of response in the world. All world come with the 4 pre-defined responses "already installed", but you can add your own; if you register the
-response `'foo'`, then when your filter return `'foo'` in a collision your world will handle them with `response`. This, however, is advanced stuff, and you
+This is how you register a new type of response in the world. All worlds come with the 4 pre-defined responses already installed, but you can add your own: if you register the
+response `'foo'`, if your filter returns `'foo'` in a collision your world will handle it with `response`. This, however, is advanced stuff, and you
 will have to read the source code of the default responses in order to know how to do that.
 
 ```lua
