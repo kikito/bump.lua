@@ -243,14 +243,14 @@ their name in the `filter` param of `world:move` or `world:check`. You can also 
 
 This is the type of collision for things like arrows or bullets; things that "gets stuck" on their targets.
 
-Collisions of this type have their `type` attribute set to `"touch"` and don't have any additional information appart from the the default one, shared by all collisions (see below).
+Collisions of this type have their `type` attribute set to `"touch"` and don't have any additional information apart from the the default one, shared by all collisions (see below).
 
 ![cross](img/cross.png)
 
 This type of collision is for cases where you want to detect a collision but you don't want any response. It is useful for things like: detecting that the player has entered a new area,
 or consumables (i.e. coins) which usually don't affect the player's trajectory, but it's still useful to know then they are collided with.
 
-Collisions of this type have their `type` attribute set to `"cross"` and don't have any additional information appart from the the default one, shared by all collisions (see below).
+Collisions of this type have their `type` attribute set to `"cross"` and don't have any additional information apart from the the default one, shared by all collisions (see below).
 
 ![slide](img/slide.png)
 
