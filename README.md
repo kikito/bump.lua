@@ -207,7 +207,7 @@ as the real "updates" - . For example, here's how a player would move:
 
 ``` lua
 function movePlayer(player, dt)
-  local goalX, goalY = player.vx * dt, player.vy * dt
+  local goalX, goalY = player.x + player.vx * dt, player.y + player.vy * dt
   local actualX, actualY, cols, len = world:move(player, goalX, goalY)
   player.x, player.y = actualX, actualY
   -- deal with the collisions
