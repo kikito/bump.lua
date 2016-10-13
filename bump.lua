@@ -539,6 +539,8 @@ end
 
 function World:queryRect(x,y,w,h, filter)
 
+  assertIsRect(x,y,w,h)
+
   local cl,ct,cw,ch = grid_toCellRect(self.cellSize, x,y,w,h)
   local dictItemsInCellRect = getDictItemsInCellRect(self, cl,ct,cw,ch)
 
