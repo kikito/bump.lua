@@ -1,5 +1,9 @@
 ## bump.lua changelog
 
+## v3.1.6
+
+* Fixes queryRect accepting rectangles with negative dimensions without raising an error
+
 ## v3.1.5
 
 * Fixed a typo inside the bounce code
