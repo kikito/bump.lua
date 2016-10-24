@@ -498,11 +498,14 @@ local cols, len = world:project(item, x,y,w,h, goalX, goalY, filter)
 
 Moves a the given imaginary rectangle towards goalX and goalY, providing a list of collisions as they happen *in that straight path*.
 
+`item` can be nil. If `item` is provided, it is ignored in this collsion test.
+
 This method is useful mostly when creating new collision responses, although it could be also used as a query method.
 
 You could use this method to implement your own collision response algorithm (this was the only way to
 do it in prevous versions of bump)
 
+## Custom response function
 ```lua
 bump.responses.touch
 bump.responses.cross
@@ -519,6 +522,32 @@ world:addResponse(name, response)
 This is how you register a new type of response in the world. All worlds come with the 4 pre-defined responses already installed, but you can add your own: if you register the
 response `'foo'`, if your filter returns `'foo'` in a collision your world will handle it with `response`. This, however, is advanced stuff, and you
 will have to read the source code of the default responses in order to know how to do that.
+
+``` lua
+function (world, col, x,y,w,h, goalX, goalY, filter)
+  ...... [[do something]] ......
+  return actualX, actualY, cols, len
+end
+```
+
+This is the template of collision response function.
+
+**argument**
+`world` the "bump" world
+`col` last collision happened
+`x,y,w,h` rect of moving item BEFORE any collision happens
+`goalX, goalY` passed in from `world:move`
+
+**return**
+`actualX, actualY, cols, len` explained with `world:move`
+
+If you want to call other response functions, remember to pass in the correct `filter`:
+``` lua
+local function foo(world, col, x,y,w,h, goalX, goalY, filter)
+  -- return bump.responses.slide(world, col, x,y,w,h, goalX, goalY, 'foo')  -- wrong! do NOT use string-like filter, use the `filter` argument passed in
+  return bump.responses.slide(world, col, x,y,w,h, goalX, goalY, filter)
+end
+```
 
 ```lua
 bump.rect.getNearestCorner
