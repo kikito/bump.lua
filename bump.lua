@@ -323,7 +323,6 @@ end
 local bypass = function(world, col, x,y,w,h, goalX, goalY, filter)
   local ro = col.otherRect
   local midx, midy = col.touch.x + w/2, col.touch.y + h/2  -- center of item when touch
-  local norm_x_0 = col.normal.x == 0
   -- if the object is moving diagonally or walks straight into col.other
   if (col.move.x ~= 0 and col.move.y ~= 0) or rect_isInShadow(ro.x, ro.y, ro.w, ro.h, midx, midy) then
     return slide(world, col, x,y,w,h, goalX, goalY, filter)
