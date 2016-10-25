@@ -535,16 +535,15 @@ This is the template of collision response function.
 **argument**
 `world` the "bump" world
 `col` last collision happened
-`x,y,w,h` rect of moving item BEFORE any collision happens
+`x,y,w,h` rect of moving item *before* any collision happens
 `goalX, goalY` passed in from `world:move`
 
 **return**
 `actualX, actualY, cols, len` explained with `world:move`
 
-If you want to call other response functions, remember to pass in the correct `filter`:
+If you want to call other response functions, remember to pass in the `filter` argument:
 ``` lua
 local function foo(world, col, x,y,w,h, goalX, goalY, filter)
-  -- return bump.responses.slide(world, col, x,y,w,h, goalX, goalY, 'foo')  -- wrong! do NOT use string-like filter, use the `filter` argument passed in
   return bump.responses.slide(world, col, x,y,w,h, goalX, goalY, filter)
 end
 ```
