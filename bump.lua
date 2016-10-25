@@ -315,6 +315,54 @@ local bounce = function(world, col, x,y,w,h, goalX, goalY, filter)
   return goalX, goalY, cols, len
 end
 
+-- in the shadow of at least one side of rect
+local function rect_isInShadow(x,y,w,h,px,py)
+  return (x<=px and px<=x+w) or (y<=py and py<=y+h)
+end
+
+local bypass = function(world, col, x,y,w,h, goalX, goalY, filter)
+  local ro = col.otherRect
+  local midx, midy = col.touch.x + w/2, col.touch.y + h/2  -- center of item when touch
+  local actualX, actualY, cols, len = bump.responses.slide(world, col, x,y,w,h, goalX, goalY, filter)
+  if rect_isInShadow(ro.x, ro.y, ro.w, ro.h, midx, midy) then
+    return actualX, actualY, cols, len
+  else
+    local abs_tx, abs_ty = abs(goalX - x), abs(goalY - y)
+    local nx, ny = bump.rect.getNearestCorner(ro.x, ro.y, ro.w, ro.h, midx, midy)  -- corner of col.other
+    local nix, niy = bump.rect.getNearestCorner(x, y, w, h, nx, ny)  -- corner of col.item
+    local dx, dy = nx - nix, ny - niy
+    local abs_dx, abs_dy= abs(dx), abs(dy)
+    local bypass_all
+    if col.normal.y ~= 0 then
+      dy = abs_ty - abs_dx
+      if dy > 0 then
+        bypass_all = true
+      else
+        dx = sign(dx) * abs_ty
+        dy = 0
+      end
+    else
+      dx = abs_tx - abs_dy
+      if dx > 0 then
+        bypass_all = true
+      else
+        dy = sign(dy) * abs_tx
+        dx = 0
+      end
+    end
+    actualX = actualX + dx
+    actualY = actualY + dy
+    -- if the item bypass around col.other
+    if bypass_all then
+      local cols2, len2 = world:project(col.item, actualX, actualY, w, h, goalX + dx, goalY + dy, filter)
+      for i,v in ipairs(cols2) do
+        table.insert(cols, v)
+      end
+      len = len + len2
+    end
+    return actualX, actualY, cols, len
+  end
+end
 ------------------------------------------
 -- World
 ------------------------------------------
@@ -742,10 +790,9 @@ bump.newWorld = function(cellSize)
     responses = {}
   }, World_mt)
 
-  world:addResponse('touch', touch)
-  world:addResponse('cross', cross)
-  world:addResponse('slide', slide)
-  world:addResponse('bounce', bounce)
+  for name,response_func in pairs(bump.responses) do
+    world:addResponse(name, response_func)
+  end
 
   return world
 end
@@ -757,14 +804,16 @@ bump.rect = {
   containsPoint                 = rect_containsPoint,
   isIntersecting                = rect_isIntersecting,
   getSquareDistance             = rect_getSquareDistance,
-  detectCollision               = rect_detectCollision
+  detectCollision               = rect_detectCollision,
+  isInShadow                    = rect_isInShadow,
 }
 
 bump.responses = {
   touch  = touch,
   cross  = cross,
   slide  = slide,
-  bounce = bounce
+  bounce = bounce,
+  bypass = bypass,
 }
 
 return bump

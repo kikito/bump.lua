@@ -189,12 +189,12 @@ This is probably the most useful method of bump. It moves the item inside the wo
 * `goalX, goalY` are the *desired* `x` and `y` coordinates. The item will end up in those coordinates if it doesn't collide with anything.
   If, however, it collides with 1 or more other items, it can end up in a different set of coordinates.
 * `filter` is an optional function. If provided, it must have this signature: `local type = filter(item, other)`. By default, `filter` always returns `"slide"`.
-  * `item` is the item being moved (the same one passed to `world:move` on the first param)
-  * `other` is an item (different from `item`) which can collide with `item`.
-  * `type` is a value which defines how `item` collides with `other`.
-    * If `type` is `false` or `nil`, `item` will ignore `other` completely (there will be no collision)
-    * If `type` is `"touch"`, `"cross"`, `"slide"` or `"bounce"`, `item` will respond to the collisions in different ways (explained below)
-    * Any other value (unless handled in an advanced way) will provoke an error
+* `item` is the item being moved (the same one passed to `world:move` on the first param)
+* `other` is an item (different from `item`) which can collide with `item`.
+* `type` is a value which defines how `item` collides with `other`.
+  * If `type` is `false` or `nil`, `item` will ignore `other` completely (there will be no collision)
+  * If `type` is `"touch"`, `"cross"`, `"slide"` or `"bounce"`, `item` will respond to the collisions in different ways (explained below)
+  * Any other value (unless handled in an advanced way) will provoke an error
 
 * `actualX, actualY` are the coordinates where the object ended up after colliding with other objects in the world while trying to get to
   `goalX, goalY`. They can be equal to `goalX, goalY` if, for example, no collisions happened.
@@ -237,7 +237,7 @@ For example, imagine a player which collides on the same frame with a coin first
 
 The first two can be handled just by using `col.other`, but "aligning the player with the ground" requires *collision resolution*.
 
-bump.lua comes with 4 built-in ways to handle collisions: `touch`, `cross`, `slide` & `bounce`. You can select which one is used on each collision by returning
+bump.lua comes with 5 built-in ways to handle collisions: `touch`, `cross`, `slide`, `bounce` & `bypass`. You can select which one is used on each collision by returning
 their name in the `filter` param of `world:move` or `world:check`. You can also choose to ignore a collision by returning `nil` or `false`.
 
 ![touch](img/touch.png)
@@ -270,6 +270,13 @@ coordinates to which the `item` "attempted to bounce".
 
 The [Grenades](https://github.com/kikito/bump.lua/blob/demo/entities/grenade.lua) and the [Debris](https://github.com/kikito/bump.lua/blob/demo/entities/debris.lua) in the
 demo use `"bounce"` to resolve their collisions.
+
+![bypass](img/bypass.png)
+
+This behavior is commonly used in top-down games especially RPGs.
+A object will move "around" other object if the line of motion of its center does not intersect with the other object.
+
+---
 
 Here's an example of a filter displaying all these behaviors:
 
@@ -556,6 +563,7 @@ bump.rect.containsPoint
 bump.rect.isIntersecting
 bump.rect.getSquareDistance
 bump.rect.detectCollision
+bump.rect.isInShadow
 ```
 
 bump.lua comes with some rectangle-related functions in the `bump.rect` namespace. These are **not** part of the official API and can change at any moment. However, feel free to
