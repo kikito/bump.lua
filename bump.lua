@@ -194,6 +194,11 @@ local function rect_detectCollision(x1,y1,w1,h1, x2,y2,w2,h2, goalX, goalY)
   }
 end
 
+-- in the shadow of at least one side of rect
+local function rect_isInShadow(x,y,w,h,px,py)
+  return (x<=px and px<=x+w) or (y<=py and py<=y+h)
+end
+
 ------------------------------------------
 -- Grid functions
 ------------------------------------------
@@ -315,38 +320,40 @@ local bounce = function(world, col, x,y,w,h, goalX, goalY, filter)
   return goalX, goalY, cols, len
 end
 
--- in the shadow of at least one side of rect
-local function rect_isInShadow(x,y,w,h,px,py)
-  return (x<=px and px<=x+w) or (y<=py and py<=y+h)
-end
-
 local bypass = function(world, col, x,y,w,h, goalX, goalY, filter)
-  local ro = col.otherRect
-  local midx, midy = col.touch.x + w/2, col.touch.y + h/2  -- center of item when touch
-  -- if the object is moving diagonally or walks straight into col.other
-  if (col.move.x ~= 0 and col.move.y ~= 0) or rect_isInShadow(ro.x, ro.y, ro.w, ro.h, midx, midy) then
-    return slide(world, col, x,y,w,h, goalX, goalY, filter)
+  local other = col.otherRect
+  local item_x, item_y = col.touch.x, col.touch.y                                                -- position when touch
+  local item_center_x, item_center_y = item_x + w/2, item_y + h/2                                -- center of `item` when touch
+  -- if the object moves *diagonally* or walks straight *into* col.other
+  if (col.move.x ~= 0 and col.move.y ~= 0) or rect_isInShadow(other.x, other.y, other.w, other.h, item_center_x, item_center_y) then
+  	-- then just slide
+    return slide(world, col, x,y,w,h, goalX, goalY, filter                                       
   else
-    local abs_tx, abs_ty = abs(goalX - x), abs(goalY - y)
-    local nx, ny = rect_getNearestCorner(ro.x, ro.y, ro.w, ro.h, midx, midy)  -- corner of col.other
-    local nix, niy = rect_getNearestCorner(x, y, w, h, nx, ny)  -- corner of col.item
-    local dx, dy = nx - nix, ny - niy
+  	-- elsewise, first calculate dx and dy
+    local remain_x, remain_y = abs(goalX - item_x), abs(goalY - item_y                           -- distance form touch to goal
+    local other_corner_x, other_corner_y
+      = rect_getNearestCorner(other.x, other.y, other.w, other.h, item_center_x, item_center_y)  -- nearest corner of col.other to center of `item`
+    local item_corner_x, item_corner_y
+      = rect_getNearestCorner(item_x, item_y, w, h, other_corner_x, other_corner_y)              -- nearest corner of col.item to `other`
+    local dx, dy = other_corner_x - item_corner_x, other_corner_y - item_corner_y                -- tangential distance to move in order move aside to `other`
+   	-- and then move
     if col.normal.y == 0 then
-      dx = abs_tx - abs(dy)
-      if dx < 0 then
-        dy = sign(dy) * abs_tx
+      dx = remain_x - abs(dy)
+      if dx < 0 then  -- can't(NEGATIVE) `item` move aside completely in this frame/update?
+        dy = sign(dy) * remain_x
         dx = 0
       end
     else
-      dy = abs_ty - abs(dx)
-      if dy < 0 then
-        dx = sign(dx) * abs_ty
+      dy = remain_y - abs(dx)
+      if dy < 0 then  -- can't(NEGATIVE) `item` move aside completely in this frame/update?
+        dx = sign(dx) * remain_y
         dy = 0
       end
     end
     return slide(world, col, col.touch.x, col.touch.y, w, h, col.touch.x + dx, col.touch.y + dy, filter)
   end
 end
+
 ------------------------------------------
 -- World
 ------------------------------------------

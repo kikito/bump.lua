@@ -273,6 +273,9 @@ demo use `"bounce"` to resolve their collisions.
 
 ![bypass](img/bypass.png)
 
+**Be careful!**
+**If you move diagonally, this behavior is equvalent to `slide`**
+
 This behavior is commonly used in top-down games especially RPGs.
 A object will move "around" other object if the line of motion of its center does not intersect with the other object.
 
