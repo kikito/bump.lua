@@ -324,13 +324,13 @@ local bypass = function(world, col, x,y,w,h, goalX, goalY, filter)
   local other = col.otherRect
   local item_x, item_y = col.touch.x, col.touch.y                                                -- position when touch
   local item_center_x, item_center_y = item_x + w/2, item_y + h/2                                -- center of `item` when touch
+  local remain_x, remain_y = abs(goalX - item_x), abs(goalY - item_y)                          -- distance form touch to goal
   -- if the object moves *diagonally* or walks straight *into* col.other
-  if (col.move.x ~= 0 and col.move.y ~= 0) or rect_isInShadow(other.x, other.y, other.w, other.h, item_center_x, item_center_y) then
+  if (remain_x ~= 0 and remain_y ~= 0) or rect_isInShadow(other.x, other.y, other.w, other.h, item_center_x, item_center_y) then
   	-- then just slide
-    return slide(world, col, x,y,w,h, goalX, goalY, filter                                       
+	return slide(world, col, x,y,w,h, goalX, goalY, function () return 'slide' end)
   else
   	-- elsewise, first calculate dx and dy
-    local remain_x, remain_y = abs(goalX - item_x), abs(goalY - item_y                           -- distance form touch to goal
     local other_corner_x, other_corner_y
       = rect_getNearestCorner(other.x, other.y, other.w, other.h, item_center_x, item_center_y)  -- nearest corner of col.other to center of `item`
     local item_corner_x, item_corner_y
@@ -339,13 +339,13 @@ local bypass = function(world, col, x,y,w,h, goalX, goalY, filter)
    	-- and then move
     if col.normal.y == 0 then
       dx = remain_x - abs(dy)
-      if dx < 0 then  -- can't(NEGATIVE) `item` move aside completely in this frame/update?
+      if dx < 0 then  -- can't `item` move aside completely in this frame/update?
         dy = sign(dy) * remain_x
         dx = 0
       end
     else
       dy = remain_y - abs(dx)
-      if dy < 0 then  -- can't(NEGATIVE) `item` move aside completely in this frame/update?
+      if dy < 0 then  -- can't `item` move aside completely in this frame/update?
         dx = sign(dx) * remain_y
         dy = 0
       end
