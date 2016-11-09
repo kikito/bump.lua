@@ -328,7 +328,7 @@ local bypass = function(world, col, x,y,w,h, goalX, goalY, filter)
   -- if the object moves *diagonally* or walks straight *into* col.other
   if (remain_x ~= 0 and remain_y ~= 0) or rect_isInShadow(other.x, other.y, other.w, other.h, item_center_x, item_center_y) then
   	-- then just slide
-	return slide(world, col, x,y,w,h, goalX, goalY, function () return 'slide' end)
+	return slide(world, col, x,y,w,h, goalX, goalY, defaultFilter)
   else
   	-- elsewise, first calculate dx and dy
     local other_corner_x, other_corner_y
