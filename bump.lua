@@ -336,36 +336,34 @@ local function sortByTiAndDistance(a,b)
   return a.ti < b.ti
 end
 
-local weak_value_mt,weak_key_mt = {__mode = 'v'}, {__mode = 'k'}
+local weakValueMt,weakKeyMt = {__mode = 'v'}, {__mode = 'k'}
 
 local function addItemToCell(self, item, cx, cy)
-  self.rows[cy] = self.rows[cy] or setmetatable({}, weak_value_mt)
+  self.rows[cy] = self.rows[cy] or setmetatable({}, weakValueMt)
   local row = self.rows[cy]
-  row[cx] = row[cx] or {itemCount = 0, x = cx, y = cy, items = setmetatable({}, weak_key_mt), items_arrary = self.using_orderedQuery and setmetatable({}, weak_value_mt)}
+  row[cx] = row[cx] or {itemCount = 0, x = cx, y = cy, itemsDictionary = setmetatable({}, weakKeyMt), itemsArray = setmetatable({}, weakValueMt)}
   local cell = row[cx]
   self.nonEmptyCells[cell] = true
-  if not cell.items[item] then
-    if(self.using_orderedQuery) then table.insert(cell.items_arrary,item) end
+  if not cell.itemsDictionary[item] then
+    table.insert(cell.itemsArray,item)
     cell.itemCount = cell.itemCount + 1
-    cell.items[item] = cell.itemCount
+    cell.itemsDictionary[item] = cell.itemCount
   end
 end
 
 local function removeItemFromCell(self, item, cx, cy)
   local row = self.rows[cy]
-  if not row or not row[cx] or not row[cx].items[item] then return false end
+  if not row or not row[cx] or not row[cx].itemsDictionary[item] then return false end
 
   local cell = row[cx]
-  if(self.using_orderedQuery) then
-    local index = cell.items[item]
-    if(index < cell.itemCount) then -- if it's not the last item, then switch the removing item with the last item.
-      local last_item = cell.items_arrary[cell.itemCount]
-      cell.items_arrary[index] = last_item -- do switch
-      if(last_item) then cell.items[last_item] = index end -- update the index
-    end
-    table.remove(cell.items_arrary)
+  local index = cell.itemsDictionary[item]
+  if(index < cell.itemCount) then -- if it's not the last item, then switch the removing item with the last item.
+    local last_item = cell.itemsArray[cell.itemCount]
+    cell.itemsArray[index] = last_item -- do switch
+    if(last_item) then cell.itemsDictionary[last_item] = index end -- update the index
   end
-  cell.items[item] = nil
+  table.remove(cell.itemsArray)
+  cell.itemsDictionary[item] = nil
   cell.itemCount = cell.itemCount - 1
   if cell.itemCount == 0 then
     self.nonEmptyCells[cell] = nil
@@ -373,48 +371,27 @@ local function removeItemFromCell(self, item, cx, cy)
   return true
 end
 
-local function getArraryItemsInCellRect(self, cl,ct,cw,ch)
-  if(self.using_orderedQuery) then
-    local items_dict, item_arrary = {}, {}
-    for cy=ct,ct+ch-1 do
-      local row = self.rows[cy]
-      if row then
-        for cx=cl,cl+cw-1 do
-          local cell = row[cx]
-          if cell and cell.itemCount > 0 then -- no cell.itemCount > 1 because tunneling
-            for i=1,cell.itemCount do
-              local item = cell.items_arrary[i]
-              if(item and not items_dict[item]) then
-                items_dict[item] = true
-                table.insert(item_arrary,item)
-              end
-            end
-          end
-        end
-      end
-    end
-
-    return item_arrary
-  end
-end
-
-local function getDictItemsInCellRect(self, cl,ct,cw,ch)
-  local items_dict = {}
+local function getArrayItemsInCellRect(self, cl,ct,cw,ch)
+  local items_dict, item_array = {}, {}
   for cy=ct,ct+ch-1 do
     local row = self.rows[cy]
     if row then
       for cx=cl,cl+cw-1 do
         local cell = row[cx]
         if cell and cell.itemCount > 0 then -- no cell.itemCount > 1 because tunneling
-          for item,_ in pairs(cell.items) do
-            items_dict[item] = true
+          for i=1,cell.itemCount do
+            local item = cell.itemsArray[i]
+            if(item and not items_dict[item]) then
+              items_dict[item] = true
+              table.insert(item_array,item)
+            end
           end
         end
       end
     end
   end
 
-  return items_dict
+  return item_array
 end
 
 local function getCellsTouchedBySegment(self, x1,y1,x2,y2)
@@ -441,7 +418,7 @@ local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
   local visited, itemInfo, itemInfoLen = {},{},0
   for i=1,len do
     cell = cells[i]
-    for item in pairs(cell.items) do
+    for _,item in ipairs(cell.itemsArray) do
       if not visited[item] then
         visited[item]  = true
         if (not filter or filter(item)) then
@@ -498,11 +475,9 @@ function World:project(item, x,y,w,h, goalX, goalY, filter)
 
   local cl,ct,cw,ch = grid_toCellRect(self.cellSize, tl,tt,tw,th)
 
-  local itemsInCellRect = self.using_orderedQuery and getArraryItemsInCellRect(self, cl,ct,cw,ch) or getDictItemsInCellRect(self, cl,ct,cw,ch)
-  local iterator = self.using_orderedQuery and ipairs or pairs
+  local itemsInCellRect = getArrayItemsInCellRect(self, cl,ct,cw,ch)
 
-  for k,v in iterator(itemsInCellRect) do
-    local other = self.using_orderedQuery and v or k
+  for _,other in ipairs(itemsInCellRect) do
     if not visited[other] then
       visited[other] = true
 
@@ -581,14 +556,12 @@ function World:queryRect(x,y,w,h, filter)
   assertIsRect(x,y,w,h)
 
   local cl,ct,cw,ch = grid_toCellRect(self.cellSize, x,y,w,h)
-  local itemsInCellRect = self.using_orderedQuery and getArraryItemsInCellRect(self, cl,ct,cw,ch) or getDictItemsInCellRect(self, cl,ct,cw,ch)
-  local iterator = self.using_orderedQuery and ipairs or pairs
+  local itemsInCellRect = getArrayItemsInCellRect(self, cl,ct,cw,ch)
 
   local items, len = {}, 0
 
   local rect
-  for k,v in iterator(itemsInCellRect) do
-    local item = self.using_orderedQuery and v or k
+  for _,item in ipairs(itemsInCellRect) do
     rect = self.rects[item]
     if (not filter or filter(item))
     and rect_isIntersecting(x,y,w,h, rect.x, rect.y, rect.w, rect.h)
@@ -603,14 +576,12 @@ end
 
 function World:queryPoint(x,y, filter)
   local cx,cy = self:toCell(x,y)
-  local itemsInCellRect = self.using_orderedQuery and getArraryItemsInCellRect(self, cx,cy,1,1) or getDictItemsInCellRect(self, cx,cy,1,1)
-  local iterator = self.using_orderedQuery and ipairs or pairs
+  local itemsInCellRect = getArrayItemsInCellRect(self, cx,cy,1,1)
 
   local items, len = {}, 0
 
   local rect
-  for k,v in iterator(itemsInCellRect) do
-    local item = self.using_orderedQuery and v or k
+  for _,item in ipairs(itemsInCellRect) do
     rect = self.rects[item]
     if (not filter or filter(item))
     and rect_containsPoint(rect.x, rect.y, rect.w, rect.h, x, y)
@@ -774,7 +745,7 @@ end
 
 -- Public library functions
 
-bump.newWorld = function(cellSize,using_orderedQuery)
+bump.newWorld = function(cellSize)
   cellSize = cellSize or 64
   assertIsPositiveNumber(cellSize, 'cellSize')
   local world = setmetatable({
@@ -782,8 +753,7 @@ bump.newWorld = function(cellSize,using_orderedQuery)
     rects          = {},
     rows           = {},
     nonEmptyCells  = {},
-    responses = {},
-    using_orderedQuery=using_orderedQuery
+    responses = {}
   }, World_mt)
 
   world:addResponse('touch', touch)
