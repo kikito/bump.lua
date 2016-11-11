@@ -361,7 +361,7 @@ local function removeItemFromCell(self, item, cx, cy)
     if(index < cell.itemCount) then -- if it's not the last item, then switch the removing item with the last item.
       local last_item = cell.items_arrary[cell.itemCount]
       cell.items_arrary[index] = last_item -- do switch
-      cell.items[last_item] = index -- update the index
+      if(last_item) then cell.items[last_item] = index end -- update the index
     end
     table.remove(cell.items_arrary)
   end
@@ -382,8 +382,9 @@ local function getArraryItemsInCellRect(self, cl,ct,cw,ch)
         for cx=cl,cl+cw-1 do
           local cell = row[cx]
           if cell and cell.itemCount > 0 then -- no cell.itemCount > 1 because tunneling
-            for _,item in ipairs(cell.items_arrary) do
-              if(not items_dict[item]) then
+            for i=1,cell.itemCount do
+              local item = cell.items_arrary[i]
+              if(item and not items_dict[item]) then
                 items_dict[item] = true
                 table.insert(item_arrary,item)
               end
