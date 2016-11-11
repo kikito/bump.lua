@@ -345,8 +345,8 @@ local function addItemToCell(self, item, cx, cy)
   local cell = row[cx]
   self.nonEmptyCells[cell] = true
   if not cell.itemsDictionary[item] then
-    table.insert(cell.itemsArray,item)
     cell.itemCount = cell.itemCount + 1
+    cell.itemsArray[cell.itemCount] = item
     cell.itemsDictionary[item] = cell.itemCount
   end
 end
@@ -371,8 +371,8 @@ local function removeItemFromCell(self, item, cx, cy)
   return true
 end
 
-local function getArrayItemsInCellRect(self, cl,ct,cw,ch)
-  local items_dict, item_array = {}, {}
+local function getItemsInCellRect(self, cl,ct,cw,ch)
+  local itemsDict, itemArray, len = {}, {}, 0
   for cy=ct,ct+ch-1 do
     local row = self.rows[cy]
     if row then
@@ -381,9 +381,10 @@ local function getArrayItemsInCellRect(self, cl,ct,cw,ch)
         if cell and cell.itemCount > 0 then -- no cell.itemCount > 1 because tunneling
           for i=1,cell.itemCount do
             local item = cell.itemsArray[i]
-            if(item and not items_dict[item]) then
-              items_dict[item] = true
-              table.insert(item_array,item)
+            if(item and not itemsDict[item]) then
+              itemsDict[item] = true
+              len=len+1
+              itemArray[len]=item
             end
           end
         end
@@ -391,7 +392,7 @@ local function getArrayItemsInCellRect(self, cl,ct,cw,ch)
     end
   end
 
-  return item_array
+  return itemArray, len
 end
 
 local function getCellsTouchedBySegment(self, x1,y1,x2,y2)
@@ -475,9 +476,10 @@ function World:project(item, x,y,w,h, goalX, goalY, filter)
 
   local cl,ct,cw,ch = grid_toCellRect(self.cellSize, tl,tt,tw,th)
 
-  local itemsInCellRect = getArrayItemsInCellRect(self, cl,ct,cw,ch)
+  local itemsInCellRect, lenItems = getItemsInCellRect(self, cl,ct,cw,ch)
 
-  for _,other in ipairs(itemsInCellRect) do
+  for i=1,lenItems do
+    local other = itemsInCellRect[i]
     if not visited[other] then
       visited[other] = true
 
@@ -556,12 +558,13 @@ function World:queryRect(x,y,w,h, filter)
   assertIsRect(x,y,w,h)
 
   local cl,ct,cw,ch = grid_toCellRect(self.cellSize, x,y,w,h)
-  local itemsInCellRect = getArrayItemsInCellRect(self, cl,ct,cw,ch)
+  local itemsInCellRect, lenItems = getItemsInCellRect(self, cl,ct,cw,ch)
 
   local items, len = {}, 0
 
   local rect
-  for _,item in ipairs(itemsInCellRect) do
+  for i=1,lenItems do
+    local item=itemsInCellRect[i]
     rect = self.rects[item]
     if (not filter or filter(item))
     and rect_isIntersecting(x,y,w,h, rect.x, rect.y, rect.w, rect.h)
@@ -576,12 +579,13 @@ end
 
 function World:queryPoint(x,y, filter)
   local cx,cy = self:toCell(x,y)
-  local itemsInCellRect = getArrayItemsInCellRect(self, cx,cy,1,1)
+  local itemsInCellRect, lenItems = getItemsInCellRect(self, cx,cy,1,1)
 
   local items, len = {}, 0
 
   local rect
-  for _,item in ipairs(itemsInCellRect) do
+  for i=1,lenItems do
+    local item=itemsInCellRect[i]
     rect = self.rects[item]
     if (not filter or filter(item))
     and rect_containsPoint(rect.x, rect.y, rect.w, rect.h, x, y)
