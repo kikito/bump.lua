@@ -110,6 +110,9 @@ local function rect_getSegmentIntersectionIndices(x,y,w,h, x1,y1,x2,y2, ti1,ti2)
     end
   end
 
+  -- special case for when a rect moves just right through the corner of another rect
+  if ti1 == ti2 then return nil end
+
   return ti1,ti2, nx1,ny1, nx2,ny2
 end
 
