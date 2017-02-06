@@ -110,9 +110,6 @@ local function rect_getSegmentIntersectionIndices(x,y,w,h, x1,y1,x2,y2, ti1,ti2)
     end
   end
 
-  -- special case for when a rect moves just right through the corner of another rect
-  if ti1 == ti2 then return nil end
-
   return ti1,ti2, nx1,ny1, nx2,ny2
 end
 
@@ -158,7 +155,12 @@ local function rect_detectCollision(x1,y1,w1,h1, x2,y2,w2,h2, goalX, goalY)
     local ti1,ti2,nx1,ny1 = rect_getSegmentIntersectionIndices(x,y,w,h, 0,0,dx,dy, -math.huge, math.huge)
 
     -- item tunnels into other
-    if ti1 and ti1 < 1 and (0 < ti1 + DELTA or 0 == ti1 and ti2 > 0) then
+    if ti1
+    and ti1 < 1
+    and (abs(ti1 - ti2) >= DELTA) -- special case for rect going through another rect's corner
+    and (0 < ti1 + DELTA
+      or 0 == ti1 and ti2 > 0)
+    then
       ti, nx, ny = ti1, nx1, ny1
       overlaps   = false
     end
