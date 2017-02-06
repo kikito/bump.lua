@@ -1,5 +1,9 @@
 ## bump.lua changelog
 
+## v3.1.7
+
+* Fixes rare edge case which was triggered sometimes when two rects shared one corner and one of them moved (#33)
+
 ## v3.1.6
 
 * Fixes queryRect accepting rectangles with negative dimensions without raising an error
