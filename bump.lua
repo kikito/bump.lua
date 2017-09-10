@@ -280,19 +280,17 @@ local slide = function(world, col, x,y,w,h, goalX, goalY, filter)
   goalY = goalY or y
 
   local tch, move  = col.touch, col.move
-  local sx, sy     = tch.x, tch.y
   if move.x ~= 0 or move.y ~= 0 then
-    if col.normal.x == 0 then
-      sx = goalX
+    if col.normal.x ~= 0 then
+      goalX = tch.x
     else
-      sy = goalY
+      goalY = tch.y
     end
   end
 
-  col.slide = {x = sx, y = sy}
+  col.slide = {x = goalX, y = goalY}
 
-  x,y          = tch.x, tch.y
-  goalX, goalY = sx, sy
+  x,y = tch.x, tch.y
   local cols, len  = world:project(col.item, x,y,w,h, goalX, goalY, filter)
   return goalX, goalY, cols, len
 end

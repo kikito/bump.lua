@@ -51,9 +51,9 @@ describe('bump.responses', function()
             assert.same(touch( 3, 3,2,2, 0,0,8,8), { 3, 8,  0, 1}) -- 5
             assert.same(touch( 7, 3,2,2, 0,0,8,8), { 8, 3,  1, 0}) -- 6
 
-            assert.same(touch(-1, 7,2,2, 0,0,8,8), {-1, 8,  0, 1}) -- 1
-            assert.same(touch( 3, 7,2,2, 0,0,8,8), { 3, 8,  0, 1}) -- 2
-            assert.same(touch( 7, 7,2,2, 0,0,8,8), { 7, 8,  0, 1}) -- 3
+            assert.same(touch(-1, 7,2,2, 0,0,8,8), {-1, 8,  0, 1}) -- 7
+            assert.same(touch( 3, 7,2,2, 0,0,8,8), { 3, 8,  0, 1}) -- 8
+            assert.same(touch( 7, 7,2,2, 0,0,8,8), { 7, 8,  0, 1}) -- 9
 
           end)
         end)
