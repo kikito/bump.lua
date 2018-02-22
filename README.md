@@ -363,7 +363,7 @@ For example, `cols[i].normal` could be used to "detect if a player is on ground 
 
 ## Intermediate API - Querying the world
 
-The following methods are required for basic usage of bump.lua, but are quite handy, and you would be missing out some
+The following methods are not required for basic usage of bump.lua, but are quite handy, and you would be missing out some
 nice features of this lib if you were not using it.
 
 Sometimes it is desirable to know "which items are in a certain area". This is called "querying the world".
