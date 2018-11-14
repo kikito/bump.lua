@@ -20,7 +20,7 @@ function MultiSource:cleanup(older_than)
 
   for instance, lastPlayed in pairs(self.instances) do
     local age = now - lastPlayed
-    if age > older_than and instance:isStopped() then
+    if age > older_than and not instance:isPlaying() then
       self.instances[instance] = nil
     end
   end
@@ -28,7 +28,7 @@ end
 
 function MultiSource:getStoppedOrNewInstance()
   for instance in pairs(self.instances) do
-    if instance:isStopped() then return instance end
+    if not instance:isPlaying() then return instance end
   end
   return self.source:clone()
 end
