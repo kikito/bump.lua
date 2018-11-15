@@ -57,32 +57,32 @@ function Guardian:getCenter()
 end
 
 function Guardian:draw(drawDebug)
-  local r,g,b = 255,0,255
+  local r,g,b = 1,0,1
   util.drawFilledRectangle(self.l, self.t, width, height, r,g,b)
 
   local cx,cy = self:getCenter()
-  love.graphics.setColor(255,0,0)
+  love.graphics.setColor(1,0,0)
   local radius = Grenade.radius
   if self.isLoading then
     local percent = self.fireTimer / fireCoolDown
-    local alpha = math.floor(255 * percent)
+    local alpha = percent
     radius = radius * percent
 
-    love.graphics.setColor(0,100,200,alpha)
+    love.graphics.setColor(0,0.4,0.8,alpha)
     love.graphics.circle('fill', cx, cy, radius)
-    love.graphics.setColor(0,100,200)
+    love.graphics.setColor(0,0.4,0.8)
     love.graphics.circle('line', cx, cy, radius)
   else
     if self.aimTimer > 0 then
-      love.graphics.setColor(255,0,0)
+      love.graphics.setColor(1,0,0)
     else
-      love.graphics.setColor(0,100,200)
+      love.graphics.setColor(0,0.4,0.8)
     end
     love.graphics.circle('line', cx, cy, radius)
     love.graphics.circle('fill', cx, cy, radius)
 
     if drawDebug then
-      love.graphics.setColor(255,255,255,100)
+      love.graphics.setColor(1,1,1,0.4)
       love.graphics.circle('line', cx, cy, activeRadius)
     end
 
@@ -90,14 +90,14 @@ function Guardian:draw(drawDebug)
       local tx,ty = self.target:getCenter()
 
       if drawDebug then
-        love.graphics.setColor(255,255,255,100)
+        love.graphics.setColor(1,1,1,0.4)
         love.graphics.line(cx, cy, tx, ty)
       end
 
       if self.aimTimer > 0 then
-        love.graphics.setColor(255,100,100,200)
+        love.graphics.setColor(1,0.4,0.4,0.8)
       else
-        love.graphics.setColor(0,100,200,100)
+        love.graphics.setColor(0,0.4,0.8,0.4)
       end
       love.graphics.setLineWidth(2)
       love.graphics.line(cx, cy, self.laserX, self.laserY)
@@ -173,7 +173,7 @@ function Guardian:destroy()
     Debris:new(self.world,
                math.random(self.l, self.l + self.w),
                math.random(self.t, self.t + self.h),
-               255, 0, 255
+               1, 0, 1
     )
   end
 end
