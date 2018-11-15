@@ -1,6 +1,18 @@
 local bump       = require 'bump'
 local bump_debug = require 'bump_debug'
 
+if love.getVersion == nil or love.getVersion() < 11 then
+  local origSetColor = love.graphics.setColor
+  love.graphics.setColor = function (r, g, b, a)
+    return origSetColor(
+      math.floor(r * 256),
+      math.floor(g * 256),
+      math.floor(b * 256),
+      a ~= nil and math.floor(a * 256) or nil
+    )
+  end
+end
+
 local instructions = [[
   bump.lua simple demo
 
@@ -18,7 +30,7 @@ local world = bump.newWorld()
 -- Message/debug functions
 local function drawMessage()
   local msg = instructions:format(tostring(shouldDrawDebug))
-  love.graphics.setColor(255, 255, 255)
+  love.graphics.setColor(1, 1, 1)
   love.graphics.print(msg, 550, 10)
 end
 
@@ -26,7 +38,7 @@ local function drawDebug()
   bump_debug.draw(world)
 
   local statistics = ("fps: %d, mem: %dKB, collisions: %d, items: %d"):format(love.timer.getFPS(), collectgarbage("count"), cols_len, world:countItems())
-  love.graphics.setColor(255, 255, 255)
+  love.graphics.setColor(1, 1, 1)
   love.graphics.printf(statistics, 0, 580, 790, 'right')
 end
 
@@ -41,14 +53,14 @@ end
 local function drawConsole()
   local str = table.concat(consoleBuffer, "\n")
   for i=1,consoleBufferSize do
-    love.graphics.setColor(255,255,255, i*255/consoleBufferSize)
+    love.graphics.setColor(1,1,1, i/consoleBufferSize)
     love.graphics.printf(consoleBuffer[i], 10, 580-(consoleBufferSize - i)*12, 790, "left")
   end
 end
 
 -- helper function
 local function drawBox(box, r,g,b)
-  love.graphics.setColor(r,g,b,70)
+  love.graphics.setColor(r,g,b,0.25)
   love.graphics.rectangle("fill", box.x, box.y, box.w, box.h)
   love.graphics.setColor(r,g,b)
   love.graphics.rectangle("line", box.x, box.y, box.w, box.h)
@@ -85,7 +97,7 @@ local function updatePlayer(dt)
 end
 
 local function drawPlayer()
-  drawBox(player, 0, 255, 0)
+  drawBox(player, 0, 1, 0)
 end
 
 -- Block functions
@@ -100,7 +112,7 @@ end
 
 local function drawBlocks()
   for _,block in ipairs(blocks) do
-    drawBox(block, 255,0,0)
+    drawBox(block, 1,0,0)
   end
 end
 
