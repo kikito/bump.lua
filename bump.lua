@@ -305,16 +305,16 @@ end
 -- Responses
 ------------------------------------------
 
-local touch = function(world, col, x,y,w,h, goalX, goalY, filter)
+local touch = function(world, col, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   return col.touch.x, col.touch.y, {}, 0
 end
 
-local cross = function(world, col, x,y,w,h, goalX, goalY, filter)
-  local cols, len = world:project(col.item, x,y,w,h, goalX, goalY, filter)
+local cross = function(world, col, x,y,w,h, goalX, goalY, filter, alreadyVisited)
+  local cols, len = world:project(col.item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   return goalX, goalY, cols, len
 end
 
-local slide = function(world, col, x,y,w,h, goalX, goalY, filter)
+local slide = function(world, col, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   goalX = goalX or x
   goalY = goalY or y
 
@@ -330,11 +330,11 @@ local slide = function(world, col, x,y,w,h, goalX, goalY, filter)
   col.slide = {x = goalX, y = goalY}
 
   x,y = tch.x, tch.y
-  local cols, len  = world:project(col.item, x,y,w,h, goalX, goalY, filter)
+  local cols, len  = world:project(col.item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   return goalX, goalY, cols, len
 end
 
-local bounce = function(world, col, x,y,w,h, goalX, goalY, filter)
+local bounce = function(world, col, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   goalX = goalX or x
   goalY = goalY or y
 
@@ -353,7 +353,7 @@ local bounce = function(world, col, x,y,w,h, goalX, goalY, filter)
   x,y          = tch.x, tch.y
   goalX, goalY = bx, by
 
-  local cols, len    = world:project(col.item, x,y,w,h, goalX, goalY, filter)
+  local cols, len    = world:project(col.item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   return goalX, goalY, cols, len
 end
 
@@ -481,12 +481,12 @@ function World:addResponse(name, response)
   self.responses[name] = response
 end
 
-function World:project(item, x,y,w,h, goalX, goalY, filter)
+function World:project(item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   assertIsRect(x,y,w,h)
 
   goalX = goalX or x
   goalY = goalY or y
-  filter  = filter  or defaultFilter
+  filter = filter or defaultFilter
 
   local collisions, len = nil, 0
 
@@ -509,7 +509,13 @@ function World:project(item, x,y,w,h, goalX, goalY, filter)
     if not visited[other] then
       visited[other] = true
 
-      local responseName = filter(item, other)
+      local responseName
+      if alreadyVisited and alreadyVisited[other] then
+        responseName = false
+      else
+        responseName = filter(item, other)
+      end
+
       if responseName then
         local ox,oy,ow,oh   = self:getRect(other)
         local col           = rect_detectCollision(x,y,w,h, ox,oy,ow,oh, goalX, goalY)
@@ -752,23 +758,17 @@ function World:check(item, goalX, goalY, filter)
 end
 
 function World:projectMove(item, x, y, w, h, goalX, goalY, filter)
-  local cols, len = nil, 0
-
   filter = filter or defaultFilter
 
+  local projected_cols, projected_len = self:project(item, x,y,w,h, goalX,goalY, filter)
+
+  if projected_len == 0 then
+    return goalX, goalY, nil, 0
+  end
+
+  local cols, len = {}, 0
+
   local visited = Pool.fetch()
-  local visitedFilter = function(itm, other)
-    if visited[other] then
-      return false
-    end
-    return filter(itm, other)
-  end
-
-  local projected_cols, projected_len = self:project(item, x,y,w,h, goalX,goalY, visitedFilter)
-
-  if projected_len > 0 then
-    cols = {}
-  end
 
   while projected_len > 0 do
     local col = projected_cols[1]
@@ -784,7 +784,8 @@ function World:projectMove(item, x, y, w, h, goalX, goalY, filter)
       col,
       x, y, w, h,
       goalX, goalY,
-      visitedFilter
+      filter,
+      visited
     )
   end
 
@@ -792,7 +793,6 @@ function World:projectMove(item, x, y, w, h, goalX, goalY, filter)
 
   return goalX, goalY, cols, len
 end
-
 
 -- Public library functions
 
