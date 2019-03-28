@@ -7,6 +7,12 @@ describe('World', function()
     world = bump.newWorld()
   end)
 
+  after_each(function()
+    if bump._countUnreturnedTables then
+      assert.equal(0, bump._countUnreturnedTables())
+    end
+  end)
+
   local collect = function(t, field_name)
     local res = {}
     for i,v in ipairs(t) do res[i] = v[field_name] end

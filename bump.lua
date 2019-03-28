@@ -33,13 +33,6 @@ local bump = {
 ------------------------------------------
 local Pool = {}
 do
-  local ok, tabelNew = pcall(require, 'table.new')
-  if not ok then
-    tabelNew = function (narr, nrec)
-      return {}
-    end
-  end
-
   local ok, tabelClear = pcall(require, 'table.clear')
   if not ok then
     tabelClear = function (t)
@@ -51,21 +44,30 @@ do
 
   local pool = {}
   local len = 0
+  -- local unreturned = 0
 
   function Pool.fetch()
     if len == 0 then
+      -- unreturned = unreturned + 1
       Pool.free({})
     end
     local t = table.remove(pool, len)
     len = len - 1
+    -- unreturned = unreturned + 1
     return t
   end
 
   function Pool.free(t)
     tabelClear(t)
     len = len + 1
+    -- unreturned = unreturned - 1
     pool[len] = t
   end
+
+  -- -- For debugging... should return 0, ideally.
+  -- function bump._countUnreturnedTables()
+  --   return unreturned, len
+  -- end
 end
 
 ------------------------------------------
@@ -490,7 +492,7 @@ function World:project(item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
 
   local collisions, len = nil, 0
 
-  local visited = Pool.fetch()
+  local visited = alreadyVisited or Pool.fetch()
   if item ~= nil then
     visited[item] = true
   end
@@ -509,13 +511,7 @@ function World:project(item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
     if not visited[other] then
       visited[other] = true
 
-      local responseName
-      if alreadyVisited and alreadyVisited[other] then
-        responseName = false
-      else
-        responseName = filter(item, other)
-      end
-
+      local responseName = filter(item, other)
       if responseName then
         local ox,oy,ow,oh   = self:getRect(other)
         local col           = rect_detectCollision(x,y,w,h, ox,oy,ow,oh, goalX, goalY)
@@ -535,7 +531,10 @@ function World:project(item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
     end
   end
 
-  Pool.free(visited)
+  -- Free "visited" if it was allocated in this function.
+  if not alreadyVisited then
+    Pool.free(visited)
+  end
   Pool.free(dictItemsInCellRect)
 
   if collisions ~= nil then
