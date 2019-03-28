@@ -29,6 +29,46 @@ local bump = {
 }
 
 ------------------------------------------
+-- Table Pool
+------------------------------------------
+local Pool = {}
+do
+  local ok, tabelNew = pcall(require, 'table.new')
+  if not ok then
+    tabelNew = function (narr, nrec)
+      return {}
+    end
+  end
+
+  local ok, tabelClear = pcall(require, 'table.clear')
+  if not ok then
+    tabelClear = function (t)
+      for k, _ in pairs(t) do
+        t[k] = nil
+      end
+    end
+  end
+
+  local pool = {}
+  local len = 0
+
+  function Pool.fetch()
+    if len == 0 then
+      Pool.free({})
+    end
+    local t = table.remove(pool, len)
+    len = len - 1
+    return t
+  end
+
+  function Pool.free(t)
+    tabelClear(t)
+    len = len + 1
+    pool[len] = t
+  end
+end
+
+------------------------------------------
 -- Auxiliary functions
 ------------------------------------------
 local DELTA = 1e-10 -- floating-point margin of error
@@ -194,8 +234,7 @@ local function rect_detectCollision(x1,y1,w1,h1, x2,y2,w2,h2, goalX, goalY)
     move      = {x = dx, y = dy},
     normal    = {x = nx, y = ny},
     touch     = {x = tx, y = ty},
-    itemRect  = {x = x1, y = y1, w = w1, h = h1},
-    otherRect = {x = x2, y = y2, w = w2, h = h2}
+    distance = rect_getSquareDistance(x1,y1,w1,h1, x2,y2,w2,h2),
   }
 end
 
@@ -331,10 +370,7 @@ local function sortByWeight(a,b) return a.weight < b.weight end
 
 local function sortByTiAndDistance(a,b)
   if a.ti == b.ti then
-    local ir, ar, br = a.itemRect, a.otherRect, b.otherRect
-    local ad = rect_getSquareDistance(ir.x,ir.y,ir.w,ir.h, ar.x,ar.y,ar.w,ar.h)
-    local bd = rect_getSquareDistance(ir.x,ir.y,ir.w,ir.h, br.x,br.y,br.w,br.h)
-    return ad < bd
+    return a.distance < b.distance
   end
   return a.ti < b.ti
 end
@@ -365,7 +401,8 @@ local function removeItemFromCell(self, item, cx, cy)
 end
 
 local function getDictItemsInCellRect(self, cl,ct,cw,ch)
-  local items_dict = {}
+  local items_dict = Pool.fetch()
+
   for cy=ct,ct+ch-1 do
     local row = self.rows[cy]
     if row then
@@ -453,7 +490,7 @@ function World:project(item, x,y,w,h, goalX, goalY, filter)
 
   local collisions, len = {}, 0
 
-  local visited = {}
+  local visited = Pool.fetch()
   if item ~= nil then visited[item] = true end
 
   -- This could probably be done with less cells using a polygon raster over the cells instead of a
@@ -486,6 +523,9 @@ function World:project(item, x,y,w,h, goalX, goalY, filter)
       end
     end
   end
+
+  Pool.free(visited)
+  Pool.free(dictItemsInCellRect)
 
   table.sort(collisions, sortByTiAndDistance)
 
@@ -560,6 +600,8 @@ function World:queryRect(x,y,w,h, filter)
     end
   end
 
+  Pool.free(dictItemsInCellRect)
+
   return items, len
 end
 
@@ -579,6 +621,8 @@ function World:queryPoint(x,y, filter)
       items[len] = item
     end
   end
+
+  Pool.free(dictItemsInCellRect)
 
   return items, len
 end
@@ -696,17 +740,22 @@ function World:move(item, goalX, goalY, filter)
 end
 
 function World:check(item, goalX, goalY, filter)
-  filter = filter or defaultFilter
+  local x,y,w,h = self:getRect(item)
+  return self:projectMove(item, x, y, w, h, goalX,goalY, filter)
+end
 
-  local visited = {[item] = true}
-  local visitedFilter = function(itm, other)
-    if visited[other] then return false end
-    return filter(itm, other)
-  end
-
+function World:projectMove(item, x, y, w, h, goalX, goalY, filter)
   local cols, len = {}, 0
 
-  local x,y,w,h = self:getRect(item)
+  filter = filter or defaultFilter
+
+  local visited = Pool.fetch()
+  local visitedFilter = function(itm, other)
+    if visited[other] then
+      return false
+    end
+    return filter(itm, other)
+  end
 
   local projected_cols, projected_len = self:project(item, x,y,w,h, goalX,goalY, visitedFilter)
 
@@ -727,6 +776,8 @@ function World:check(item, goalX, goalY, filter)
       visitedFilter
     )
   end
+
+  Pool.free(visited)
 
   return goalX, goalY, cols, len
 end
