@@ -492,7 +492,7 @@ function World:project(item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
 
   local collisions, len = nil, 0
 
-  local visited = alreadyVisited or Pool.fetch()
+  local visited = Pool.fetch()
   if item ~= nil then
     visited[item] = true
   end
@@ -508,7 +508,7 @@ function World:project(item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   local dictItemsInCellRect = getDictItemsInCellRect(self, cl,ct,cw,ch)
 
   for other,_ in pairs(dictItemsInCellRect) do
-    if not visited[other] then
+    if not visited[other] and (alreadyVisited == nil or not alreadyVisited[other]) then
       visited[other] = true
 
       local responseName = filter(item, other)
@@ -531,10 +531,7 @@ function World:project(item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
     end
   end
 
-  -- Free "visited" if it was allocated in this function.
-  if not alreadyVisited then
-    Pool.free(visited)
-  end
+  Pool.free(visited)
   Pool.free(dictItemsInCellRect)
 
   if collisions ~= nil then

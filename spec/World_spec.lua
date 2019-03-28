@@ -413,5 +413,27 @@ describe('World', function()
         assert.same({0,-3,1,1}, {world:getRect(a)})
       end)
     end)
+
+    describe('when multiple response types encountered in path', function()
+      local TILE = 64
+      it('should cross then slide', function()
+        local player = world:add('player', 0, 0, TILE, TILE)
+        local ghostA = {solid = false}
+        local ghostB = {solid = false}
+        local wall   = {solid = true}
+        world:add(ghostA, 2 * TILE,          0, TILE, TILE)
+        world:add(ghostB, 4 * TILE,          0, TILE, TILE)
+        world:add(wall,   6 * TILE, -1 * TILE , TILE, 3 * TILE)
+        local filter = function(this, other)
+          return other.solid and 'slide' or 'cross'
+        end
+        local x, y, cols, len = world:move(player, 10 * TILE, 0, filter)
+        assert.same({320, 0}, {x, y})
+        assert.equal(3, len)
+        assert.same(collect(cols, 'other'), {ghostA, ghostB, wall})
+        assert.same(collect(cols, 'type'),  {'cross', 'cross', 'slide'})
+        assert.same({320, 0, TILE, TILE}, {world:getRect(player)})
+      end)
+    end)
   end)
 end)
