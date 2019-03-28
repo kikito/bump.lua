@@ -488,10 +488,12 @@ function World:project(item, x,y,w,h, goalX, goalY, filter)
   goalY = goalY or y
   filter  = filter  or defaultFilter
 
-  local collisions, len = {}, 0
+  local collisions, len = nil, 0
 
   local visited = Pool.fetch()
-  if item ~= nil then visited[item] = true end
+  if item ~= nil then
+    visited[item] = true
+  end
 
   -- This could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding rect of the whole movement. Conditional to building a queryPolygon method
@@ -518,6 +520,9 @@ function World:project(item, x,y,w,h, goalX, goalY, filter)
           col.type     = responseName
 
           len = len + 1
+          if collisions == nil then
+            collisions = {}
+          end
           collisions[len] = col
         end
       end
@@ -527,7 +532,9 @@ function World:project(item, x,y,w,h, goalX, goalY, filter)
   Pool.free(visited)
   Pool.free(dictItemsInCellRect)
 
-  table.sort(collisions, sortByTiAndDistance)
+  if collisions ~= nil then
+    table.sort(collisions, sortByTiAndDistance)
+  end
 
   return collisions, len
 end
@@ -745,7 +752,7 @@ function World:check(item, goalX, goalY, filter)
 end
 
 function World:projectMove(item, x, y, w, h, goalX, goalY, filter)
-  local cols, len = {}, 0
+  local cols, len = nil, 0
 
   filter = filter or defaultFilter
 
@@ -758,6 +765,10 @@ function World:projectMove(item, x, y, w, h, goalX, goalY, filter)
   end
 
   local projected_cols, projected_len = self:project(item, x,y,w,h, goalX,goalY, visitedFilter)
+
+  if projected_len > 0 then
+    cols = {}
+  end
 
   while projected_len > 0 do
     local col = projected_cols[1]
