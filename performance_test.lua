@@ -37,7 +37,7 @@ local function doTest(world)
       local x, y = world:getRect(entity)
       local goalX = clamp(0, x - MOVE_RANGE + (math.random() * MOVE_RANGE * 2), WORLD_SIZE)
       local goalY = clamp(0, y - MOVE_RANGE + (math.random() * MOVE_RANGE * 2), WORLD_SIZE)
-      local _, _, cols, len = world:move(entity, goalX, goalY)
+      local _, _, _, len = world:move(entity, goalX, goalY)
       collisions = collisions + len
     end
   end
