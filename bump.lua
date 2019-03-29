@@ -765,6 +765,7 @@ function World:projectMove(item, x, y, w, h, goalX, goalY, filter)
   local cols, len = {}, 0
 
   local visited = Pool.fetch()
+  visited[item] = true
 
   while projected_len > 0 do
     local col = projected_cols[1]
