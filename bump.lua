@@ -474,6 +474,8 @@ function World:addResponse(name, response)
   self.responses[name] = response
 end
 
+local EMPTY_TABLE = {}
+
 function World:project(item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   assertIsRect(x,y,w,h)
 
@@ -529,7 +531,7 @@ function World:project(item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
     table.sort(collisions, sortByTiAndDistance)
   end
 
-  return collisions, len
+  return collisions or EMPTY_TABLE, len
 end
 
 function World:countCells()
@@ -750,7 +752,7 @@ function World:projectMove(item, x, y, w, h, goalX, goalY, filter)
   local projected_cols, projected_len = self:project(item, x,y,w,h, goalX,goalY, filter)
 
   if projected_len == 0 then
-    return goalX, goalY, nil, 0
+    return goalX, goalY, EMPTY_TABLE, 0
   end
 
   local cols, len = {}, 0
