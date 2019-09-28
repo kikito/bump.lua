@@ -33,9 +33,9 @@ local bump = {
 ------------------------------------------
 local Pool = {}
 do
-  local ok, tabelClear = pcall(require, 'table.clear')
+  local ok, tableClear = pcall(require, 'table.clear')
   if not ok then
-    tabelClear = function (t)
+    tableClear = function (t)
       for k, _ in pairs(t) do
         t[k] = nil
       end
@@ -44,30 +44,21 @@ do
 
   local pool = {}
   local len = 0
-  -- local unreturned = 0
 
   function Pool.fetch()
     if len == 0 then
-      -- unreturned = unreturned + 1
       Pool.free({})
     end
     local t = table.remove(pool, len)
     len = len - 1
-    -- unreturned = unreturned + 1
     return t
   end
 
   function Pool.free(t)
-    tabelClear(t)
+    tableClear(t)
     len = len + 1
-    -- unreturned = unreturned - 1
     pool[len] = t
   end
-
-  -- -- For debugging... should return 0, ideally.
-  -- function bump._countUnreturnedTables()
-  --   return unreturned, len
-  -- end
 end
 
 ------------------------------------------
