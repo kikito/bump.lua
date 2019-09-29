@@ -167,8 +167,12 @@ describe('World', function()
       world:add({'a'}, 0,0, 10, 10)
       local b = world:add({'b'}, 200,200, 10,10)
       assert.same(world:countCells(), 2)
+      -- Stop GC until we can assert original cell count. Test is flakey without doing this.
+      collectgarbage('stop')
       world:remove(b)
       assert.same(world:countCells(), 2)
+      -- Restart GC.
+      collectgarbage('restart')
       collectgarbage('collect')
       assert.same(world:countCells(), 1)
     end)
