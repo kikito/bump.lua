@@ -33,9 +33,9 @@ local bump = {
 ------------------------------------------
 local Pool = {}
 do
-  local ok, tableClear = pcall(require, 'table.clear')
+  local ok, tabelClear = pcall(require, 'table.clear')
   if not ok then
-    tableClear = function (t)
+    tabelClear = function (t)
       for k, _ in pairs(t) do
         t[k] = nil
       end
@@ -55,7 +55,7 @@ do
   end
 
   function Pool.free(t)
-    tableClear(t)
+    tabelClear(t)
     len = len + 1
     pool[len] = t
   end
@@ -222,12 +222,15 @@ local function rect_detectCollision(x1,y1,w1,h1, x2,y2,w2,h2, goalX, goalY)
   end
 
   return {
-    overlaps  = overlaps,
-    ti        = ti,
-    move      = {x = dx, y = dy},
-    normal    = {x = nx, y = ny},
-    touch     = {x = tx, y = ty},
+    overlaps = overlaps,
+    ti = ti,
     distance = rect_getSquareDistance(x1,y1,w1,h1, x2,y2,w2,h2),
+    moveX = dx,
+    moveY = dy,
+    normalX = nx,
+    normalY = ny,
+    touchX = tx,
+    touchY = ty,
   }
 end
 
@@ -299,7 +302,7 @@ end
 ------------------------------------------
 
 local touch = function(world, col, x,y,w,h, goalX, goalY, filter, alreadyVisited)
-  return col.touch.x, col.touch.y, {}, 0
+  return col.touchX, col.touchY, {}, 0
 end
 
 local cross = function(world, col, x,y,w,h, goalX, goalY, filter, alreadyVisited)
@@ -311,18 +314,17 @@ local slide = function(world, col, x,y,w,h, goalX, goalY, filter, alreadyVisited
   goalX = goalX or x
   goalY = goalY or y
 
-  local tch, move  = col.touch, col.move
-  if move.x ~= 0 or move.y ~= 0 then
-    if col.normal.x ~= 0 then
-      goalX = tch.x
+  if col.moveX ~= 0 or col.moveY ~= 0 then
+    if col.normalX ~= 0 then
+      goalX = col.touchX
     else
-      goalY = tch.y
+      goalY = col.touchY
     end
   end
 
-  col.slide = {x = goalX, y = goalY}
+  col.slideX, col.slideY = goalX, goalY
 
-  x,y = tch.x, tch.y
+  x, y = col.touchX, col.touchY
   local cols, len  = world:project(col.item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   return goalX, goalY, cols, len
 end
@@ -331,19 +333,22 @@ local bounce = function(world, col, x,y,w,h, goalX, goalY, filter, alreadyVisite
   goalX = goalX or x
   goalY = goalY or y
 
-  local tch, move = col.touch, col.move
-  local tx, ty = tch.x, tch.y
+  local tx, ty = col.touchX, col.touchY
 
   local bx, by = tx, ty
 
-  if move.x ~= 0 or move.y ~= 0 then
+  if col.moveX ~= 0 or col.moveY ~= 0 then
     local bnx, bny = goalX - tx, goalY - ty
-    if col.normal.x == 0 then bny = -bny else bnx = -bnx end
+    if col.normalX == 0 then
+      bny = -bny
+    else
+      bnx = -bnx
+    end
     bx, by = tx + bnx, ty + bny
   end
 
-  col.bounce   = {x = bx,  y = by}
-  x,y          = tch.x, tch.y
+  col.bounceX, col.bounceY = bx, by
+  x, y = col.touchX, col.touchY
   goalX, goalY = bx, by
 
   local cols, len    = world:project(col.item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
