@@ -15,7 +15,7 @@ local media = {}
 
 local function newSource(name)
   local path = 'sfx/' .. name .. '.ogg'
-  local source = love.audio.newSource(path)
+  local source = love.audio.newSource(path, "static")
   return multisource.new(source)
 end
 
@@ -34,7 +34,7 @@ media.load = function()
 
   media.sfx.player_propulsion:setLooping(true)
 
-  media.music = love.audio.newSource('sfx/wrath_of_the_djinn.xm')
+  media.music = love.audio.newSource('sfx/wrath_of_the_djinn.xm', "static")
   media.music:setLooping(true)
 end
 

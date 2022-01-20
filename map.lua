@@ -37,7 +37,7 @@ end
 
 function Map:reset()
   local music = media.music
-  music:rewind()
+  music:seek(0)
   music:play()
 
   local width, height = self.width, self.height

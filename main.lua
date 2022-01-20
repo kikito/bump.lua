@@ -4,6 +4,18 @@ local shakycam   = require 'lib.shakycam'
 local media      = require 'media'
 local Map        = require 'map'
 
+if love.getVersion == nil or love.getVersion() < 11 then
+  local origSetColor = love.graphics.setColor
+  love.graphics.setColor = function (r, g, b, a)
+    return origSetColor(
+      math.floor(r * 256),
+      math.floor(g * 256),
+      math.floor(b * 256),
+      a ~= nil and math.floor(a * 256) or nil
+    )
+  end
+end
+
 
 local updateRadius = 100 -- how "far away from the camera" things stop being updated
 local drawDebug   = false  -- draw bump's debug info, fps and memory
@@ -49,7 +61,7 @@ function love.draw()
     map:draw(drawDebug, l,t,w,h)
   end)
 
-  love.graphics.setColor(255, 255, 255)
+  love.graphics.setColor(1, 1, 1)
 
   local w,h = love.graphics.getDimensions()
 
