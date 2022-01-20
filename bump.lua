@@ -29,6 +29,39 @@ local bump = {
 }
 
 ------------------------------------------
+-- Table Pool
+------------------------------------------
+local Pool = {}
+do
+  local ok, tabelClear = pcall(require, 'table.clear')
+  if not ok then
+    tabelClear = function (t)
+      for k, _ in pairs(t) do
+        t[k] = nil
+      end
+    end
+  end
+
+  local pool = {}
+  local len = 0
+
+  function Pool.fetch()
+    if len == 0 then
+      Pool.free({})
+    end
+    local t = table.remove(pool, len)
+    len = len - 1
+    return t
+  end
+
+  function Pool.free(t)
+    tabelClear(t)
+    len = len + 1
+    pool[len] = t
+  end
+end
+
+------------------------------------------
 -- Auxiliary functions
 ------------------------------------------
 local DELTA = 1e-10 -- floating-point margin of error
@@ -189,13 +222,15 @@ local function rect_detectCollision(x1,y1,w1,h1, x2,y2,w2,h2, goalX, goalY)
   end
 
   return {
-    overlaps  = overlaps,
-    ti        = ti,
-    move      = {x = dx, y = dy},
-    normal    = {x = nx, y = ny},
-    touch     = {x = tx, y = ty},
-    itemRect  = {x = x1, y = y1, w = w1, h = h1},
-    otherRect = {x = x2, y = y2, w = w2, h = h2}
+    overlaps = overlaps,
+    ti = ti,
+    distance = rect_getSquareDistance(x1,y1,w1,h1, x2,y2,w2,h2),
+    moveX = dx,
+    moveY = dy,
+    normalX = nx,
+    normalY = ny,
+    touchX = tx,
+    touchY = ty,
   }
 end
 
@@ -266,55 +301,57 @@ end
 -- Responses
 ------------------------------------------
 
-local touch = function(world, col, x,y,w,h, goalX, goalY, filter)
-  return col.touch.x, col.touch.y, {}, 0
+local touch = function(world, col, x,y,w,h, goalX, goalY, filter, alreadyVisited)
+  return col.touchX, col.touchY, {}, 0
 end
 
-local cross = function(world, col, x,y,w,h, goalX, goalY, filter)
-  local cols, len = world:project(col.item, x,y,w,h, goalX, goalY, filter)
+local cross = function(world, col, x,y,w,h, goalX, goalY, filter, alreadyVisited)
+  local cols, len = world:project(col.item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   return goalX, goalY, cols, len
 end
 
-local slide = function(world, col, x,y,w,h, goalX, goalY, filter)
+local slide = function(world, col, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   goalX = goalX or x
   goalY = goalY or y
 
-  local tch, move  = col.touch, col.move
-  if move.x ~= 0 or move.y ~= 0 then
-    if col.normal.x ~= 0 then
-      goalX = tch.x
+  if col.moveX ~= 0 or col.moveY ~= 0 then
+    if col.normalX ~= 0 then
+      goalX = col.touchX
     else
-      goalY = tch.y
+      goalY = col.touchY
     end
   end
 
-  col.slide = {x = goalX, y = goalY}
+  col.slideX, col.slideY = goalX, goalY
 
-  x,y = tch.x, tch.y
-  local cols, len  = world:project(col.item, x,y,w,h, goalX, goalY, filter)
+  x, y = col.touchX, col.touchY
+  local cols, len  = world:project(col.item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   return goalX, goalY, cols, len
 end
 
-local bounce = function(world, col, x,y,w,h, goalX, goalY, filter)
+local bounce = function(world, col, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   goalX = goalX or x
   goalY = goalY or y
 
-  local tch, move = col.touch, col.move
-  local tx, ty = tch.x, tch.y
+  local tx, ty = col.touchX, col.touchY
 
   local bx, by = tx, ty
 
-  if move.x ~= 0 or move.y ~= 0 then
+  if col.moveX ~= 0 or col.moveY ~= 0 then
     local bnx, bny = goalX - tx, goalY - ty
-    if col.normal.x == 0 then bny = -bny else bnx = -bnx end
+    if col.normalX == 0 then
+      bny = -bny
+    else
+      bnx = -bnx
+    end
     bx, by = tx + bnx, ty + bny
   end
 
-  col.bounce   = {x = bx,  y = by}
-  x,y          = tch.x, tch.y
+  col.bounceX, col.bounceY = bx, by
+  x, y = col.touchX, col.touchY
   goalX, goalY = bx, by
 
-  local cols, len    = world:project(col.item, x,y,w,h, goalX, goalY, filter)
+  local cols, len    = world:project(col.item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   return goalX, goalY, cols, len
 end
 
@@ -331,10 +368,7 @@ local function sortByWeight(a,b) return a.weight < b.weight end
 
 local function sortByTiAndDistance(a,b)
   if a.ti == b.ti then
-    local ir, ar, br = a.itemRect, a.otherRect, b.otherRect
-    local ad = rect_getSquareDistance(ir.x,ir.y,ir.w,ir.h, ar.x,ar.y,ar.w,ar.h)
-    local bd = rect_getSquareDistance(ir.x,ir.y,ir.w,ir.h, br.x,br.y,br.w,br.h)
-    return ad < bd
+    return a.distance < b.distance
   end
   return a.ti < b.ti
 end
@@ -365,7 +399,8 @@ local function removeItemFromCell(self, item, cx, cy)
 end
 
 local function getDictItemsInCellRect(self, cl,ct,cw,ch)
-  local items_dict = {}
+  local items_dict = Pool.fetch()
+
   for cy=ct,ct+ch-1 do
     local row = self.rows[cy]
     if row then
@@ -444,17 +479,21 @@ function World:addResponse(name, response)
   self.responses[name] = response
 end
 
-function World:project(item, x,y,w,h, goalX, goalY, filter)
+local EMPTY_TABLE = {}
+
+function World:project(item, x,y,w,h, goalX, goalY, filter, alreadyVisited)
   assertIsRect(x,y,w,h)
 
   goalX = goalX or x
   goalY = goalY or y
-  filter  = filter  or defaultFilter
+  filter = filter or defaultFilter
 
-  local collisions, len = {}, 0
+  local collisions, len = nil, 0
 
-  local visited = {}
-  if item ~= nil then visited[item] = true end
+  local visited = Pool.fetch()
+  if item ~= nil then
+    visited[item] = true
+  end
 
   -- This could probably be done with less cells using a polygon raster over the cells instead of a
   -- bounding rect of the whole movement. Conditional to building a queryPolygon method
@@ -467,7 +506,7 @@ function World:project(item, x,y,w,h, goalX, goalY, filter)
   local dictItemsInCellRect = getDictItemsInCellRect(self, cl,ct,cw,ch)
 
   for other,_ in pairs(dictItemsInCellRect) do
-    if not visited[other] then
+    if not visited[other] and (alreadyVisited == nil or not alreadyVisited[other]) then
       visited[other] = true
 
       local responseName = filter(item, other)
@@ -481,15 +520,23 @@ function World:project(item, x,y,w,h, goalX, goalY, filter)
           col.type     = responseName
 
           len = len + 1
+          if collisions == nil then
+            collisions = {}
+          end
           collisions[len] = col
         end
       end
     end
   end
 
-  table.sort(collisions, sortByTiAndDistance)
+  Pool.free(visited)
+  Pool.free(dictItemsInCellRect)
 
-  return collisions, len
+  if collisions ~= nil then
+    table.sort(collisions, sortByTiAndDistance)
+  end
+
+  return collisions or EMPTY_TABLE, len
 end
 
 function World:countCells()
@@ -560,6 +607,8 @@ function World:queryRect(x,y,w,h, filter)
     end
   end
 
+  Pool.free(dictItemsInCellRect)
+
   return items, len
 end
 
@@ -579,6 +628,8 @@ function World:queryPoint(x,y, filter)
       items[len] = item
     end
   end
+
+  Pool.free(dictItemsInCellRect)
 
   return items, len
 end
@@ -696,19 +747,23 @@ function World:move(item, goalX, goalY, filter)
 end
 
 function World:check(item, goalX, goalY, filter)
+  local x,y,w,h = self:getRect(item)
+  return self:projectMove(item, x, y, w, h, goalX,goalY, filter)
+end
+
+function World:projectMove(item, x, y, w, h, goalX, goalY, filter)
   filter = filter or defaultFilter
 
-  local visited = {[item] = true}
-  local visitedFilter = function(itm, other)
-    if visited[other] then return false end
-    return filter(itm, other)
+  local projected_cols, projected_len = self:project(item, x,y,w,h, goalX,goalY, filter)
+
+  if projected_len == 0 then
+    return goalX, goalY, EMPTY_TABLE, 0
   end
 
   local cols, len = {}, 0
 
-  local x,y,w,h = self:getRect(item)
-
-  local projected_cols, projected_len = self:project(item, x,y,w,h, goalX,goalY, visitedFilter)
+  local visited = Pool.fetch()
+  visited[item] = true
 
   while projected_len > 0 do
     local col = projected_cols[1]
@@ -724,13 +779,15 @@ function World:check(item, goalX, goalY, filter)
       col,
       x, y, w, h,
       goalX, goalY,
-      visitedFilter
+      filter,
+      visited
     )
   end
 
+  Pool.free(visited)
+
   return goalX, goalY, cols, len
 end
-
 
 -- Public library functions
 

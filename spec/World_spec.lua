@@ -167,8 +167,12 @@ describe('World', function()
       world:add({'a'}, 0,0, 10, 10)
       local b = world:add({'b'}, 200,200, 10,10)
       assert.same(world:countCells(), 2)
+      -- Stop GC until we can assert original cell count. Test is flakey without doing this.
+      collectgarbage('stop')
       world:remove(b)
       assert.same(world:countCells(), 2)
+      -- Restart GC.
+      collectgarbage('restart')
       collectgarbage('collect')
       assert.same(world:countCells(), 1)
     end)
@@ -349,7 +353,7 @@ describe('World', function()
     describe('when there are no collisions', function()
       it('it moves the object, and returns zero collisions', function()
         local item = world:add({}, 0,0,1,1)
-        assert.same({1,1,{},0}, {world:move(item, 1,1)})
+        assert.same({1, 1, {}, 0}, {world:move(item, 1,1)})
       end)
     end)
 
@@ -405,6 +409,28 @@ describe('World', function()
         assert.same(collect(cols, 'other'), {'b'})
         assert.same(collect(cols, 'type'),  {'bounce'})
         assert.same({0,-3,1,1}, {world:getRect(a)})
+      end)
+    end)
+
+    describe('when multiple response types encountered in path', function()
+      local TILE = 64
+      it('should cross then slide', function()
+        local player = world:add('player', 0, 0, TILE, TILE)
+        local ghostA = {solid = false}
+        local ghostB = {solid = false}
+        local wall   = {solid = true}
+        world:add(ghostA, 2 * TILE,          0, TILE, TILE)
+        world:add(ghostB, 4 * TILE,          0, TILE, TILE)
+        world:add(wall,   6 * TILE, -1 * TILE , TILE, 3 * TILE)
+        local filter = function(this, other)
+          return other.solid and 'slide' or 'cross'
+        end
+        local x, y, cols, len = world:move(player, 10 * TILE, 0, filter)
+        assert.same({320, 0}, {x, y})
+        assert.equal(3, len)
+        assert.same(collect(cols, 'other'), {ghostA, ghostB, wall})
+        assert.same(collect(cols, 'type'),  {'cross', 'cross', 'slide'})
+        assert.same({320, 0, TILE, TILE}, {world:getRect(player)})
       end)
     end)
   end)
