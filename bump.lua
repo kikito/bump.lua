@@ -339,24 +339,34 @@ local function sortByTiAndDistance(a,b)
   return a.ti < b.ti
 end
 
+local weakValueMt,weakKeyMt = {__mode = 'v'}, {__mode = 'k'}
+
 local function addItemToCell(self, item, cx, cy)
-  self.rows[cy] = self.rows[cy] or setmetatable({}, {__mode = 'v'})
+  self.rows[cy] = self.rows[cy] or setmetatable({}, weakValueMt)
   local row = self.rows[cy]
-  row[cx] = row[cx] or {itemCount = 0, x = cx, y = cy, items = setmetatable({}, {__mode = 'k'})}
+  row[cx] = row[cx] or {itemCount = 0, x = cx, y = cy, itemsDictionary = setmetatable({}, weakKeyMt), itemsArray = setmetatable({}, weakValueMt)}
   local cell = row[cx]
   self.nonEmptyCells[cell] = true
-  if not cell.items[item] then
-    cell.items[item] = true
+  if not cell.itemsDictionary[item] then
     cell.itemCount = cell.itemCount + 1
+    cell.itemsArray[cell.itemCount] = item
+    cell.itemsDictionary[item] = cell.itemCount
   end
 end
 
 local function removeItemFromCell(self, item, cx, cy)
   local row = self.rows[cy]
-  if not row or not row[cx] or not row[cx].items[item] then return false end
+  if not row or not row[cx] or not row[cx].itemsDictionary[item] then return false end
 
   local cell = row[cx]
-  cell.items[item] = nil
+  local index = cell.itemsDictionary[item]
+  if(index < cell.itemCount) then -- if it's not the last item, then switch the removing item with the last item.
+    local last_item = cell.itemsArray[cell.itemCount]
+    cell.itemsArray[index] = last_item -- do switch
+    if(last_item) then cell.itemsDictionary[last_item] = index end -- update the index
+  end
+  table.remove(cell.itemsArray)
+  cell.itemsDictionary[item] = nil
   cell.itemCount = cell.itemCount - 1
   if cell.itemCount == 0 then
     self.nonEmptyCells[cell] = nil
@@ -364,23 +374,28 @@ local function removeItemFromCell(self, item, cx, cy)
   return true
 end
 
-local function getDictItemsInCellRect(self, cl,ct,cw,ch)
-  local items_dict = {}
+local function getItemsInCellRect(self, cl,ct,cw,ch)
+  local itemsDict, itemArray, len = {}, {}, 0
   for cy=ct,ct+ch-1 do
     local row = self.rows[cy]
     if row then
       for cx=cl,cl+cw-1 do
         local cell = row[cx]
         if cell and cell.itemCount > 0 then -- no cell.itemCount > 1 because tunneling
-          for item,_ in pairs(cell.items) do
-            items_dict[item] = true
+          for i=1,cell.itemCount do
+            local item = cell.itemsArray[i]
+            if(item and not itemsDict[item]) then
+              itemsDict[item] = true
+              len=len+1
+              itemArray[len]=item
+            end
           end
         end
       end
     end
   end
 
-  return items_dict
+  return itemArray, len
 end
 
 local function getCellsTouchedBySegment(self, x1,y1,x2,y2)
@@ -407,7 +422,7 @@ local function getInfoAboutItemsTouchedBySegment(self, x1,y1, x2,y2, filter)
   local visited, itemInfo, itemInfoLen = {},{},0
   for i=1,len do
     cell = cells[i]
-    for item in pairs(cell.items) do
+    for _,item in ipairs(cell.itemsArray) do
       if not visited[item] then
         visited[item]  = true
         if (not filter or filter(item)) then
@@ -464,9 +479,10 @@ function World:project(item, x,y,w,h, goalX, goalY, filter)
 
   local cl,ct,cw,ch = grid_toCellRect(self.cellSize, tl,tt,tw,th)
 
-  local dictItemsInCellRect = getDictItemsInCellRect(self, cl,ct,cw,ch)
+  local itemsInCellRect, lenItems = getItemsInCellRect(self, cl,ct,cw,ch)
 
-  for other,_ in pairs(dictItemsInCellRect) do
+  for i=1,lenItems do
+    local other = itemsInCellRect[i]
     if not visited[other] then
       visited[other] = true
 
@@ -545,12 +561,13 @@ function World:queryRect(x,y,w,h, filter)
   assertIsRect(x,y,w,h)
 
   local cl,ct,cw,ch = grid_toCellRect(self.cellSize, x,y,w,h)
-  local dictItemsInCellRect = getDictItemsInCellRect(self, cl,ct,cw,ch)
+  local itemsInCellRect, lenItems = getItemsInCellRect(self, cl,ct,cw,ch)
 
   local items, len = {}, 0
 
   local rect
-  for item,_ in pairs(dictItemsInCellRect) do
+  for i=1,lenItems do
+    local item=itemsInCellRect[i]
     rect = self.rects[item]
     if (not filter or filter(item))
     and rect_isIntersecting(x,y,w,h, rect.x, rect.y, rect.w, rect.h)
@@ -565,12 +582,13 @@ end
 
 function World:queryPoint(x,y, filter)
   local cx,cy = self:toCell(x,y)
-  local dictItemsInCellRect = getDictItemsInCellRect(self, cx,cy,1,1)
+  local itemsInCellRect, lenItems = getItemsInCellRect(self, cx,cy,1,1)
 
   local items, len = {}, 0
 
   local rect
-  for item,_ in pairs(dictItemsInCellRect) do
+  for i=1,lenItems do
+    local item=itemsInCellRect[i]
     rect = self.rects[item]
     if (not filter or filter(item))
     and rect_containsPoint(rect.x, rect.y, rect.w, rect.h, x, y)
