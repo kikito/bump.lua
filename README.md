@@ -337,7 +337,7 @@ end
 
 Here's the info contained on every collision item contained in the `cols` variables mentioned above:
 
-```lua
+```
 cols[i] = {
   item  = the item being moved / checked
   other = an item colliding with the item being moved
