@@ -360,6 +360,10 @@ local function removeItemFromCell(self, item, cx, cy)
   cell.itemCount = cell.itemCount - 1
   if cell.itemCount == 0 then
     self.nonEmptyCells[cell] = nil
+    row[cx] = nil
+    if next(row) == nil then
+      self.rows[cy] = nil
+    end
   end
   return true
 end
